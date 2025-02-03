@@ -5,13 +5,16 @@
         <img width="150" src="assets/vg%20logo.png" alt="The VG Programming Language">
     </a>
 </p>
-</div>
 
 # VG Language
-
-
 A new programming language made by developers for developers.
 Unlock the joy of coding with a language that prioritizes simplicity, efficiency, and developer experience.
+</div>
+
+
+
+
+
 ---
 # Introduction to VG Language
 **VG Language**, made out of the two words Visual and Graphics... is a Language made for educational purposes. to teach
