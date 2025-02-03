@@ -92,16 +92,13 @@ IDENTIFIER
     ;
 TRUE    : 'true';
 FALSE   : 'false';
-INT
-    : [0-9]+
+INT : [0-9]+
     ;
 
-DOUBLE
-    : [0-9]+ '.' [0-9]+
+DOUBLE: [0-9]+ '.' [0-9]+
     ;
 
-STRING_LITERAL
-    : '"' ( ESC_SEQ | ~["\\\r\n] )* '"'
+STRING_LITERAL: '"' ( ESC_SEQ | ~["\\\r\n] )* '"'
     ;
 
 fragment ESC_SEQ
