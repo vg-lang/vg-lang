@@ -38,6 +38,16 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitVariableDeclaration(vg_langParser.VariableDeclarationContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#constDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterConstDeclaration(vg_langParser.ConstDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#constDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitConstDeclaration(vg_langParser.ConstDeclarationContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#assignment}.
 	 * @param ctx the parse tree
 	 */

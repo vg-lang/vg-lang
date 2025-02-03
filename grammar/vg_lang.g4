@@ -9,11 +9,15 @@ statement
     | printStatement
     | comments
     | expressionStatement
+    | constDeclaration
     ;
 
 variableDeclaration
     : 'var' IDENTIFIER '=' expression ';'
     ;
+constDeclaration
+   : 'const' IDENTIFIER '=' expression ';'
+   ;
 assignment
     : leftHandSide '=' expression ';'
     ;

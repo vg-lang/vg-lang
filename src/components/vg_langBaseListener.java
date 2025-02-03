@@ -53,6 +53,18 @@ public class vg_langBaseListener implements vg_langListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterConstDeclaration(vg_langParser.ConstDeclarationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitConstDeclaration(vg_langParser.ConstDeclarationContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterAssignment(vg_langParser.AssignmentContext ctx) { }
 	/**
 	 * {@inheritDoc}

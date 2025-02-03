@@ -38,11 +38,20 @@ public class Interpreter extends vg_langBaseVisitor {
         currentSymbolTable().set(varName, value);
         return null;
     }
-
+    @Override
+    public Object visitConstDeclaration(vg_langParser.ConstDeclarationContext ctx) {
+        String constName = ctx.IDENTIFIER().getText();
+        Object value = visit(ctx.expression());
+        SymbolTable currentTable = currentSymbolTable();
+        currentTable.setConstant(constName, value); // a method that sets a variable and marks it as const
+        return null;
+    }
     @Override
     public Object visitAssignment(vg_langParser.AssignmentContext ctx) {
         VariableReference varRef = (VariableReference) visit(ctx.leftHandSide());
-
+        if (varRef.isConstant()) {
+            throw new RuntimeException("Cannot reassign to a constant variable '" + varRef.getName() + "'.");
+        }
         Object value = visit(ctx.expression());
 
         varRef.setValue(value);

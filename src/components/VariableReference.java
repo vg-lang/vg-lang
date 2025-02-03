@@ -17,6 +17,9 @@ public class VariableReference {
         if (indices.isEmpty()) {
             symbolTable.set(name, value);
         }
+        else if(isConstant()) {
+            throw new RuntimeException("Cannot assign to a constant variable: " + name);
+        }
     }
     public Object getValue() {
         Object value = symbolTable.get(name);
@@ -25,5 +28,9 @@ public class VariableReference {
     }
     public String getName() {
         return name;
+    }
+    public boolean isConstant() {
+
+        return symbolTable.isConstant(name);
     }
 }

@@ -29,6 +29,12 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitVariableDeclaration(vg_langParser.VariableDeclarationContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#constDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitConstDeclaration(vg_langParser.ConstDeclarationContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#assignment}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
