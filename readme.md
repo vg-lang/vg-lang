@@ -1,7 +1,7 @@
 <div align="center">
 
 <p>
-    <a href="https://salamlang.ir/">
+    <a href="#">
         <img width="150" src="assets/vg%20logo.png" alt="The VG Programming Language">
     </a>
 </p>
@@ -30,3 +30,4 @@ To start using VG, run the following commands inside the windows terminal:
     <file.vg>  The VG source file to interpret
     --version shows the version of the VG Interpreter
 ````
+
