@@ -105,7 +105,29 @@ public class Interpreter extends vg_langBaseVisitor {
         return null;
     }
 
+    @Override
+    public Object visitIfStatement(vg_langParser.IfStatementContext ctx) {
 
+
+        if (toBoolean(visit(ctx.expression()))) {
+            visit(ctx.ifBlock);
+        } else {
+            boolean executed = false;
+
+            for (vg_langParser.ElseIfStatementContext elifCtx : ctx.elseIfStatement()) {
+                if (toBoolean(visit(elifCtx.expression()))) {
+                    visit(elifCtx.block());
+                    executed = true;
+                    break;
+                }
+            }
+
+            if (!executed && ctx.elseStatement() != null) {
+                visit(ctx.elseStatement().block());
+            }
+        }
+        return null;
+    }
 
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
