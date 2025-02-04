@@ -12,6 +12,10 @@ statement
     | constDeclaration
     ;
 
+arrayLiteral
+    : '[' (expression (',' expression)*)? ']'
+    ;
+
 variableDeclaration
     : 'var' IDENTIFIER '=' expression ';'
     ;
@@ -73,6 +77,7 @@ postfixExpression
      : INT
      | DOUBLE
      | STRING_LITERAL
+     | arrayLiteral
      | TRUE
      | FALSE
      ;
