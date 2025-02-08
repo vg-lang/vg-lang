@@ -168,6 +168,46 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitUnaryExpression(vg_langParser.UnaryExpressionContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#ifStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterIfStatement(vg_langParser.IfStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#ifStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitIfStatement(vg_langParser.IfStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#elseIfStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterElseIfStatement(vg_langParser.ElseIfStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#elseIfStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitElseIfStatement(vg_langParser.ElseIfStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#elseStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterElseStatement(vg_langParser.ElseStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#elseStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitElseStatement(vg_langParser.ElseStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#block}.
+	 * @param ctx the parse tree
+	 */
+	void enterBlock(vg_langParser.BlockContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#block}.
+	 * @param ctx the parse tree
+	 */
+	void exitBlock(vg_langParser.BlockContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#postfixExpression}.
 	 * @param ctx the parse tree
 	 */

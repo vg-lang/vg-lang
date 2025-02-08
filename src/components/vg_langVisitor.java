@@ -107,6 +107,30 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitUnaryExpression(vg_langParser.UnaryExpressionContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#ifStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitIfStatement(vg_langParser.IfStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#elseIfStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitElseIfStatement(vg_langParser.ElseIfStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#elseStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitElseStatement(vg_langParser.ElseStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#block}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBlock(vg_langParser.BlockContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#postfixExpression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

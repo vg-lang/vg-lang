@@ -8,6 +8,7 @@ statement
     | assignment
     | printStatement
     | comments
+    | ifStatement
     | expressionStatement
     | constDeclaration
     ;
@@ -62,6 +63,21 @@ multiplicativeExpression
 unaryExpression
     : ( '+' | '-' | '!' ) unaryExpression
     | postfixExpression
+    ;
+
+ifStatement
+    : 'if' '(' expression ')' ifBlock=block elseIfStatement* elseStatement?
+    ;
+
+elseIfStatement
+    : 'else' 'if' '(' expression ')' block
+    ;
+
+elseStatement
+    : 'else' block
+    ;
+block
+    : '{' statement* '}'
     ;
 
 postfixExpression
