@@ -9,11 +9,19 @@ statement
     | printStatement
     | comments
     | expressionStatement
+    | constDeclaration
+    ;
+
+arrayLiteral
+    : '[' (expression (',' expression)*)? ']'
     ;
 
 variableDeclaration
     : 'var' IDENTIFIER '=' expression ';'
     ;
+constDeclaration
+   : 'const' IDENTIFIER '=' expression ';'
+   ;
 assignment
     : leftHandSide '=' expression ';'
     ;
@@ -69,6 +77,7 @@ postfixExpression
      : INT
      | DOUBLE
      | STRING_LITERAL
+     | arrayLiteral
      | TRUE
      | FALSE
      ;

@@ -38,11 +38,20 @@ public class Interpreter extends vg_langBaseVisitor {
         currentSymbolTable().set(varName, value);
         return null;
     }
-
+    @Override
+    public Object visitConstDeclaration(vg_langParser.ConstDeclarationContext ctx) {
+        String constName = ctx.IDENTIFIER().getText();
+        Object value = visit(ctx.expression());
+        SymbolTable currentTable = currentSymbolTable();
+        currentTable.setConstant(constName, value); // a method that sets a variable and marks it as const
+        return null;
+    }
     @Override
     public Object visitAssignment(vg_langParser.AssignmentContext ctx) {
         VariableReference varRef = (VariableReference) visit(ctx.leftHandSide());
-
+        if (varRef.isConstant()) {
+            throw new RuntimeException("Cannot reassign to a constant variable '" + varRef.getName() + "'.");
+        }
         Object value = visit(ctx.expression());
 
         varRef.setValue(value);
@@ -70,6 +79,9 @@ public class Interpreter extends vg_langBaseVisitor {
             if (ctx.expression() != null && !ctx.expression().isEmpty()) {
                 for (vg_langParser.ExpressionContext exprCtx : ctx.expression()) {
                     Object indexObj = visit(exprCtx);
+                    if (!(indexObj instanceof Number)) {
+                        throw new RuntimeException("Array index must be a number.");
+                    }
                     indices.add(((Number) indexObj).intValue());
                 }
             }
@@ -92,6 +104,7 @@ public class Interpreter extends vg_langBaseVisitor {
         System.out.println(output.toString().trim());
         return null;
     }
+
 
 
     private boolean toBoolean(Object value) {
@@ -195,7 +208,9 @@ public class Interpreter extends vg_langBaseVisitor {
         return result;
     }
     private Object evaluateArithmetic(Object left, Object right, String operator) {
-
+        if (left instanceof List || right instanceof List) {
+            throw new RuntimeException("Cannot perform arithmetic operations on arrays.");
+        }
         if (left instanceof String || right instanceof String) {
             if (operator.equals("+")) {
                 return String.valueOf(left) + String.valueOf(right);
@@ -371,7 +386,39 @@ public class Interpreter extends vg_langBaseVisitor {
         } else if (ctx.FALSE() != null) {
             return false;
         }
+        else if (ctx.arrayLiteral() != null) {
+            return visit(ctx.arrayLiteral());
+        }
         return null;
+    }
+    @Override
+    public Object visitPostfixExpression(vg_langParser.PostfixExpressionContext ctx) {
+        Object value = visit(ctx.primary());
+        for (vg_langParser.ExpressionContext indexExpr : ctx.expression()) {
+            Object indexObj = visit(indexExpr);
+            if (!(indexObj instanceof Number)) {
+                throw new RuntimeException("Array index must be a number.");
+            }
+            int index = ((Number) indexObj).intValue();
+            if (!(value instanceof List)) {
+                throw new RuntimeException("Cannot index into non-array value.");
+            }
+            List<?> array = (List<?>) value;
+            if (index < 0 || index >= array.size()) {
+                throw new RuntimeException("Array index out of bounds.");
+            }
+            value = array.get(index);
+        }
+        return value;
+    }
+    @Override
+    public Object visitArrayLiteral(vg_langParser.ArrayLiteralContext ctx) {
+        List<Object> elements = new ArrayList<>();
+        for (vg_langParser.ExpressionContext exprCtx : ctx.expression()) {
+            Object value = visit(exprCtx);
+            elements.add(value);
+        }
+        return elements;
     }
 
 }

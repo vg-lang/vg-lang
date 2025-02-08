@@ -28,6 +28,16 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitStatement(vg_langParser.StatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#arrayLiteral}.
+	 * @param ctx the parse tree
+	 */
+	void enterArrayLiteral(vg_langParser.ArrayLiteralContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#arrayLiteral}.
+	 * @param ctx the parse tree
+	 */
+	void exitArrayLiteral(vg_langParser.ArrayLiteralContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#variableDeclaration}.
 	 * @param ctx the parse tree
 	 */
@@ -37,6 +47,16 @@ public interface vg_langListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitVariableDeclaration(vg_langParser.VariableDeclarationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#constDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterConstDeclaration(vg_langParser.ConstDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#constDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitConstDeclaration(vg_langParser.ConstDeclarationContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vg_langParser#assignment}.
 	 * @param ctx the parse tree
