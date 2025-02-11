@@ -473,7 +473,7 @@ public class Interpreter extends vg_langBaseVisitor {
             visit(ctx.forInit());
         }
 
-        // 3) Loop until the condition fails.
+
         while (true) {
             // If there is a condition, evaluate it. If it's false, break out.
             if (ctx.forCondition() != null) {
@@ -483,12 +483,8 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
             }
 
-            // 4) Visit the loop body block.
-            //    Note: the block itself will typically push/pop its own scope
-            //    in visitBlock(...) if you have implemented it that way.
-            visit(ctx.block());
 
-            // 5) Execute the update part (if present).
+            visit(ctx.block());
             if (ctx.forUpdate() != null) {
                 visit(ctx.forUpdate());
             }
@@ -500,19 +496,17 @@ public class Interpreter extends vg_langBaseVisitor {
     }
     @Override
     public Object visitWhileStatement(vg_langParser.WhileStatementContext ctx) {
-        // Typical while loop: check condition first, then execute block if true.
+
         while (toBoolean(visit(ctx.expression()))) {
-            // Visit the block, which (in visitBlock) should push/pop a new scope.
+
             visit(ctx.block());
         }
         return null;
     }
     @Override
     public Object visitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx) {
-        // do...while executes the block at least once,
-        // then checks the condition at the end.
         do {
-            // Visit the block first.
+
             visit(ctx.block());
         } while (toBoolean(visit(ctx.expression()))); // Re-check condition at the end
         return null;
