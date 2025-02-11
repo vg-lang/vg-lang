@@ -28,6 +28,66 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitStatement(vg_langParser.StatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#forStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterForStatement(vg_langParser.ForStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#forStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitForStatement(vg_langParser.ForStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#forInit}.
+	 * @param ctx the parse tree
+	 */
+	void enterForInit(vg_langParser.ForInitContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#forInit}.
+	 * @param ctx the parse tree
+	 */
+	void exitForInit(vg_langParser.ForInitContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#forCondition}.
+	 * @param ctx the parse tree
+	 */
+	void enterForCondition(vg_langParser.ForConditionContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#forCondition}.
+	 * @param ctx the parse tree
+	 */
+	void exitForCondition(vg_langParser.ForConditionContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#forUpdate}.
+	 * @param ctx the parse tree
+	 */
+	void enterForUpdate(vg_langParser.ForUpdateContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#forUpdate}.
+	 * @param ctx the parse tree
+	 */
+	void exitForUpdate(vg_langParser.ForUpdateContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#whileStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterWhileStatement(vg_langParser.WhileStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#whileStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitWhileStatement(vg_langParser.WhileStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#doWhileStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterDoWhileStatement(vg_langParser.DoWhileStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#doWhileStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#arrayLiteral}.
 	 * @param ctx the parse tree
 	 */

@@ -11,7 +11,34 @@ statement
     | ifStatement
     | expressionStatement
     | constDeclaration
+    | forStatement
+    | whileStatement
+    | doWhileStatement
     ;
+
+    forStatement
+        : 'for' '(' forInit? ';' forCondition? ';' forUpdate? ')' block
+        ;
+
+    forInit
+        : variableDeclaration
+        | assignment
+        ;
+
+    forCondition
+        : expression
+        ;
+
+    forUpdate
+        : assignment
+        ;
+whileStatement
+    : 'while' '(' expression ')' block
+    ;
+doWhileStatement
+    : 'do' block 'while' '(' expression ')' ';'
+    ;
+
 
 arrayLiteral
     : '[' (expression (',' expression)*)? ']'
