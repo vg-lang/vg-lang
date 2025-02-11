@@ -11,7 +11,34 @@ statement
     | ifStatement
     | expressionStatement
     | constDeclaration
+    | forStatement
+    | whileStatement
+    | doWhileStatement
     ;
+
+    forStatement
+        : 'for' '(' forInit? ';' forCondition? ';' forUpdate? ')' block
+        ;
+
+    forInit
+        : variableDeclarationNoSemi
+        | assignmentNoSemi
+        ;
+
+    forCondition
+        : expression
+        ;
+
+    forUpdate
+        : assignmentNoSemi
+        ;
+whileStatement
+    : 'while' '(' expression ')' block
+    ;
+doWhileStatement
+    : 'do' block 'while' '(' expression ')' ';'
+    ;
+
 
 arrayLiteral
     : '[' (expression (',' expression)*)? ']'
@@ -20,11 +47,17 @@ arrayLiteral
 variableDeclaration
     : 'var' IDENTIFIER '=' expression ';'
     ;
+variableDeclarationNoSemi
+    : 'var' IDENTIFIER '=' expression
+    ;
 constDeclaration
    : 'const' IDENTIFIER '=' expression ';'
    ;
 assignment
     : leftHandSide '=' expression ';'
+    ;
+assignmentNoSemi
+    : leftHandSide '=' expression
     ;
 leftHandSide
     : IDENTIFIER ( '[' expression ']' )*

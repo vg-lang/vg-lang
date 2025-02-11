@@ -39,6 +39,14 @@ public class Interpreter extends vg_langBaseVisitor {
         return null;
     }
     @Override
+    public Object visitVariableDeclarationNoSemi(vg_langParser.VariableDeclarationNoSemiContext ctx) {
+        String varName = ctx.IDENTIFIER().getText();
+        Object value = visit(ctx.expression());
+        currentSymbolTable().set(varName, value);
+        return null;
+    }
+
+    @Override
     public Object visitConstDeclaration(vg_langParser.ConstDeclarationContext ctx) {
         String constName = ctx.IDENTIFIER().getText();
         Object value = visit(ctx.expression());
@@ -56,6 +64,17 @@ public class Interpreter extends vg_langBaseVisitor {
 
         varRef.setValue(value);
         return null;
+    }
+    @Override
+    public Object visitAssignmentNoSemi(vg_langParser.AssignmentNoSemiContext ctx) {
+        // Use the same logic as the regular assignment.
+        VariableReference varRef = (VariableReference) visit(ctx.leftHandSide());
+        if (varRef.isConstant()) {
+            throw new RuntimeException("Cannot reassign to a constant variable '" + varRef.getName() + "'.");
+        }
+        Object value = visit(ctx.expression());
+        varRef.setValue(value);
+        return value;
     }
 
     @Override
@@ -441,6 +460,56 @@ public class Interpreter extends vg_langBaseVisitor {
             elements.add(value);
         }
         return elements;
+    }
+    @Override
+    public Object visitForStatement(vg_langParser.ForStatementContext ctx) {
+        // 1) Create a new scope for the entire for-loop.
+        //    This ensures that variables declared in the init are
+        //    not accessible outside of the for loop.
+        symbolTableStack.push(new SymbolTable());
+
+        // 2) Execute the initialization part (if present).
+        if (ctx.forInit() != null) {
+            visit(ctx.forInit());
+        }
+
+
+        while (true) {
+            // If there is a condition, evaluate it. If it's false, break out.
+            if (ctx.forCondition() != null) {
+                Object conditionValue = visit(ctx.forCondition());
+                if (!toBoolean(conditionValue)) {
+                    break;
+                }
+            }
+
+
+            visit(ctx.block());
+            if (ctx.forUpdate() != null) {
+                visit(ctx.forUpdate());
+            }
+        }
+
+        // 6) Pop the for-loop’s scope.
+        symbolTableStack.pop();
+        return null;
+    }
+    @Override
+    public Object visitWhileStatement(vg_langParser.WhileStatementContext ctx) {
+
+        while (toBoolean(visit(ctx.expression()))) {
+
+            visit(ctx.block());
+        }
+        return null;
+    }
+    @Override
+    public Object visitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx) {
+        do {
+
+            visit(ctx.block());
+        } while (toBoolean(visit(ctx.expression()))); // Re-check condition at the end
+        return null;
     }
 
 }

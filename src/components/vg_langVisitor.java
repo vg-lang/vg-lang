@@ -23,6 +23,42 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitStatement(vg_langParser.StatementContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#forStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForStatement(vg_langParser.ForStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#forInit}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForInit(vg_langParser.ForInitContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#forCondition}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForCondition(vg_langParser.ForConditionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#forUpdate}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForUpdate(vg_langParser.ForUpdateContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#whileStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitWhileStatement(vg_langParser.WhileStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#doWhileStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#arrayLiteral}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -35,6 +71,12 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitVariableDeclaration(vg_langParser.VariableDeclarationContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#variableDeclarationNoSemi}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitVariableDeclarationNoSemi(vg_langParser.VariableDeclarationNoSemiContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#constDeclaration}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -46,6 +88,12 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitAssignment(vg_langParser.AssignmentContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#assignmentNoSemi}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAssignmentNoSemi(vg_langParser.AssignmentNoSemiContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vg_langParser#leftHandSide}.
 	 * @param ctx the parse tree
