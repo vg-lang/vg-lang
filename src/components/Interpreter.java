@@ -43,7 +43,7 @@ public class Interpreter extends vg_langBaseVisitor {
         String constName = ctx.IDENTIFIER().getText();
         Object value = visit(ctx.expression());
         SymbolTable currentTable = currentSymbolTable();
-        currentTable.setConstant(constName, value); // a method that sets a variable and marks it as const
+        currentTable.setConstant(constName, value);
         return null;
     }
     @Override

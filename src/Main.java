@@ -8,7 +8,7 @@ public class Main {
 
     public static void main(String[] args) {
         try {
-            // Check if the user provided any arguments
+
             Interpreter interpreter = new Interpreter();
             if (args.length > 0) {
 
@@ -18,7 +18,6 @@ public class Main {
                     // Display the help menu
                     showHelp();
                 }
-
                 else {
                     // Proceed with interpreting the provided file
                     String filePath = args[0];
@@ -39,7 +38,6 @@ public class Main {
         }
 
     }
-
     // Method to display the help menu
     private static void showHelp() {
         System.out.println("Usage: vg lang  <file.vg> [options]");
@@ -48,6 +46,4 @@ public class Main {
         System.out.println("  <file.vg>  The vg source file to interpret");
 
     }
-
-
 }
