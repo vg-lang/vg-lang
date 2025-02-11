@@ -3,10 +3,10 @@ name: mkdocs-deploy
 on:
   push:
     branches:
-      - website
+      - website  # Only run on the 'website' branch
 
 permissions:
-  contents: write
+  contents: write  # Allows pushing to gh-pages
 
 jobs:
   build-and-deploy:
@@ -24,5 +24,6 @@ jobs:
         run: |
           pip install mkdocs mkdocs-material pillow cairosvg
 
-      - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force
+      - name: Build and Deploy
+        run: |
+          mkdocs gh-deploy --force
