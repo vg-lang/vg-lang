@@ -21,8 +21,8 @@ statement
         ;
 
     forInit
-        : variableDeclaration
-        | assignment
+        : variableDeclarationNoSemi
+        | assignmentNoSemi
         ;
 
     forCondition
@@ -30,7 +30,7 @@ statement
         ;
 
     forUpdate
-        : assignment
+        : assignmentNoSemi
         ;
 whileStatement
     : 'while' '(' expression ')' block
@@ -47,11 +47,17 @@ arrayLiteral
 variableDeclaration
     : 'var' IDENTIFIER '=' expression ';'
     ;
+variableDeclarationNoSemi
+    : 'var' IDENTIFIER '=' expression
+    ;
 constDeclaration
    : 'const' IDENTIFIER '=' expression ';'
    ;
 assignment
     : leftHandSide '=' expression ';'
+    ;
+assignmentNoSemi
+    : leftHandSide '=' expression
     ;
 leftHandSide
     : IDENTIFIER ( '[' expression ']' )*

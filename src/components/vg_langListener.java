@@ -108,6 +108,16 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitVariableDeclaration(vg_langParser.VariableDeclarationContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#variableDeclarationNoSemi}.
+	 * @param ctx the parse tree
+	 */
+	void enterVariableDeclarationNoSemi(vg_langParser.VariableDeclarationNoSemiContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#variableDeclarationNoSemi}.
+	 * @param ctx the parse tree
+	 */
+	void exitVariableDeclarationNoSemi(vg_langParser.VariableDeclarationNoSemiContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#constDeclaration}.
 	 * @param ctx the parse tree
 	 */
@@ -127,6 +137,16 @@ public interface vg_langListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitAssignment(vg_langParser.AssignmentContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#assignmentNoSemi}.
+	 * @param ctx the parse tree
+	 */
+	void enterAssignmentNoSemi(vg_langParser.AssignmentNoSemiContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#assignmentNoSemi}.
+	 * @param ctx the parse tree
+	 */
+	void exitAssignmentNoSemi(vg_langParser.AssignmentNoSemiContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vg_langParser#leftHandSide}.
 	 * @param ctx the parse tree

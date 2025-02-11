@@ -39,6 +39,14 @@ public class Interpreter extends vg_langBaseVisitor {
         return null;
     }
     @Override
+    public Object visitVariableDeclarationNoSemi(vg_langParser.VariableDeclarationNoSemiContext ctx) {
+        String varName = ctx.IDENTIFIER().getText();
+        Object value = visit(ctx.expression());
+        currentSymbolTable().set(varName, value);
+        return null;
+    }
+
+    @Override
     public Object visitConstDeclaration(vg_langParser.ConstDeclarationContext ctx) {
         String constName = ctx.IDENTIFIER().getText();
         Object value = visit(ctx.expression());
@@ -56,6 +64,17 @@ public class Interpreter extends vg_langBaseVisitor {
 
         varRef.setValue(value);
         return null;
+    }
+    @Override
+    public Object visitAssignmentNoSemi(vg_langParser.AssignmentNoSemiContext ctx) {
+        // Use the same logic as the regular assignment.
+        VariableReference varRef = (VariableReference) visit(ctx.leftHandSide());
+        if (varRef.isConstant()) {
+            throw new RuntimeException("Cannot reassign to a constant variable '" + varRef.getName() + "'.");
+        }
+        Object value = visit(ctx.expression());
+        varRef.setValue(value);
+        return value;
     }
 
     @Override

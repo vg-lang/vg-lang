@@ -137,6 +137,18 @@ public class vg_langBaseListener implements vg_langListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterVariableDeclarationNoSemi(vg_langParser.VariableDeclarationNoSemiContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitVariableDeclarationNoSemi(vg_langParser.VariableDeclarationNoSemiContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterConstDeclaration(vg_langParser.ConstDeclarationContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -156,6 +168,18 @@ public class vg_langBaseListener implements vg_langListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitAssignment(vg_langParser.AssignmentContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterAssignmentNoSemi(vg_langParser.AssignmentNoSemiContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAssignmentNoSemi(vg_langParser.AssignmentNoSemiContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
