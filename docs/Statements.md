@@ -6,6 +6,7 @@ VG Language consists of **statements**, which include:
 - Print statements
 - Conditional statements
 - Loops
+- Functions
 
 Example:
 ```vg
