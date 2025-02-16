@@ -28,6 +28,36 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitStatement(vg_langParser.StatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#functionDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterFunctionDeclaration(vg_langParser.FunctionDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#functionDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitFunctionDeclaration(vg_langParser.FunctionDeclarationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#parameterList}.
+	 * @param ctx the parse tree
+	 */
+	void enterParameterList(vg_langParser.ParameterListContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#parameterList}.
+	 * @param ctx the parse tree
+	 */
+	void exitParameterList(vg_langParser.ParameterListContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#returnStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterReturnStatement(vg_langParser.ReturnStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#returnStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitReturnStatement(vg_langParser.ReturnStatementContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#forStatement}.
 	 * @param ctx the parse tree
 	 */
@@ -307,6 +337,36 @@ public interface vg_langListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitPrimary(vg_langParser.PrimaryContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#functionCall}.
+	 * @param ctx the parse tree
+	 */
+	void enterFunctionCall(vg_langParser.FunctionCallContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#functionCall}.
+	 * @param ctx the parse tree
+	 */
+	void exitFunctionCall(vg_langParser.FunctionCallContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#functionReference}.
+	 * @param ctx the parse tree
+	 */
+	void enterFunctionReference(vg_langParser.FunctionReferenceContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#functionReference}.
+	 * @param ctx the parse tree
+	 */
+	void exitFunctionReference(vg_langParser.FunctionReferenceContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#argumentList}.
+	 * @param ctx the parse tree
+	 */
+	void enterArgumentList(vg_langParser.ArgumentListContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#argumentList}.
+	 * @param ctx the parse tree
+	 */
+	void exitArgumentList(vg_langParser.ArgumentListContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vg_langParser#literal}.
 	 * @param ctx the parse tree

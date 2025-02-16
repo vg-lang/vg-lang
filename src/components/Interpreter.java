@@ -1,5 +1,7 @@
 package components;
 
+import org.antlr.v4.runtime.tree.TerminalNode;
+
 import java.util.*;
 
 public class Interpreter extends vg_langBaseVisitor {
@@ -30,6 +32,114 @@ public class Interpreter extends vg_langBaseVisitor {
 
         symbolTableStack.peek().set(name, value);
     }
+
+    @Override
+    public Object visitProgram(vg_langParser.ProgramContext ctx) {
+
+        for (vg_langParser.StatementContext stmtCtx : ctx.statement()) {
+            if (stmtCtx.functionDeclaration() != null) {
+                visit(stmtCtx.functionDeclaration());
+
+            }
+
+        }
+
+
+        for (vg_langParser.StatementContext stmtCtx : ctx.statement()) {
+            if (stmtCtx.functionDeclaration() == null) {
+                visit(stmtCtx);
+            }
+        }
+        return null;
+    }
+    @Override
+    public Object visitFunctionDeclaration(vg_langParser.FunctionDeclarationContext ctx) {
+        String functionName = ctx.IDENTIFIER().getText();
+        List<String> parameters = new ArrayList<>();
+        if (ctx.parameterList() != null) {
+            for (TerminalNode paramNode : ctx.parameterList().IDENTIFIER()) {
+                parameters.add(paramNode.getText());
+            }
+        }
+        Function function = new Function(parameters, ctx.block(), this);
+
+        symbolTableStack.getLast().setFunction(functionName, function);
+        return null;
+    }
+    @Override
+    public Object visitFunctionCall(vg_langParser.FunctionCallContext ctx) {
+        String functionName;
+        if (ctx.IDENTIFIER() != null) {
+            functionName = ctx.IDENTIFIER().getText();
+
+        } else {
+            throw new RuntimeException("Invalid function call.");
+        }
+
+
+        List<vg_langParser.ExpressionContext> argExprs = ctx.argumentList() != null ? ctx.argumentList().expression() : Collections.emptyList();
+        List<Object> argValues = new ArrayList<>();
+        for (vg_langParser.ExpressionContext exprCtx : argExprs) {
+            Object argValue = visit(exprCtx);
+            argValues.add(argValue);
+        }
+
+
+
+
+        Function function = null;
+
+
+
+
+        for (SymbolTable table : symbolTableStack) {
+            if (table.containsFunction(functionName)) {
+                function = table.getFunction(functionName);
+                break;
+            }
+        }
+
+
+        if (function == null) {
+            int line = ctx.getStart().getLine(); // from ANTLR
+            throw new RuntimeException("Function '" + functionName + "' is not defined at line: "+line);
+        }
+
+
+        List<String> parameters = function.getParameters();
+
+        if (argValues.size() != parameters.size()) {
+            int line = ctx.getStart().getLine(); // from ANTLR
+            throw new RuntimeException("at line: "+ line + " Function '" + functionName + "' expects " + parameters.size() + " arguments but got " + argValues.size());
+        }
+
+
+
+
+        SymbolTable functionSymbolTable = new SymbolTable();
+
+        symbolTableStack.push(functionSymbolTable);
+
+
+        for (int i = 0; i < parameters.size(); i++) {
+            functionSymbolTable.set(parameters.get(i), argValues.get(i));
+        }
+
+        Object returnValue = null;
+        try {
+
+            visit(function.getBlock());
+        } catch (ReturnException e) {
+
+            returnValue = e.getValue();
+        } finally {
+
+            symbolTableStack.pop();
+        }
+
+        return returnValue;
+    }
+
     @Override
     public Object visitVariableDeclaration(vg_langParser.VariableDeclarationContext ctx) {
         String varName = ctx.IDENTIFIER().getText();
@@ -356,6 +466,9 @@ public class Interpreter extends vg_langBaseVisitor {
                 return getVariable(varName);
         }  else if (ctx.expression() != null) {
             return visit(ctx.expression());
+        }
+        else if (ctx.functionCall() != null) {
+            return visit(ctx.functionCall());
         }
         return null;
     }

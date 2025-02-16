@@ -77,3 +77,11 @@ print("--------------Comments ---------------");
 
 var x = 100; ## Declaring x
 print(x);    ## Printing x
+
+print("-----------functions-----------------");
+function nameprinter(name){
+print("Hello: ",name);
+}
+
+nameprinter("test user 1");
+nameprinter("test user 2");
