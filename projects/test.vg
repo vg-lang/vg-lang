@@ -10,7 +10,7 @@ print(x); ## Outputs 15
 print("--------------constants---------------");
 const PI = 3.14;
 var radius = 5;
-var area = PI * radius * radius;
+var area = PI * (radius * radius);
 print(area); ## Outputs 78.5
 ## if statements
 print("--------------if statements---------------");

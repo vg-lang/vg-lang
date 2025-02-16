@@ -12,9 +12,24 @@ statement
     | expressionStatement
     | constDeclaration
     | forStatement
+    | functionDeclaration
+    | returnStatement
     | whileStatement
     | doWhileStatement
     ;
+
+    functionDeclaration
+        : 'function' IDENTIFIER '(' parameterList? ')' block
+        ;
+
+
+    parameterList
+        : IDENTIFIER (',' IDENTIFIER)*
+        ;
+
+    returnStatement
+        : 'return' expression? ';'
+        ;
 
     forStatement
         : 'for' '(' forInit? ';' forCondition? ';' forUpdate? ')' block
@@ -120,7 +135,22 @@ postfixExpression
  primary : literal
     | IDENTIFIER
     | '(' expression ')'
+    | functionCall
+    | functionReference
     ;
+
+    functionCall
+        : (IDENTIFIER) '(' argumentList? ')'
+        ;
+
+    functionReference
+        : '&' IDENTIFIER '(' argumentList? ')'
+        ;
+
+    argumentList
+        : expression (',' expression)*
+        ;
+
 
  literal
      : INT
