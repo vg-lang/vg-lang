@@ -7,3 +7,4 @@
 
    ```sh
    vg my_script.vg
+   ```
