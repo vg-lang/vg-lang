@@ -37,7 +37,7 @@ nav:
       - Installation: installation.md
       - Commands: commands.md
   - Syntax:
-      - Statements: statements.md
+      - Statements: Statements.md
       - Expressions: Expressions.md
       - Control Flow:
           - If Statements: if-statements.md
