@@ -31,7 +31,7 @@ plugins:
   - search
 
 nav:
-  - Home: index.md
+  - Home: Index.md
   - Introduction:
       - Overview: Introduction.md
       - Installation: installation.md
