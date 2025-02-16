@@ -33,7 +33,7 @@ plugins:
 nav:
   - Home: index.md
   - Introduction:
-      - Overview: introduction.md
+      - Overview: Introduction.md
       - Installation: installation.md
       - Commands: commands.md
   - Syntax:

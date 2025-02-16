@@ -11,5 +11,5 @@ Example:
 ```vg
 var x = 10;
 print(x);
-````
+```
 

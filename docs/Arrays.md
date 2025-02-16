@@ -42,4 +42,4 @@ items[1] = "blueberry";
 
 print(items); ## Output: ["apple", "blueberry", "cherry"]
 
-````
+```
