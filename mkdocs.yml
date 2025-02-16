@@ -34,7 +34,7 @@ nav:
   - Home: index.md
   - Introduction:
       - Overview: Introduction.md
-      - Installation: installation.md
+      - Installation: Installation.md
       - Commands: commands.md
   - Syntax:
       - Statements: Statements.md
