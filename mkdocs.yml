@@ -46,10 +46,10 @@ nav:
               - While Loop: while-loop.md
               - Do-While Loop: do-while-loop.md
       - Variables:
-          - Variable Declaration: variables.md
-          - Constants: constants.md
-      - Arrays: arrays.md
-      - Comments: comments.md
+          - Variable Declaration: Variables.md
+          - Constants: Constants.md
+      - Arrays: Arrays.md
+      - Comments: Comments.md
 
 
 markdown_extensions:
