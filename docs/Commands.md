@@ -9,13 +9,13 @@ To execute a VG script, use:
 
 ```sh
 vg <file.vg> [options]
-````
+```
 ## **Help Command**
 To display the help command, use:
 
 ```sh
 vg --help
-````
+```
 that would display the following:
 ```sh 
 Usage: vg <file.vg> [options]
