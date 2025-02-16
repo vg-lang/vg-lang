@@ -35,7 +35,7 @@ nav:
   - Introduction:
       - Overview: Introduction.md
       - Installation: Installation.md
-      - Commands: commands.md
+      - Commands: Commands.md
   - Syntax:
       - Statements: Statements.md
       - Expressions: Expressions.md
