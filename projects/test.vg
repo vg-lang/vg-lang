@@ -1,0 +1,77 @@
+## variables
+print("--------------variables---------------");
+var x = 10;
+var y = 5;
+x = x + y;
+print(x); ## Outputs 15
+## constants
+print("--------------constants---------------");
+const PI = 3.14;
+var radius = 5;
+var area = PI * radius * radius;
+print(area); ## Outputs 78.5
+## if statements
+print("--------------if statements---------------");
+var num = 10;
+if (num > 0) {
+    print("Positive");
+} else if (num < 0) {
+    print("Negative");
+} else {
+    print("Zero");
+}
+## for loop
+print("--------------for loops---------------");
+for (var i = 0; i < 5; i = i + 1) {
+    print("Iteration:", i);
+}
+## while loop
+print("--------------while loop---------------");
+var count = 3;
+while (count > 0) {
+    print("Countdown:", count);
+    count = count - 1;
+}
+print("Go!");
+## do while loop
+print("--------------do while loop---------------");
+var number = 0;
+do {
+    print("Number:", number);
+    number = number + 1;
+} while (number < 3);
+## arrays
+print("--------------arrays---------------");
+var arr = [10, 20, 30, 40];
+print(arr[0]); ## Outputs 10
+arr[1] = 50;
+print(arr[1]); ## Outputs 50
+## nested loops
+for (var i = 1; i <= 3; i = i + 1) {
+    for (var j = 1; j <= 3; j = j + 1) {
+        if (i == j) {
+            print("Equal:", i, j);
+        } else {
+            print("Not Equal:", i, j);
+        }
+    }
+}
+## logical operations
+print("--------------Logical Operations---------------");
+var a = 1;
+var b = 0;
+print(a && b);  ## Outputs false
+print(a || b);  ## Outputs true
+print(!a);      ## Outputs false
+
+## comments
+print("--------------Comments ---------------");
+## This is a single-line comment
+
+/#
+   This is a
+   multi-line comment
+#/
+
+var x = 100; ## Declaring x
+print(x);    ## Printing x
