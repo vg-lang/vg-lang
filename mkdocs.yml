@@ -32,10 +32,25 @@ plugins:
 
 nav:
   - Home: index.md
-  - Introduction: Introduction.md
-  - Reference:
+  - Introduction:
+      - Overview: introduction.md
+      - Installation: installation.md
+      - Commands: commands.md
+  - Syntax:
       - Statements: statements.md
-      - Grammar: grammar.md
+      - Expressions: Expressions.md
+      - Control Flow:
+          - If Statements: if-statements.md
+          - Loops:
+              - For Loop: for-loop.md
+              - While Loop: while-loop.md
+              - Do-While Loop: do-while-loop.md
+      - Variables:
+          - Variable Declaration: variables.md
+          - Constants: constants.md
+      - Arrays: arrays.md
+      - Comments: comments.md
+
 
 markdown_extensions:
   - pymdownx.highlight:
