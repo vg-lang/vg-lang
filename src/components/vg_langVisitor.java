@@ -227,6 +227,30 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitArgumentList(vg_langParser.ArgumentListContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#tryStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTryStatement(vg_langParser.TryStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#catchStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitCatchStatement(vg_langParser.CatchStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#finallyStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitFinallyStatement(vg_langParser.FinallyStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#throwStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitThrowStatement(vg_langParser.ThrowStatementContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

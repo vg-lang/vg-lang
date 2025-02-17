@@ -368,6 +368,46 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitArgumentList(vg_langParser.ArgumentListContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#tryStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterTryStatement(vg_langParser.TryStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#tryStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitTryStatement(vg_langParser.TryStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#catchStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterCatchStatement(vg_langParser.CatchStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#catchStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitCatchStatement(vg_langParser.CatchStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#finallyStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterFinallyStatement(vg_langParser.FinallyStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#finallyStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitFinallyStatement(vg_langParser.FinallyStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#throwStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterThrowStatement(vg_langParser.ThrowStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#throwStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitThrowStatement(vg_langParser.ThrowStatementContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#literal}.
 	 * @param ctx the parse tree
 	 */

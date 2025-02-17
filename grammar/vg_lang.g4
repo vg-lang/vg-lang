@@ -14,6 +14,8 @@ statement
     | forStatement
     | functionDeclaration
     | returnStatement
+    | tryStatement
+    | throwStatement
     | whileStatement
     | doWhileStatement
     ;
@@ -150,6 +152,22 @@ postfixExpression
     argumentList
         : expression (',' expression)*
         ;
+
+tryStatement
+    : 'try' block catchStatement+ finallyStatement?
+    ;
+
+catchStatement
+    : 'catch' '(' IDENTIFIER ')' block
+    ;
+
+finallyStatement
+    : 'finally' block
+    ;
+
+throwStatement
+    : 'throw' expression ';'
+    ;
 
 
  literal

@@ -6,9 +6,11 @@ import java.util.*;
 
 public class Interpreter extends vg_langBaseVisitor {
     public Deque<SymbolTable> symbolTableStack = new ArrayDeque<>();
+
     public Interpreter() {
         symbolTableStack.push(new SymbolTable());
     }
+
     private SymbolTable currentSymbolTable() {
         return symbolTableStack.peek();
     }
@@ -21,6 +23,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         throw new RuntimeException("Variable '" + name + "' is not defined.");
     }
+
     private void setVariable(String name, Object value) {
 
         for (SymbolTable table : symbolTableStack) {
@@ -52,6 +55,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return null;
     }
+
     @Override
     public Object visitFunctionDeclaration(vg_langParser.FunctionDeclarationContext ctx) {
         String functionName = ctx.IDENTIFIER().getText();
@@ -66,6 +70,7 @@ public class Interpreter extends vg_langBaseVisitor {
         symbolTableStack.getLast().setFunction(functionName, function);
         return null;
     }
+
     @Override
     public Object visitFunctionCall(vg_langParser.FunctionCallContext ctx) {
         String functionName;
@@ -85,11 +90,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
 
 
-
-
         Function function = null;
-
-
 
 
         for (SymbolTable table : symbolTableStack) {
@@ -102,7 +103,7 @@ public class Interpreter extends vg_langBaseVisitor {
 
         if (function == null) {
             int line = ctx.getStart().getLine(); // from ANTLR
-            throw new RuntimeException("Function '" + functionName + "' is not defined at line: "+line);
+            throw new RuntimeException("Function '" + functionName + "' is not defined at line: " + line);
         }
 
 
@@ -110,10 +111,8 @@ public class Interpreter extends vg_langBaseVisitor {
 
         if (argValues.size() != parameters.size()) {
             int line = ctx.getStart().getLine(); // from ANTLR
-            throw new RuntimeException("at line: "+ line + " Function '" + functionName + "' expects " + parameters.size() + " arguments but got " + argValues.size());
+            throw new RuntimeException("at line: " + line + " Function '" + functionName + "' expects " + parameters.size() + " arguments but got " + argValues.size());
         }
-
-
 
 
         SymbolTable functionSymbolTable = new SymbolTable();
@@ -148,6 +147,7 @@ public class Interpreter extends vg_langBaseVisitor {
         currentSymbolTable().set(varName, value);
         return null;
     }
+
     @Override
     public Object visitVariableDeclarationNoSemi(vg_langParser.VariableDeclarationNoSemiContext ctx) {
         String varName = ctx.IDENTIFIER().getText();
@@ -164,6 +164,7 @@ public class Interpreter extends vg_langBaseVisitor {
         currentTable.setConstant(constName, value);
         return null;
     }
+
     @Override
     public Object visitAssignment(vg_langParser.AssignmentContext ctx) {
         VariableReference varRef = (VariableReference) visit(ctx.leftHandSide());
@@ -175,6 +176,7 @@ public class Interpreter extends vg_langBaseVisitor {
         varRef.setValue(value);
         return null;
     }
+
     @Override
     public Object visitAssignmentNoSemi(vg_langParser.AssignmentNoSemiContext ctx) {
         // Use the same logic as the regular assignment.
@@ -216,9 +218,7 @@ public class Interpreter extends vg_langBaseVisitor {
             }
 
             return new VariableReference(targetTable, varName, indices);
-        }
-
-         else {
+        } else {
             throw new RuntimeException("Invalid assignment target.");
         }
     }
@@ -271,6 +271,7 @@ public class Interpreter extends vg_langBaseVisitor {
 
         return value != null;
     }
+
     @Override
     public Object visitLogicalOrExpression(vg_langParser.LogicalOrExpressionContext ctx) {
         Object left = visit(ctx.logicalAndExpression(0));
@@ -283,6 +284,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return left;
     }
+
     @Override
     public Object visitEqualityExpression(vg_langParser.EqualityExpressionContext ctx) {
         Object left = visit(ctx.relationalExpression(0));
@@ -302,6 +304,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return left;
     }
+
     @Override
     public Object visitRelationalExpression(vg_langParser.RelationalExpressionContext ctx) {
         Object left = visit(ctx.additiveExpression(0));
@@ -332,6 +335,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return left;
     }
+
     @Override
     public Object visitAdditiveExpression(vg_langParser.AdditiveExpressionContext ctx) {
         Object result = visit(ctx.multiplicativeExpression(0));
@@ -345,6 +349,7 @@ public class Interpreter extends vg_langBaseVisitor {
 
         return result;
     }
+
     @Override
     public Object visitMultiplicativeExpression(vg_langParser.MultiplicativeExpressionContext ctx) {
         Object result = visit(ctx.unaryExpression(0));
@@ -358,6 +363,7 @@ public class Interpreter extends vg_langBaseVisitor {
 
         return result;
     }
+
     private Object evaluateArithmetic(Object left, Object right, String operator) {
         if (left instanceof List || right instanceof List) {
             throw new RuntimeException("Cannot perform arithmetic operations on arrays.");
@@ -426,6 +432,7 @@ public class Interpreter extends vg_langBaseVisitor {
                 throw new RuntimeException("Unknown operator '" + operator + "'.");
         }
     }
+
     @Override
     public Object visitUnaryExpression(vg_langParser.UnaryExpressionContext ctx) {
         if (ctx.unaryExpression() != null) {
@@ -457,21 +464,22 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return null;
     }
+
     @Override
     public Object visitPrimary(vg_langParser.PrimaryContext ctx) {
         if (ctx.literal() != null) {
             return visit(ctx.literal());
         } else if (ctx.IDENTIFIER() != null) {
             String varName = ctx.IDENTIFIER().getText();
-                return getVariable(varName);
-        }  else if (ctx.expression() != null) {
+            return getVariable(varName);
+        } else if (ctx.expression() != null) {
             return visit(ctx.expression());
-        }
-        else if (ctx.functionCall() != null) {
+        } else if (ctx.functionCall() != null) {
             return visit(ctx.functionCall());
         }
         return null;
     }
+
     private String unescapeString(String str) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < str.length(); i++) {
@@ -524,6 +532,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return sb.toString();
     }
+
     @Override
     public Object visitLiteral(vg_langParser.LiteralContext ctx) {
         if (ctx.INT() != null) {
@@ -539,12 +548,12 @@ public class Interpreter extends vg_langBaseVisitor {
             return true;
         } else if (ctx.FALSE() != null) {
             return false;
-        }
-        else if (ctx.arrayLiteral() != null) {
+        } else if (ctx.arrayLiteral() != null) {
             return visit(ctx.arrayLiteral());
         }
         return null;
     }
+
     @Override
     public Object visitPostfixExpression(vg_langParser.PostfixExpressionContext ctx) {
         Object value = visit(ctx.primary());
@@ -565,6 +574,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return value;
     }
+
     @Override
     public Object visitArrayLiteral(vg_langParser.ArrayLiteralContext ctx) {
         List<Object> elements = new ArrayList<>();
@@ -574,6 +584,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return elements;
     }
+
     @Override
     public Object visitForStatement(vg_langParser.ForStatementContext ctx) {
         // 1) Create a new scope for the entire for-loop.
@@ -607,6 +618,7 @@ public class Interpreter extends vg_langBaseVisitor {
         symbolTableStack.pop();
         return null;
     }
+
     @Override
     public Object visitWhileStatement(vg_langParser.WhileStatementContext ctx) {
 
@@ -616,6 +628,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return null;
     }
+
     @Override
     public Object visitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx) {
         do {
@@ -625,4 +638,48 @@ public class Interpreter extends vg_langBaseVisitor {
         return null;
     }
 
+    @Override
+    public Object visitThrowStatement(vg_langParser.ThrowStatementContext ctx) {
+        Object value = visit(ctx.expression());
+        throw new RuntimeException((String) value);
+    }
+
+    @Override
+    public Object visitTryStatement(vg_langParser.TryStatementContext ctx) {
+        try {
+            visit(ctx.block());
+        } catch (RuntimeException e) {
+            boolean handled = false;
+            for (vg_langParser.CatchStatementContext catchCtx : ctx.catchStatement()) {
+                String exceptionVar = catchCtx.IDENTIFIER().getText();
+
+                SymbolTable catchSymbolTable = new SymbolTable();
+                symbolTableStack.push(catchSymbolTable);
+
+                String exceptionMessage = e.getMessage() != null ? e.getMessage() : "An error occurred";
+
+
+                String exceptionOutput = exceptionMessage;
+                catchSymbolTable.set(exceptionVar, exceptionOutput);
+                try {
+
+                    visit(catchCtx.block());
+                    handled = true;
+                    break;
+                } finally {
+                    symbolTableStack.pop();
+                }
+            }
+            if (!handled) {
+                throw e;
+            }
+        } finally {
+
+            if (ctx.finallyStatement() != null) {
+                visit(ctx.finallyStatement().block());
+            }
+        }
+        return null;
+    }
 }
+
