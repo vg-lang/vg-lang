@@ -138,6 +138,14 @@ public class Interpreter extends vg_langBaseVisitor {
 
         return returnValue;
     }
+    @Override
+    public Object visitReturnStatement(vg_langParser.ReturnStatementContext ctx) {
+        Object returnValue = null;
+        if (ctx.expression() != null) {
+            returnValue = visit(ctx.expression());
+        }
+        throw new ReturnException(returnValue);
+    }
 
     @Override
     public Object visitVariableDeclaration(vg_langParser.VariableDeclarationContext ctx) {
