@@ -23,6 +23,24 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitStatement(vg_langParser.StatementContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#functionDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitFunctionDeclaration(vg_langParser.FunctionDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#parameterList}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitParameterList(vg_langParser.ParameterListContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#returnStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitReturnStatement(vg_langParser.ReturnStatementContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#forStatement}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -190,6 +208,48 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitPrimary(vg_langParser.PrimaryContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#functionCall}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitFunctionCall(vg_langParser.FunctionCallContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#functionReference}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitFunctionReference(vg_langParser.FunctionReferenceContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#argumentList}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitArgumentList(vg_langParser.ArgumentListContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#tryStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTryStatement(vg_langParser.TryStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#catchStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitCatchStatement(vg_langParser.CatchStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#finallyStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitFinallyStatement(vg_langParser.FinallyStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#throwStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitThrowStatement(vg_langParser.ThrowStatementContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vg_langParser#literal}.
 	 * @param ctx the parse tree
