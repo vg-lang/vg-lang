@@ -85,3 +85,20 @@ print("Hello: ",name);
 
 nameprinter("test user 1");
 nameprinter("test user 2");
+
+print("-----------try catch and throw -------------");
+function divide(a, b) {
+    if (b == 0) {
+        throw "Division by zero error!";
+    }
+    return a / b;
+}
+
+try {
+    var result = divide(10, 0);
+    print(result);
+} catch (error) {
+    print("Caught an error: ", error);
+} finally {
+    print("Execution completed.");
+}
