@@ -30,8 +30,6 @@ theme:
   favicon: assets/logo.png
 plugins:
   - search
-  - sitemap:
-      base_url: "https://www.vglang.com"
 
 nav:
   - Home: index.md
@@ -69,5 +67,5 @@ markdown_extensions:
   - pymdownx.mark
   - attr_list
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
