@@ -1,5 +1,5 @@
 site_name: VG Language Documentation
-site_url: #/
+site_url: "https://www.vglang.com"
 theme:
   name: material
   features:
@@ -30,6 +30,8 @@ theme:
   favicon: assets/logo.png
 plugins:
   - search
+  - sitemap:
+      base_url: "https://www.vglang.com"
 
 nav:
   - Home: index.md
