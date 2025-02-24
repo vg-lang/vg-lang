@@ -27,7 +27,7 @@ theme:
       primary: teal
       accent: lime
   logo: assets/logo.png
-  favicon: assets/logo.png
+  favicon: assets/favicon.ico
 plugins:
   - search
 
