@@ -1,5 +1,5 @@
-# Statements 
 VG Language consists of statements, which include:
+
 * Variable declarations
 * Constants
 * Arrays
@@ -7,5 +7,5 @@ VG Language consists of statements, which include:
 * Print statements
 * Conditional statements
 * Loops
-* functions
-* try-Catch statements
+* Functions
+* Try-Catch statements
