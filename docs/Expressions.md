@@ -8,7 +8,7 @@ Expressions form the building blocks of VG Language, including:
 Example:
 ```vg
 var result = (10 + 5) * 2;
-print(result);  // Output: 30
+print(result);  ## Output: 30
 ```
 
 

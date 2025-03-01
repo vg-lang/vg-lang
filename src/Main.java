@@ -7,6 +7,7 @@ import components.*;
 public class Main {
 
     public static void main(String[] args) {
+        String versionnumber ="1.2.0";
         try {
 
             Interpreter interpreter = new Interpreter();
@@ -17,6 +18,10 @@ public class Main {
                 if (args[0].equals("--help")) {
                     // Display the help menu
                     showHelp();
+                }
+                else if (args[0].equals("--version")) {
+                    // Display the help menu
+                    displayversion(versionnumber);
                 }
                 else {
                     // Proceed with interpreting the provided file
@@ -40,10 +45,14 @@ public class Main {
     }
     // Method to display the help menu
     private static void showHelp() {
-        System.out.println("Usage: vg lang  <file.vg> [options]");
+        System.out.println("Usage: VG  <file.vg> [options]");
         System.out.println("Options:");
         System.out.println("  --help          Show this help menu");
+        System.out.println("  --version          Show version information");
         System.out.println("  <file.vg>  The vg source file to interpret");
 
+    }
+    private static void displayversion(String versionnumber) {
+        System.out.println("VG Version : "+versionnumber);
     }
 }
