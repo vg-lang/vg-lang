@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="vg">
+    <output-path>$PROJECT_DIR$/out/artifacts/testenmin</output-path>
+    <root id="archive" name="vg lang.jar">
+      <element id="module-output" name="vg lang" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/antlr-4.13.2-complete.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/antlr-runtime-4.13.2.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
