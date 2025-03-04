@@ -1,14 +1,30 @@
 package components;
 
+import com.sun.jdi.InvocationException;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+import java.lang.reflect.AccessibleObject;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class Interpreter extends vg_langBaseVisitor {
     public Deque<SymbolTable> symbolTableStack = new ArrayDeque<>();
-
+    private Map<String, Set<String>> allowedMethods = new HashMap<>();
+    private Set<String> allowedClasses = new HashSet<>();
+    public Map<String,BuiltInFunction> builtInFunction = new HashMap<>();
+    SymbolTable globalSymbolTable;
     public Interpreter() {
-        symbolTableStack.push(new SymbolTable());
+        globalSymbolTable = new SymbolTable();
+        symbolTableStack.push(globalSymbolTable);
+        registerBuiltInFunction();
+        String appPath = System.getProperty("user.dir");
+        String configfilepath = appPath + "/configuration/"+"allowed_configurations.vgenv";
+        loadLangConfigFile(configfilepath);
     }
 
     private SymbolTable currentSymbolTable() {
@@ -22,6 +38,359 @@ public class Interpreter extends vg_langBaseVisitor {
             }
         }
         throw new RuntimeException("Variable '" + name + "' is not defined.");
+    }
+
+    private void registerBuiltInFunction(){
+        BuiltInFunction VgSystemCall = new BuiltInFunction() {
+            @Override
+            public Object call(List<Object> args) {
+                return VgSystemCall(args);
+            }
+        };
+        BuiltInFunctionWrapper wrappedVgSystemCall = new BuiltInFunctionWrapper(VgSystemCall, this);
+        builtInFunction.put("VgSystemCall", VgSystemCall);
+        globalSymbolTable.setFunction("VgSystemCall",wrappedVgSystemCall);
+
+    }
+    private boolean isMethodAllowed(Class<?> vgclass, String methodName) {
+        while (vgclass != null) {
+            String className = vgclass.getName();
+            if(allowedClasses.contains(className)){
+                Set<String> classMethods = allowedMethods.get(className);
+                if(classMethods != null && classMethods.contains(methodName)) {
+                    return true;
+                }
+            }
+            vgclass = vgclass.getSuperclass();
+        }
+        return false;
+    }
+
+    private Constructor<?> findConstructor(Class<?> vgclass, List<Object> args) {
+        for (Constructor<?> constructor : vgclass.getConstructors()) {
+
+            if (constructor.getParameterCount() == args.size()) {
+                if (matchParameterTypes(constructor.getParameterTypes(), args)) {
+                    return constructor;
+                }
+            }
+        }
+        return null;
+    }
+    private boolean matchParameterTypes(Class<?>[] paramTypes, List<Object> args) {
+        for (int i = 0; i < paramTypes.length; i++) {
+            Object arg = args.get(i);
+            Class<?> paramType = paramTypes[i];
+            if (!isAssignable(paramType, arg)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isAssignable(Class<?> paramType, Object arg) {
+        if (arg instanceof LanguageObjectWrapper) {
+            arg = ((LanguageObjectWrapper) arg).getLanguageObject();
+        }
+
+        if (paramType.isPrimitive()) {
+            paramType = getWrappedclasses(paramType);
+        }
+
+        if (arg == null) {
+            return !paramType.isPrimitive();
+        }
+
+        return paramType.isAssignableFrom(arg.getClass());
+    }
+    private Class<?> getWrappedclasses(Class<?> primitiveType) {
+        if (primitiveType == int.class) {
+            return Integer.class;
+        } else if (primitiveType == double.class) {
+            return Double.class;
+        } else if (primitiveType == boolean.class) {
+            return Boolean.class;
+        } else if (primitiveType == char.class) {
+            return Character.class;
+        } else if (primitiveType == long.class) {
+            return Long.class;
+        } else if (primitiveType == short.class) {
+            return Short.class;
+        } else if (primitiveType == byte.class) {
+            return Byte.class;
+        } else if (primitiveType == float.class) {
+            return Float.class;
+        } else {
+            return primitiveType;
+        }
+    }
+
+    private Method findMethod(Class<?> vgclass, String methodName, List<Object> args) {
+        while (vgclass != null) {
+            for (Method method : vgclass.getDeclaredMethods()) {
+                if (method.getName().equals(methodName) && method.getParameterCount() == args.size()) {
+                    if (matchParameterTypes(method.getParameterTypes(), args)) {
+                        return method;
+                    }
+                }
+            }
+            vgclass = vgclass.getSuperclass();
+        }
+        return null;
+    }
+
+
+    private Object[] convertArguments(List<Object> args, AccessibleObject accessibleObject) {
+        Class<?>[] paramTypes;
+        if (accessibleObject instanceof Method) {
+            paramTypes = ((Method) accessibleObject).getParameterTypes();
+        } else if (accessibleObject instanceof Constructor<?>) {
+            paramTypes = ((Constructor<?>) accessibleObject).getParameterTypes();
+        } else {
+            throw new IllegalArgumentException("AccessibleObject must be a Method or Constructor");
+        }
+
+        Object[] javaArgs = new Object[args.size()];
+        for (int i = 0; i < args.size(); i++) {
+            Object arg = args.get(i);
+            Class<?> paramType = paramTypes[i];
+            if (paramType == boolean.class || paramType == Boolean.class) {
+                if (arg instanceof Boolean) {
+                    javaArgs[i] = arg;
+                } else if (arg instanceof Number) {
+                    int num = ((Number) arg).intValue();
+                    if (num == 1) {
+                        javaArgs[i] = true;
+                    } else if (num == 0) {
+                        javaArgs[i] = false;
+                    } else {
+                        throw new RuntimeException("Invalid number for boolean parameter: " + num);
+                    }
+                } else if (arg instanceof String) {
+                    String str = (String) arg;
+                    if (str.equals("1")) {
+                        javaArgs[i] = true;
+                    } else if (str.equals("0")) {
+                        javaArgs[i] = false;
+                    } else {
+                        throw new RuntimeException("Invalid string for boolean parameter: " + str);
+                    }
+                } else {
+                    throw new RuntimeException("Invalid type for boolean parameter: " + arg.getClass().getName());
+                }
+                continue;
+            }
+            if (arg instanceof LanguageObjectWrapper) {
+                arg = ((LanguageObjectWrapper) arg).getLanguageObject();
+            }
+
+
+            if (paramType.isPrimitive()) {
+                paramType = getWrappedclasses(paramType);
+            }
+            // Handle Object[][] conversion
+            if (paramType.isArray() && paramType.getComponentType() == Object.class && arg instanceof List) {
+                List<?> outerList = (List<?>) arg;
+                Object[][] javaArray = new Object[outerList.size()][];
+                for (int j = 0; j < outerList.size(); j++) {
+                    Object inner = outerList.get(j);
+                    if (inner instanceof List) {
+                        List<?> innerList = (List<?>) inner;
+                        Object[] innerArray = new Object[innerList.size()];
+                        for (int k = 0; k < innerList.size(); k++) {
+                            innerArray[k] = innerList.get(k);
+                        }
+                        javaArray[j] = innerArray;
+                    } else {
+                        throw new RuntimeException("Each series must be a list containing a name and values.");
+                    }
+                }
+                javaArgs[i] = javaArray;
+                continue;
+            }
+            if (arg == null) {
+                javaArgs[i] = null;
+            } else if (paramType.isAssignableFrom(arg.getClass())) {
+                javaArgs[i] = arg;
+            } else if (arg instanceof Number) {
+                Number num = (Number) arg;
+                if (paramType == Integer.class) {
+                    javaArgs[i] = num.intValue();
+                } else if (paramType == Double.class) {
+                    javaArgs[i] = num.doubleValue();
+                } else if (paramType == Float.class) {
+                    javaArgs[i] = num.floatValue();
+                } else if (paramType == Long.class) {
+                    javaArgs[i] = num.longValue();
+                } else if (paramType == Short.class) {
+                    javaArgs[i] = num.shortValue();
+                } else if (paramType == Byte.class) {
+                    javaArgs[i] = num.byteValue();
+                } else {
+                    throw new RuntimeException("Cannot convert number to " + paramType.getName());
+                }
+            } else if (paramType == String.class) {
+                javaArgs[i] = arg.toString();
+            } else {
+                throw new RuntimeException("Cannot convert argument of type " + arg.getClass().getName() + " to " + paramType.getName());
+            }
+        }
+        return javaArgs;
+    }
+    private List<Object> convertJavaListToLanguageArray(List<?> javaList) {
+        List<Object> languageArray = new ArrayList<>();
+        for (Object item : javaList) {
+            if (item instanceof List) {
+
+                languageArray.add(convertJavaListToLanguageArray((List<?>) item));
+            } else {
+                languageArray.add(item);
+            }
+        }
+        return languageArray;
+    }
+    private boolean isPrimitiveOrWrapper(Class<?> vgclass) {
+        return vgclass.isPrimitive() ||
+                vgclass == Boolean.class ||
+                vgclass == Byte.class ||
+                vgclass == Character.class ||
+                vgclass == Double.class ||
+                vgclass == Float.class ||
+                vgclass == Integer.class ||
+                vgclass == Long.class ||
+                vgclass == Short.class ||
+                vgclass == String.class ||
+                vgclass == Void.class;
+    }
+
+    private Object VgSystemCall(List<Object> args) {
+        if (args.size() < 2) {
+            throw new RuntimeException("CallJava requires at least 2 arguments: className and methodName");
+        }
+        String className = args.get(0).toString();
+        String memberName = args.get(1).toString();
+        List<Object> methodArgs = args.size() > 2 ? args.subList(2, args.size()) : Collections.emptyList();
+        try {
+
+            Class<?> clazz = Class.forName(className);
+
+            if (!isMethodAllowed(clazz, memberName)) {
+                throw new RuntimeException("Access to method '" + memberName + "' in class '" + className + "' is not allowed.");
+            }
+            Object instance = null;
+            if (!memberName.equals("<init>")) {
+
+                if (methodArgs.size() > 0 && methodArgs.get(0) instanceof LanguageObjectWrapper) {
+                    instance = ((LanguageObjectWrapper) methodArgs.get(0)).getLanguageObject();
+                    methodArgs = methodArgs.subList(1, methodArgs.size());
+                }
+            }
+
+
+            AccessibleObject accessibleObject = null;
+            if (memberName.equals("<init>")) {
+                Constructor<?> constructor = findConstructor(clazz, methodArgs);
+                if (constructor == null) {
+                    throw new RuntimeException("Constructor not found in class '" + className + "' with " + methodArgs.size() + " arguments.");
+                }
+                accessibleObject = constructor;
+            } else {
+                Method method = findMethod(clazz, memberName, methodArgs);
+                if (method == null) {
+                    throw new RuntimeException("Method '" + memberName + "' not found in class '" + className + "'");
+                }
+                accessibleObject = method;
+            }
+
+
+            Object[] javaArgs = convertArguments(methodArgs, accessibleObject);
+
+
+            Object result;
+            if (accessibleObject instanceof Constructor<?>) {
+                result = ((Constructor<?>) accessibleObject).newInstance(javaArgs);
+            } else {
+                result = ((Method) accessibleObject).invoke(instance, javaArgs);
+            }
+
+
+            if (result != null && !isPrimitiveOrWrapper(result.getClass())) {
+                return new LanguageObjectWrapper(result);
+            } else if (result instanceof List) {
+                return convertJavaListToLanguageArray((List<?>) result);
+            } else {
+                return result;
+            }
+        }
+        catch (InvocationTargetException ite) {
+
+            Throwable cause = ite.getCause();
+            if (cause != null) {
+
+                String details = cause.toString();
+
+
+
+
+                throw new RuntimeException("Error invoking system method: " + details, ite);
+            } else {
+
+                throw new RuntimeException("Error invoking system method: <no cause>", ite);
+            }
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    private void loadLangConfigFile(String filepath) {
+        try {
+            // Read the entire file content as a string
+            String fileContent = new String(Files.readAllBytes(Paths.get(filepath)), StandardCharsets.UTF_8);
+
+            // Check if the file starts with the marker "ENCRYPTED:"
+            if (fileContent.startsWith("ENCRYPTED:")) {
+                // Remove the marker and decrypt the remaining content
+                String encryptedPart = fileContent.substring("ENCRYPTED:".length());
+                fileContent = CryptoUtil.decrypt(encryptedPart);
+                System.out.println("Decrypted the configuration file.");
+            }
+
+            // Now process the file content line by line
+            List<String> lines = Arrays.asList(fileContent.split("\\r?\\n"));
+            for (String line : lines) {
+                line = line.trim();
+                // Skip empty lines and comment lines.
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+                // Expect format: ClassName: method1, method2, method3
+                String[] parts = line.split(":");
+                if (parts.length != 2) {
+                    throw new RuntimeException("Invalid config line (missing colon): " + line);
+                }
+                String className = parts[0].trim();
+                allowedClasses.add(className);
+
+                String methodsPart = parts[1].trim();
+                String[] methods = methodsPart.split(",");
+                Set<String> methodsSet = new HashSet<>();
+                for (String method : methods) {
+                    method = method.trim();
+                    if (!method.isEmpty()) {
+                        methodsSet.add(method);
+                    }
+                }
+                allowedMethods.put(className, methodsSet);
+            }
+            System.out.println("Loaded allowed classes and methods from " + filepath);
+        } catch (Exception e) {
+            throw new RuntimeException("Error reading allowed configuration file: " + e.getMessage(), e);
+        }
     }
 
     private void setVariable(String name, Object value) {
@@ -89,7 +458,10 @@ public class Interpreter extends vg_langBaseVisitor {
             argValues.add(argValue);
         }
 
-
+        if (builtInFunction.containsKey(functionName)) {
+            BuiltInFunction builtInFunc = builtInFunction.get(functionName);
+            return builtInFunc.call(argValues);
+        }
         Function function = null;
 
 
