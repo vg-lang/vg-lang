@@ -18,7 +18,26 @@ statement
     | throwStatement
     | whileStatement
     | doWhileStatement
+    | libraryDeclaration
+    | importStatement
     ;
+
+        importStatement
+            : 'import' importPath ';'
+            ;
+
+        importPath
+            : IDENTIFIER ('.' IDENTIFIER)* ('.' '*')?
+            ;
+
+        libraryDeclaration
+            : 'library' IDENTIFIER '{' namespaceDeclaration* '}'
+            ;
+
+        namespaceDeclaration
+            : 'namespace' IDENTIFIER '{' (functionDeclaration | variableDeclaration | constDeclaration| namespaceDeclaration)* '}'
+            ;
+
 
     functionDeclaration
         : 'function' IDENTIFIER '(' parameterList? ')' block
@@ -131,9 +150,14 @@ block
     ;
 
 postfixExpression
-    : primary ( '[' expression ']' )*
+    : primary (postfixOp)*
     ;
 
+postfixOp
+    : '.' IDENTIFIER
+    | '(' argumentList? ')'
+    | '[' expression ']'
+    ;
  primary : literal
     | IDENTIFIER
     | '(' expression ')'

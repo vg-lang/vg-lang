@@ -23,6 +23,30 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitStatement(vg_langParser.StatementContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#importStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitImportStatement(vg_langParser.ImportStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#importPath}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitImportPath(vg_langParser.ImportPathContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#libraryDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitLibraryDeclaration(vg_langParser.LibraryDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#namespaceDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitNamespaceDeclaration(vg_langParser.NamespaceDeclarationContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#functionDeclaration}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -202,6 +226,12 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitPostfixExpression(vg_langParser.PostfixExpressionContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#postfixOp}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPostfixOp(vg_langParser.PostfixOpContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vg_langParser#primary}.
 	 * @param ctx the parse tree

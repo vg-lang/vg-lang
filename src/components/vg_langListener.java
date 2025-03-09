@@ -28,6 +28,46 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitStatement(vg_langParser.StatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#importStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterImportStatement(vg_langParser.ImportStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#importStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitImportStatement(vg_langParser.ImportStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#importPath}.
+	 * @param ctx the parse tree
+	 */
+	void enterImportPath(vg_langParser.ImportPathContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#importPath}.
+	 * @param ctx the parse tree
+	 */
+	void exitImportPath(vg_langParser.ImportPathContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#libraryDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterLibraryDeclaration(vg_langParser.LibraryDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#libraryDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitLibraryDeclaration(vg_langParser.LibraryDeclarationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#namespaceDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterNamespaceDeclaration(vg_langParser.NamespaceDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#namespaceDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitNamespaceDeclaration(vg_langParser.NamespaceDeclarationContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#functionDeclaration}.
 	 * @param ctx the parse tree
 	 */
@@ -327,6 +367,16 @@ public interface vg_langListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitPostfixExpression(vg_langParser.PostfixExpressionContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#postfixOp}.
+	 * @param ctx the parse tree
+	 */
+	void enterPostfixOp(vg_langParser.PostfixOpContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#postfixOp}.
+	 * @param ctx the parse tree
+	 */
+	void exitPostfixOp(vg_langParser.PostfixOpContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vg_langParser#primary}.
 	 * @param ctx the parse tree
