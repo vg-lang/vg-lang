@@ -1,2 +1,13 @@
-var window = VgSystemCall("components.MyGUI","<init>","hello",300,300);
-VgSystemCall("components.MyGUI","launch",window);
+## imports
+import Guilibrary.window;
+import Guilibrary.style.*;
+import Guilibrary.Button;
+import Guilibrary.component;
+
+## actual code
+var mywindow = window.create("hei",300,300);
+setBackgroundColor(mywindow,"#B5E61D");
+var mybtn = Button.createButton("hei",150,150,150,150);
+Button.setButtonColor(mybtn,"#00A2E8");
+component.add(mywindow,mybtn);
+window.launch(mywindow);

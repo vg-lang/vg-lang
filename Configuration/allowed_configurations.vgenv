@@ -17,9 +17,8 @@ components.MyGUI.MyAnimator: <init>, start, stop
 components.MyGUI.MyImage: <init>, setImage, resizeImage, moveImage, getTile, setTile
 components.MyGUI.MyTextArea: <init>, setFontFamily, setFontStyle
 components.MyGUI.LineNumberingTextArea: <init>, updateLineNumbers
-components.MyGUI.RaycastPanel: <init>, clear, setPixel, drawVerticalSlice, paintComponent
 components.MyGUI.MyColorPicker: <init>
 components.MyGUI.MyProgressIndicator: <init>, setProgress
 components.MyGUI.MyDatePicker: <init>, getSelectedDate
-java.lang.Math: pow,sqrt,tan,cos,sin
+components.MyGUI$MyButton: <init>,setButtonColor
 

@@ -40,6 +40,7 @@ public class MyGUI extends JFrame {
         });
 
     }
+
     public void killAllTimers() {
         for (Timer timer : activeTimers) {
             if (timer != null && timer.isRunning()) {
@@ -142,11 +143,6 @@ public class MyGUI extends JFrame {
 
     }
 
-
-
-
-
-
     public void launch() {
         SwingUtilities.invokeLater(() -> setVisible(true));
     }
@@ -164,8 +160,6 @@ public class MyGUI extends JFrame {
     public void dispose(Window w){
         w.dispose();
     }
-
-
     public void setWindowIcon(String iconName) {
         String appPath = System.getProperty("user.dir");
         String assetsPath = appPath + "/assets/"+iconName;
@@ -203,7 +197,7 @@ public class MyGUI extends JFrame {
 
         frame.revalidate();
         frame.repaint();
-        System.out.println("Window revalidated and repainted.");
+
     }
 
     public int getWindowComponentsCount() {
@@ -277,7 +271,6 @@ public class MyGUI extends JFrame {
             setFont(new Font(getFont().getName(), style, getFont().getSize()));
         }
     }
-
     public static class MyLabel extends JLabel {
         private static final long serialVersionUID = 1L;
         private Font customFont = null;
@@ -353,8 +346,6 @@ public class MyGUI extends JFrame {
 
 
     }
-
-
     public static class MyPane extends JPanel {
         private static final long serialVersionUID = 1L;
         private JLabel backgroundLabel;
@@ -397,7 +388,6 @@ public class MyGUI extends JFrame {
 
 
     }
-
     public static class MyAnimator {
         private Timer timer;
         private JComponent component;
@@ -476,8 +466,6 @@ public class MyGUI extends JFrame {
             }
         }
     }
-
-
     public static class MyImage extends JLabel {
         private static final long serialVersionUID = 1L;
         private String imagePath;
@@ -584,7 +572,6 @@ public class MyGUI extends JFrame {
             setFont(new Font(getFont().getName(), style, getFont().getSize()));
         }
     }
-
     public class LineNumberingTextArea extends JTextArea {
 
 
@@ -616,77 +603,6 @@ public class MyGUI extends JFrame {
             return lineNumbersTextBuilder.toString();
         }
     }
-
-
-    public static class RaycastPanel extends JPanel {
-
-        private int width, height;
-        private int[] pixels;
-        private BufferedImage image;
-
-        public RaycastPanel(int width, int height) {
-            this.width = width;
-            this.height = height;
-            this.pixels = new int[width * height];
-            setPreferredSize(new Dimension(width, height));
-
-
-            image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-
-
-            clear("#000000");
-        }
-
-        public void clear(String hexColor) {
-            Color c = Color.decode(hexColor);
-            int argb = c.getRGB();
-            for (int i = 0; i < pixels.length; i++) {
-                pixels[i] = argb;
-            }
-            repaint();
-        }
-
-        public void setPixel(int x, int y, int color) {
-            if (x < 0 || x >= width || y < 0 || y >= height) {
-                return;
-            }
-            pixels[y * width + x] = color;
-
-        }
-
-        public void drawVerticalSlice(int x, int start, int end, String hexColor) {
-
-            Color c = Color.decode(hexColor);
-            int argb = c.getRGB();
-
-
-            if (x < 0 || x >= width) {
-                return;
-            }
-
-
-            if (start < 0) start = 0;
-            if (end > height) end = height;
-
-
-            for (int y = start; y < end; y++) {
-                pixels[y * width + x] = argb;
-            }
-
-        }
-
-        @Override
-        public void paintComponent(Graphics g) {
-            super.paintComponent(g);
-
-            image.setRGB(0, 0, width, height, pixels, 0, width);
-
-
-            g.drawImage(image, 0, 0, null);
-        }
-
-    }
-
     public static class MyColorPicker extends JPanel {
         private static final long serialVersionUID = 1L;
 
@@ -715,7 +631,6 @@ public class MyGUI extends JFrame {
             });
         }
     }
-
     public static class MyProgressIndicator extends JProgressBar {
         private static final long serialVersionUID = 1L;
 
@@ -729,7 +644,6 @@ public class MyGUI extends JFrame {
             setValue(value);
         }
     }
-
     public static class MyDatePicker extends JPanel {
         private static final long serialVersionUID = 1L;
         private JSpinner dateSpinner;
@@ -748,6 +662,38 @@ public class MyGUI extends JFrame {
             return (Date) dateSpinner.getValue();
         }
     }
+    public static class MyButton extends JButton {
+        private static final long serialVersionUID = 1L;
+
+        public MyButton(String text, int x, int y, int width, int height) {
+            super(text);
+            setBounds(x, y, width, height);
+            setFocusPainted(false);
+        }
+        public void setButtonColor(Color color) {
+            setBackground(color);
+            setOpaque(true);
+            setBorderPainted(false);
+        }
+        public void setButtonBorder(Color color, int thickness) {
+            setBorder(createBorder(color, thickness));
+        }
+
+        public void setBorderPainted(int painted) {
+
+            boolean shouldPaint = painted != 0;
+            super.setBorderPainted(shouldPaint);
+        }
+
+        }
 
 
-}
+        public void setFontFamily(String fontFamily) {
+            setFont(new Font(fontFamily, getFont().getStyle(), getFont().getSize()));
+        }
+
+        public void setFontStyle(int style) {
+            setFont(new Font(getFont().getName(), style, getFont().getSize()));
+        }
+    }
+

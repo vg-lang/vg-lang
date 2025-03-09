@@ -8,7 +8,7 @@ public class LanguageObjectWrapper {
     public Object getLanguageObject() {
         return languageObject;
     }
-    public void setLanguageObject(Object languageObject) {
-        this.languageObject = languageObject;
+    public Object getObject() {
+        return languageObject;
     }
 }

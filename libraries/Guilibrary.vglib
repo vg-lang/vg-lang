@@ -1,0 +1,62 @@
+library Guilibrary {
+    namespace window {
+        function create(title, width, height) {
+            ## Creates a new window instance using the MyGUI constructor
+            return VgSystemCall("components.MyGUI", "<init>", title, width, height);
+        }
+        function launch(window) {
+            ## Launches the given window (makes it visible)
+            return VgSystemCall("components.MyGUI", "launch", window);
+        }
+        function setIcon(window, iconName) {
+            ## Sets the window icon
+            return VgSystemCall("components.MyGUI", "setWindowIcon", window, iconName);
+        }
+    }
+    namespace component {
+        function add(window, component) {
+            ## Adds a component to the window
+            return VgSystemCall("components.MyGUI", "addComponentToWindow", window,window, component);
+        }
+    }
+    namespace style {
+        function setBackgroundColor(window, colorCode) {
+            var color = VgSystemCall("java.awt.Color", "decode", colorCode);
+            return VgSystemCall("components.MyGUI", "setWindowBackgroundColor", window, color);
+        }
+
+    }
+    namespace popup {
+        function info(window, message, title) {
+            return VgSystemCall("components.MyGUI", "showInfoPopup", window, message, title);
+        }
+        function warning(window, message, title) {
+            return VgSystemCall("components.MyGUI", "showWarningPopup", window, message, title);
+        }
+        function error(window, message, title) {
+            return VgSystemCall("components.MyGUI", "showErrorPopup", window, message, title);
+        }
+    }
+    namespace Callbacks {
+        function onKey(msg, code) {
+            print("Callbacks.onKey => msg: " + msg + ", code: " + code);
+        }
+    }
+    namespace Button {
+        function createButton(text, x, y, width, height) {
+            return VgSystemCall("components.MyGUI$MyButton", "<init>", text, x, y, width, height);
+        }
+        function setButtonColor(button, colorCode) {
+            var color = VgSystemCall("java.awt.Color", "decode", colorCode);
+            return VgSystemCall("components.MyGUI$MyButton", "setButtonColor", button, color);
+        }
+    }
+    namespace IOEvents {
+        function setOnKeyPress(window, method) {
+            return VgSystemCall("components.MyGUI", "setOnKeyPress", window, method);
+        }
+        function setOnClick(button, method) {
+            return VgSystemCall("components.MyGUI$MyButton", "setOnClick", button, method);
+        }
+    }
+}

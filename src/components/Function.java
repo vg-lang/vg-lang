@@ -27,7 +27,7 @@ public class Function {
         }
         Object returnValue = null;
         try{
-
+            interpreter.visit(block);
         } catch (ReturnException e) {
             returnValue = e.getValue();
         }

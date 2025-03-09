@@ -1,16 +1,22 @@
 package components;
 
 import com.sun.jdi.InvocationException;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+import java.io.IOException;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Stream;
 
 public class Interpreter extends vg_langBaseVisitor {
     public Deque<SymbolTable> symbolTableStack = new ArrayDeque<>();
@@ -18,14 +24,230 @@ public class Interpreter extends vg_langBaseVisitor {
     private Set<String> allowedClasses = new HashSet<>();
     public Map<String,BuiltInFunction> builtInFunction = new HashMap<>();
     SymbolTable globalSymbolTable;
+    ModuleRegistry moduleRegistry;
+    private String libraryFolder = "libraries";
     public Interpreter() {
         globalSymbolTable = new SymbolTable();
         symbolTableStack.push(globalSymbolTable);
         registerBuiltInFunction();
-        String appPath = System.getProperty("user.dir");
-        String configfilepath = appPath + "/configuration/"+"allowed_configurations.vgenv";
-        loadLangConfigFile(configfilepath);
+
+        // String configPath = System.getenv("MY_APP_CONFIG");
+        String configPath = "C:/Users/hodif/Desktop/usn2024/vg lang/Configuration";
+        loadLangConfigFile(configPath + "/allowed_configurations.vgenv");
+        moduleRegistry = new ModuleRegistry();
+        loadLibrariesFromFolder(libraryFolder);
+
+
     }
+    public void loadLibrariesFromFolder(String folderPath) {
+        try (Stream<Path> paths = Files.walk(Paths.get(folderPath))) {
+            paths.filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".vglib"))
+                    .forEach(path -> loadLibraryFile(path.toString()));
+        } catch (IOException e) {
+            throw new RuntimeException("Error loading libraries from folder: " + folderPath, e);
+        }
+    }
+    public void processLibraryDeclaration(vg_langParser.LibraryDeclarationContext ctx) {
+        String libraryName = ctx.IDENTIFIER().getText();
+        Library library = new Library(libraryName);
+        for (vg_langParser.NamespaceDeclarationContext nsCtx : ctx.namespaceDeclaration()) {
+            String nsName = nsCtx.IDENTIFIER().getText();
+            Namespace namespace = new Namespace(nsName);
+            processNamespaceBody(nsCtx, namespace);
+            library.addNamespace(namespace);
+        }
+        moduleRegistry.addLibrary(library);
+    }
+    public void loadLibraryFile(String filePath) {
+        try {
+
+            String content = new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
+
+
+            CharStream input = CharStreams.fromString(content);
+            vg_langLexer lexer = new vg_langLexer(input);
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+            vg_langParser parser = new vg_langParser(tokens);
+
+
+            vg_langParser.ProgramContext programCtx = parser.program();
+
+
+            for (vg_langParser.StatementContext stmtCtx : programCtx.statement()) {
+                if (stmtCtx.libraryDeclaration() != null) {
+
+                    processLibraryDeclaration(stmtCtx.libraryDeclaration());
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error reading library file: " + filePath);
+        }
+    }
+    private void processNamespaceBody(vg_langParser.NamespaceDeclarationContext nsCtx, Namespace namespace) {
+
+        for (vg_langParser.FunctionDeclarationContext funcCtx : nsCtx.functionDeclaration()) {
+            String functionName = funcCtx.IDENTIFIER().getText();
+            Function function = new Function(
+                    getParameters(funcCtx.parameterList()),
+                    funcCtx.block(),
+                    this
+            );
+            namespace.addSymbol(functionName, function);
+        }
+
+
+        for (vg_langParser.VariableDeclarationContext varCtx : nsCtx.variableDeclaration()) {
+            String varName = varCtx.IDENTIFIER().getText();
+            Object value = visit(varCtx.expression());
+            namespace.addSymbol(varName, value);
+        }
+        for (vg_langParser.ConstDeclarationContext constCtx : nsCtx.constDeclaration()) {
+            String constName = constCtx.IDENTIFIER().getText();
+            Object value = visit(constCtx.expression());
+            namespace.addSymbol(constName, value);
+        }
+        for (vg_langParser.NamespaceDeclarationContext childNsCtx : nsCtx.namespaceDeclaration()) {
+            String childName = childNsCtx.IDENTIFIER().getText();
+            Namespace childNs = new Namespace(childName);
+            processNamespaceBody(childNsCtx, childNs);
+            namespace.addChildNamespace(childNs);
+        }
+    }
+
+    public void processImport(String importPath) {
+
+        importPath = importPath.trim();
+        if (importPath.endsWith(";")) {
+            importPath = importPath.substring(0, importPath.length() - 1);
+        }
+
+
+        String[] rawParts = importPath.split("\\.");
+        List<String> partsList = new ArrayList<>();
+        for (String part : rawParts) {
+            if (!part.isEmpty()) {
+                partsList.add(part);
+            }
+        }
+        String[] parts = partsList.toArray(new String[0]);
+
+        if (parts.length < 2) {
+            throw new RuntimeException("Invalid import path: " + importPath);
+        }
+
+
+        String libName = parts[0];
+        Library lib = moduleRegistry.getLibrary(libName);
+        if (lib == null) {
+
+            String libraryFilePath = libraryFolder + "/" + libName + ".vglib";
+            loadLibraryFile(libraryFilePath);
+            lib = moduleRegistry.getLibrary(libName);
+            if (lib == null) {
+                throw new RuntimeException("Library not found after attempting load: " + libName);
+            }
+        }
+
+
+        if (parts[parts.length - 1].equals("*")) {
+
+            String[] nsPath = Arrays.copyOfRange(parts, 1, parts.length - 1);
+            Namespace ns;
+            if (nsPath.length == 1) {
+                ns = lib.getNamespace(nsPath[0]);
+            } else {
+                ns = lib.getNamespace(nsPath[0]);
+                if (ns == null) {
+                    throw new RuntimeException("Namespace not found: " + nsPath[0]);
+                }
+                ns = ns.getNestedNamespace(nsPath, 1);
+            }
+            if (ns == null) {
+                throw new RuntimeException("Nested namespace not found for path: " + String.join(".", nsPath));
+            }
+
+            for (Map.Entry<String, Object> entry : ns.getSymbols().entrySet()) {
+                if (entry.getValue() instanceof Function) {
+                    globalSymbolTable.setFunction(entry.getKey(), (Function) entry.getValue());
+                    globalSymbolTable.set(entry.getKey(), entry.getValue());
+                } else {
+                    globalSymbolTable.set(entry.getKey(), entry.getValue());
+                }
+            }
+            System.out.println("DEBUG: Imported all symbols from nested namespace '" + String.join(".", nsPath) + "'.");
+            return;
+        }
+
+
+        if (parts.length == 2) {
+            String nsName = parts[1];
+            Namespace ns = lib.getNamespace(nsName);
+            if (ns == null) {
+                throw new RuntimeException("Namespace not found: " + nsName);
+            }
+            globalSymbolTable.set(nsName, ns);
+            System.out.println("DEBUG: Imported namespace '" + nsName + "' into global scope.");
+            return;
+        }
+
+
+        if (parts.length >= 3) {
+
+            String symbolName = parts[parts.length - 1];
+
+            String[] nsPath = Arrays.copyOfRange(parts, 1, parts.length - 1);
+            Namespace ns;
+            if (nsPath.length == 1) {
+                ns = lib.getNamespace(nsPath[0]);
+            } else {
+                ns = lib.getNamespace(nsPath[0]);
+                if (ns == null) {
+                    throw new RuntimeException("Namespace not found: " + nsPath[0]);
+                }
+                ns = ns.getNestedNamespace(nsPath, 1);
+            }
+            if (ns == null) {
+                throw new RuntimeException("Nested namespace not found for path: " + String.join(".", nsPath));
+            }
+            Object symbol = ns.getSymbol(symbolName);
+            if (symbol == null) {
+
+                symbol = ns.getChildNamespace(symbolName);
+                if (symbol == null) {
+                    throw new RuntimeException("Symbol or nested namespace not found: " + symbolName);
+                }
+            }
+            if (symbol instanceof Function) {
+                globalSymbolTable.setFunction(symbolName, (Function) symbol);
+                globalSymbolTable.set(symbolName, symbol);
+            } else {
+                globalSymbolTable.set(symbolName, symbol);
+            }
+            System.out.println("DEBUG: Imported symbol or namespace '" + symbolName + "' from nested path '" + String.join(".", nsPath) + "' into global scope.");
+            return;
+        }
+
+        throw new RuntimeException("Import path format not recognized: " + importPath);
+    }
+
+    private void importNamespace(Namespace ns) {
+        for (Map.Entry<String, Object> entry : ns.getSymbols().entrySet()) {
+            globalSymbolTable.set(entry.getKey(), entry.getValue());
+        }
+    }
+
+    private java.util.List<String> getParameters(vg_langParser.ParameterListContext paramCtx) {
+        java.util.List<String> params = new java.util.ArrayList<>();
+        if (paramCtx != null) {
+            for (var id : paramCtx.IDENTIFIER()) {
+                params.add(id.getText());
+            }
+        }
+        return params;
+    }
+
 
     private SymbolTable currentSymbolTable() {
         return symbolTableStack.peek();
@@ -49,7 +271,9 @@ public class Interpreter extends vg_langBaseVisitor {
         };
         BuiltInFunctionWrapper wrappedVgSystemCall = new BuiltInFunctionWrapper(VgSystemCall, this);
         builtInFunction.put("VgSystemCall", VgSystemCall);
-        globalSymbolTable.setFunction("VgSystemCall",wrappedVgSystemCall);
+        globalSymbolTable.setFunction("VgSystemCall", wrappedVgSystemCall);
+        globalSymbolTable.set("VgSystemCall", wrappedVgSystemCall);
+
 
     }
     private boolean isMethodAllowed(Class<?> vgclass, String methodName) {
@@ -349,26 +573,25 @@ public class Interpreter extends vg_langBaseVisitor {
 
     private void loadLangConfigFile(String filepath) {
         try {
-            // Read the entire file content as a string
+
             String fileContent = new String(Files.readAllBytes(Paths.get(filepath)), StandardCharsets.UTF_8);
 
-            // Check if the file starts with the marker "ENCRYPTED:"
+
             if (fileContent.startsWith("ENCRYPTED:")) {
-                // Remove the marker and decrypt the remaining content
+
                 String encryptedPart = fileContent.substring("ENCRYPTED:".length());
                 fileContent = CryptoUtil.decrypt(encryptedPart);
                 System.out.println("Decrypted the configuration file.");
             }
 
-            // Now process the file content line by line
+
             List<String> lines = Arrays.asList(fileContent.split("\\r?\\n"));
             for (String line : lines) {
                 line = line.trim();
-                // Skip empty lines and comment lines.
                 if (line.isEmpty() || line.startsWith("#")) {
                     continue;
                 }
-                // Expect format: ClassName: method1, method2, method3
+
                 String[] parts = line.split(":");
                 if (parts.length != 2) {
                     throw new RuntimeException("Invalid config line (missing colon): " + line);
@@ -436,59 +659,69 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         Function function = new Function(parameters, ctx.block(), this);
 
-        symbolTableStack.getLast().setFunction(functionName, function);
+        SymbolTable currentTable = symbolTableStack.getLast();
+        currentTable.setFunction(functionName, function);
+        currentTable.set(functionName, function);
         return null;
     }
 
     @Override
     public Object visitFunctionCall(vg_langParser.FunctionCallContext ctx) {
         String functionName;
+
         if (ctx.IDENTIFIER() != null) {
             functionName = ctx.IDENTIFIER().getText();
-
+            System.out.println(functionName);
         } else {
             throw new RuntimeException("Invalid function call.");
         }
 
 
-        List<vg_langParser.ExpressionContext> argExprs = ctx.argumentList() != null ? ctx.argumentList().expression() : Collections.emptyList();
+        List<vg_langParser.ExpressionContext> argExprs = ctx.argumentList() != null
+                ? ctx.argumentList().expression()
+                : Collections.emptyList();
+
         List<Object> argValues = new ArrayList<>();
         for (vg_langParser.ExpressionContext exprCtx : argExprs) {
-            Object argValue = visit(exprCtx);
-            argValues.add(argValue);
+            argValues.add(visit(exprCtx));
         }
+
 
         if (builtInFunction.containsKey(functionName)) {
             BuiltInFunction builtInFunc = builtInFunction.get(functionName);
             return builtInFunc.call(argValues);
         }
-        Function function = null;
+
+        Object funcObj = null;
 
 
         for (SymbolTable table : symbolTableStack) {
             if (table.containsFunction(functionName)) {
-                function = table.getFunction(functionName);
+                funcObj = table.getFunction(functionName);
+                break;
+            }
+            if (table.contains(functionName)) {
+                funcObj = table.get(functionName);
                 break;
             }
         }
 
-
-        if (function == null) {
-            int line = ctx.getStart().getLine(); // from ANTLR
+        if (!(funcObj instanceof Function)) {
+            int line = ctx.getStart().getLine();
             throw new RuntimeException("Function '" + functionName + "' is not defined at line: " + line);
         }
 
-
+        Function function = (Function) funcObj;
         List<String> parameters = function.getParameters();
 
+
         if (argValues.size() != parameters.size()) {
-            int line = ctx.getStart().getLine(); // from ANTLR
-            throw new RuntimeException("at line: " + line + " Function '" + functionName + "' expects " + parameters.size() + " arguments but got " + argValues.size());
+            int line = ctx.getStart().getLine();
+            throw new RuntimeException("At line: " + line + " Function '" + functionName + "' expects " + parameters.size() + " arguments but got " + argValues.size());
         }
 
 
         SymbolTable functionSymbolTable = new SymbolTable();
-
         symbolTableStack.push(functionSymbolTable);
 
 
@@ -496,20 +729,45 @@ public class Interpreter extends vg_langBaseVisitor {
             functionSymbolTable.set(parameters.get(i), argValues.get(i));
         }
 
+
         Object returnValue = null;
         try {
-
             visit(function.getBlock());
         } catch (ReturnException e) {
-
             returnValue = e.getValue();
         } finally {
-
             symbolTableStack.pop();
         }
 
         return returnValue;
     }
+    public Function resolveFunctionFromNamespace(String functionPath) {
+        String[] parts = functionPath.split("\\.");
+        if (parts.length == 1) {
+            return globalSymbolTable.getFunction(parts[0]);
+        }
+
+        Library lib = moduleRegistry.getLibrary(parts[0]);
+        if (lib == null) {
+            throw new RuntimeException("Library not found: " + parts[0]);
+        }
+
+        Namespace namespace = lib.getNamespace(parts[1]);
+        if (namespace == null) {
+            throw new RuntimeException("Namespace not found: " + parts[1]);
+        }
+
+        if (parts.length == 3) {
+            Function function = (Function) namespace.getSymbol(parts[2]);
+            if (function == null) {
+                throw new RuntimeException("Function not found: " + parts[2]);
+            }
+            return function;
+        }
+
+        throw new RuntimeException("Invalid function path: " + functionPath);
+    }
+
     @Override
     public Object visitReturnStatement(vg_langParser.ReturnStatementContext ctx) {
         Object returnValue = null;
@@ -937,20 +1195,54 @@ public class Interpreter extends vg_langBaseVisitor {
     @Override
     public Object visitPostfixExpression(vg_langParser.PostfixExpressionContext ctx) {
         Object value = visit(ctx.primary());
-        for (vg_langParser.ExpressionContext indexExpr : ctx.expression()) {
-            Object indexObj = visit(indexExpr);
-            if (!(indexObj instanceof Number)) {
-                throw new RuntimeException("Array index must be a number.");
+
+
+        for (vg_langParser.PostfixOpContext opCtx : ctx.postfixOp()) {
+            String opText = opCtx.getChild(0).getText();
+            if (".".equals(opText)) {
+
+                String memberName = opCtx.IDENTIFIER().getText();
+                if (value instanceof Namespace) {
+                    Namespace ns = (Namespace) value;
+                    Object member = ns.getSymbol(memberName);
+                    if (member == null) {
+                        throw new RuntimeException("Member '" + memberName + "' not found in namespace.");
+                    }
+                    value = member;
+                } else {
+                    throw new RuntimeException("Dot operator not supported on type: " + value.getClass().getName());
+                }
+            } else if ("(".equals(opText)) {
+
+                List<Object> argValues = new ArrayList<>();
+                vg_langParser.ArgumentListContext argsCtx = opCtx.argumentList();
+                if (argsCtx != null) {
+                    for (vg_langParser.ExpressionContext exprCtx : argsCtx.expression()) {
+                        argValues.add(visit(exprCtx));
+                    }
+                }
+
+                if (value instanceof Function) {
+                    value = ((Function) value).call(argValues);
+                } else {
+                    throw new RuntimeException("Attempted to call a non-function: " + value);
+                }
+            } else if ("[".equals(opText)) {
+
+                Object indexObj = visit(opCtx.expression());
+                if (!(indexObj instanceof Number)) {
+                    throw new RuntimeException("Array index must be a number.");
+                }
+                int index = ((Number) indexObj).intValue();
+                if (!(value instanceof List)) {
+                    throw new RuntimeException("Cannot index into non-array value.");
+                }
+                List<?> list = (List<?>) value;
+                if (index < 0 || index >= list.size()) {
+                    throw new RuntimeException("Array index out of bounds.");
+                }
+                value = list.get(index);
             }
-            int index = ((Number) indexObj).intValue();
-            if (!(value instanceof List)) {
-                throw new RuntimeException("Cannot index into non-array value.");
-            }
-            List<?> array = (List<?>) value;
-            if (index < 0 || index >= array.size()) {
-                throw new RuntimeException("Array index out of bounds.");
-            }
-            value = array.get(index);
         }
         return value;
     }
@@ -967,19 +1259,17 @@ public class Interpreter extends vg_langBaseVisitor {
 
     @Override
     public Object visitForStatement(vg_langParser.ForStatementContext ctx) {
-        // 1) Create a new scope for the entire for-loop.
-        //    This ensures that variables declared in the init are
-        //    not accessible outside of the for loop.
+
         symbolTableStack.push(new SymbolTable());
 
-        // 2) Execute the initialization part (if present).
+
         if (ctx.forInit() != null) {
             visit(ctx.forInit());
         }
 
 
         while (true) {
-            // If there is a condition, evaluate it. If it's false, break out.
+
             if (ctx.forCondition() != null) {
                 Object conditionValue = visit(ctx.forCondition());
                 if (!toBoolean(conditionValue)) {
@@ -994,7 +1284,7 @@ public class Interpreter extends vg_langBaseVisitor {
             }
         }
 
-        // 6) Pop the for-loop’s scope.
+
         symbolTableStack.pop();
         return null;
     }
@@ -1059,6 +1349,60 @@ public class Interpreter extends vg_langBaseVisitor {
                 visit(ctx.finallyStatement().block());
             }
         }
+        return null;
+    }
+    @Override
+    public Object visitLibraryDeclaration(vg_langParser.LibraryDeclarationContext ctx) {
+
+        String libName = ctx.IDENTIFIER().getText();
+        Library library = new Library(libName);
+
+
+        for (vg_langParser.NamespaceDeclarationContext nsCtx : ctx.namespaceDeclaration()) {
+            Namespace ns = (Namespace) visit(nsCtx);
+            library.addNamespace(ns);
+        }
+
+
+        this.moduleRegistry.addLibrary(library);
+        return library;
+    }
+    @Override
+    public Object visitNamespaceDeclaration(vg_langParser.NamespaceDeclarationContext ctx) {
+
+        String nsName = ctx.IDENTIFIER().getText();
+        Namespace namespace = new Namespace(nsName);
+
+
+        for (vg_langParser.FunctionDeclarationContext funcCtx : ctx.functionDeclaration()) {
+            String functionName = funcCtx.IDENTIFIER().getText();
+            Function function = new Function(
+                    getParameters(funcCtx.parameterList()),
+                    funcCtx.block(),
+                    this
+            );
+            namespace.addSymbol(functionName, function);
+        }
+
+
+        for (vg_langParser.VariableDeclarationContext varCtx : ctx.variableDeclaration()) {
+            String varName = varCtx.IDENTIFIER().getText();
+            Object value = visit(varCtx.expression());
+            namespace.addSymbol(varName, value);
+        }
+
+
+        for (vg_langParser.ConstDeclarationContext constCtx : ctx.constDeclaration()) {
+            String constName = constCtx.IDENTIFIER().getText();
+            Object value = visit(constCtx.expression());
+            namespace.addSymbol(constName, value);
+        }
+        return namespace;
+    }
+    @Override
+    public Object visitImportStatement(vg_langParser.ImportStatementContext ctx) {
+        String importPath = ctx.importPath().getText();
+        this.processImport(importPath);
         return null;
     }
 }
