@@ -7,24 +7,24 @@ import components.*;
 public class Main {
 
     public static void main(String[] args) {
-        String versionnumber ="1.2.0";
+        String versionnumber ="1.3.0";
         try {
 
             Interpreter interpreter = new Interpreter();
             if (args.length > 0) {
 
 
-                // Check for the --help argument
+
                 if (args[0].equals("--help")) {
                     // Display the help menu
                     showHelp();
                 }
                 else if (args[0].equals("--version")) {
-                    // Display the help menu
+                    // displays version numbef
                     displayversion(versionnumber);
                 }
                 else {
-                    // Proceed with interpreting the provided file
+
                     String filePath = args[0];
                     String source = new String(Files.readAllBytes(Paths.get(filePath)));
                     vg_langLexer lexer = new vg_langLexer(CharStreams.fromString(source));
