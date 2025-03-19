@@ -2,7 +2,7 @@
 
 <p>
     <a href="#">
-        <img width="150" src="assets/vg%20logo.png" alt="The VG Programming Language">
+        <img width="150" src="assets/logo.png" alt="The VG Programming Language">
     </a>
 </p>
 
