@@ -1,0 +1,580 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ArtifactsWorkspaceSettings">
+    <artifacts-to-build>
+      <artifact name="vg" />
+    </artifacts-to-build>
+  </component>
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="5b8ecab8-df26-4e25-afa1-93332a737f99" name="Changes" comment="added simple but useful error messages, and a custome made erorr handling mechanism" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Rebase.Settings">
+    <option name="NEW_BASE" value="master" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="master" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;Husseinabdulameer11&quot;
+  }
+}</component>
+  <component name="GithubProjectSettings">
+    <option name="branchProtectionPatterns">
+      <list>
+        <option value="main" />
+      </list>
+    </option>
+  </component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Husseinabdulameer11/vg-lang&quot;,
+    &quot;accountId&quot;: &quot;b54f74a0-adc5-4535-a7d4-b8f1da8c3144&quot;
+  }
+}</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="2sVj8kQjErexJQevsYOaPhZgKWl" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.Main (1).executor&quot;: &quot;Run&quot;,
+    &quot;Application.Main.executor&quot;: &quot;Run&quot;,
+    &quot;Application.Unnamed.executor&quot;: &quot;Run&quot;,
+    &quot;Application.encrypter.executor&quot;: &quot;Run&quot;,
+    &quot;Application.repl.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;improved-error-messages&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/hodif/Downloads/sqlite-jdbc-3.36.0.3.jar&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;onboarding.tips.debug.path&quot;: &quot;C:/Users/hodif/Desktop/usn2024/vg lang/src/Main.java&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\hodif\Desktop\usn2024\vg lang" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\hodif\Desktop\usn2024\vg lang\docs" />
+      <recent name="C:\Users\hodif\Desktop\usn2024\vg lang\docs\assets" />
+      <recent name="C:\Users\hodif\Desktop\usn2024\vg lang\assets" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Application.Main">
+    <configuration name="Main (1)" type="Application" factoryName="Application">
+      <option name="ALTERNATIVE_JRE_PATH" value="21" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="MAIN_CLASS_NAME" value="ConfigEncrypter" />
+      <module name="vg lang" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Main" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="ALTERNATIVE_JRE_PATH" value="21" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <option name="MAIN_CLASS_NAME" value="Main" />
+      <module name="vg lang" />
+      <option name="PROGRAM_PARAMETERS" value="&quot;C:\Users\hodif\Desktop\usn2024\vg lang\projects\test.vg&quot;" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Unnamed" type="Application" factoryName="Application" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="Main" />
+      <module name="vg lang" />
+      <option name="PROGRAM_PARAMETERS" value="--version" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="Application.Main" />
+      <item itemvalue="Application.Main (1)" />
+      <item itemvalue="Application.Unnamed" />
+    </list>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-28b599e66164-intellij.indexing.shared.core-IU-242.23726.103" />
+        <option value="bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-IU-242.23726.103" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="5b8ecab8-df26-4e25-afa1-93332a737f99" name="Changes" comment="" />
+      <created>1738547480903</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1738547480903</updated>
+      <workItem from="1738547481945" duration="49192000" />
+      <workItem from="1739074447597" duration="821000" />
+      <workItem from="1739142300884" duration="1503000" />
+      <workItem from="1739148383621" duration="64000" />
+      <workItem from="1739233160635" duration="5203000" />
+      <workItem from="1739288818811" duration="7654000" />
+      <workItem from="1739341118941" duration="5746000" />
+      <workItem from="1739468047237" duration="6425000" />
+      <workItem from="1739520358635" duration="19687000" />
+      <workItem from="1739682583821" duration="171000" />
+      <workItem from="1739682804660" duration="89000" />
+      <workItem from="1739683091640" duration="20093000" />
+      <workItem from="1739818200520" duration="4433000" />
+      <workItem from="1739841657270" duration="5751000" />
+      <workItem from="1739918074976" duration="12765000" />
+      <workItem from="1740045851532" duration="893000" />
+      <workItem from="1740091990909" duration="7220000" />
+      <workItem from="1740321343862" duration="58000" />
+      <workItem from="1740321434229" duration="15550000" />
+      <workItem from="1740680337821" duration="614000" />
+      <workItem from="1740748042219" duration="7097000" />
+      <workItem from="1740869423699" duration="8191000" />
+      <workItem from="1741041529395" duration="18739000" />
+      <workItem from="1741064911545" duration="209000" />
+      <workItem from="1741065130775" duration="401000" />
+      <workItem from="1741065542340" duration="39567000" />
+      <workItem from="1741543091290" duration="4312000" />
+      <workItem from="1741554527609" duration="4049000" />
+      <workItem from="1741642556250" duration="24000" />
+      <workItem from="1741642586475" duration="82000" />
+      <workItem from="1741643211330" duration="163000" />
+      <workItem from="1741643382406" duration="5807000" />
+      <workItem from="1741829935006" duration="1188000" />
+      <workItem from="1742001535501" duration="70000" />
+      <workItem from="1742085009078" duration="2476000" />
+      <workItem from="1742308904216" duration="1434000" />
+      <workItem from="1742344985529" duration="536000" />
+      <workItem from="1742441736958" duration="1885000" />
+      <workItem from="1742479117191" duration="38230000" />
+      <workItem from="1742687230401" duration="13230000" />
+    </task>
+    <task id="LOCAL−00021" summary="changes">
+      <option name="closed" value="true" />
+      <created>1739681277788</created>
+      <option name="number" value="LOCAL−00021" />
+      <option name="presentableId" value="LOCAL−00021" />
+      <updated>1739681277788</updated>
+    </task>
+    <task id="LOCAL−00022" summary="changes">
+      <option name="closed" value="true" />
+      <created>1739681830255</created>
+      <option name="number" value="LOCAL−00022" />
+      <option name="presentableId" value="LOCAL−00022" />
+      <updated>1739681830255</updated>
+    </task>
+    <task id="LOCAL−00023" summary="added a new file">
+      <option name="closed" value="true" />
+      <created>1739681867618</created>
+      <option name="number" value="LOCAL−00023" />
+      <option name="presentableId" value="LOCAL−00023" />
+      <updated>1739681867618</updated>
+    </task>
+    <task id="LOCAL−00024" summary="changes">
+      <option name="closed" value="true" />
+      <created>1739683291908</created>
+      <option name="number" value="LOCAL−00024" />
+      <option name="presentableId" value="LOCAL−00024" />
+      <updated>1739683291908</updated>
+    </task>
+    <task id="LOCAL−00025" summary="changes">
+      <option name="closed" value="true" />
+      <created>1739684023099</created>
+      <option name="number" value="LOCAL−00025" />
+      <option name="presentableId" value="LOCAL−00025" />
+      <updated>1739684023099</updated>
+    </task>
+    <task id="LOCAL−00026" summary="changes">
+      <option name="closed" value="true" />
+      <created>1739684388952</created>
+      <option name="number" value="LOCAL−00026" />
+      <option name="presentableId" value="LOCAL−00026" />
+      <updated>1739684388952</updated>
+    </task>
+    <task id="LOCAL−00027" summary="changes">
+      <option name="closed" value="true" />
+      <created>1739684512822</created>
+      <option name="number" value="LOCAL−00027" />
+      <option name="presentableId" value="LOCAL−00027" />
+      <updated>1739684512822</updated>
+    </task>
+    <task id="LOCAL−00028" summary="added some changes to the statements file">
+      <option name="closed" value="true" />
+      <created>1739686299854</created>
+      <option name="number" value="LOCAL−00028" />
+      <option name="presentableId" value="LOCAL−00028" />
+      <updated>1739686299854</updated>
+    </task>
+    <task id="LOCAL−00029" summary="added some changes to the introduction and index file">
+      <option name="closed" value="true" />
+      <created>1739686647081</created>
+      <option name="number" value="LOCAL−00029" />
+      <option name="presentableId" value="LOCAL−00029" />
+      <updated>1739686647081</updated>
+    </task>
+    <task id="LOCAL−00030" summary="renamed statements to Statements">
+      <option name="closed" value="true" />
+      <created>1739687155675</created>
+      <option name="number" value="LOCAL−00030" />
+      <option name="presentableId" value="LOCAL−00030" />
+      <updated>1739687155675</updated>
+    </task>
+    <task id="LOCAL−00031" summary="renamed a bunch of files">
+      <option name="closed" value="true" />
+      <created>1739687324734</created>
+      <option name="number" value="LOCAL−00031" />
+      <option name="presentableId" value="LOCAL−00031" />
+      <updated>1739687324734</updated>
+    </task>
+    <task id="LOCAL−00032" summary="renamed a bunch of files">
+      <option name="closed" value="true" />
+      <created>1739687532135</created>
+      <option name="number" value="LOCAL−00032" />
+      <option name="presentableId" value="LOCAL−00032" />
+      <updated>1739687532135</updated>
+    </task>
+    <task id="LOCAL−00033" summary="renamed commands to Commands">
+      <option name="closed" value="true" />
+      <created>1739722698860</created>
+      <option name="number" value="LOCAL−00033" />
+      <option name="presentableId" value="LOCAL−00033" />
+      <updated>1739722698860</updated>
+    </task>
+    <task id="LOCAL−00034" summary="added a download button for latest version for easier access to the software">
+      <option name="closed" value="true" />
+      <created>1739729373977</created>
+      <option name="number" value="LOCAL−00034" />
+      <option name="presentableId" value="LOCAL−00034" />
+      <updated>1739729373977</updated>
+    </task>
+    <task id="LOCAL−00035" summary="added a favicon for the documentation website">
+      <option name="closed" value="true" />
+      <created>1739739104606</created>
+      <option name="number" value="LOCAL−00035" />
+      <option name="presentableId" value="LOCAL−00035" />
+      <updated>1739739104606</updated>
+    </task>
+    <task id="LOCAL−00036" summary="added basic functions grammar">
+      <option name="closed" value="true" />
+      <created>1739739852702</created>
+      <option name="number" value="LOCAL−00036" />
+      <option name="presentableId" value="LOCAL−00036" />
+      <updated>1739739852702</updated>
+    </task>
+    <task id="LOCAL−00037" summary="added support for functions and return statements for functions, that means function decleration, function calling">
+      <option name="closed" value="true" />
+      <created>1739748979587</created>
+      <option name="number" value="LOCAL−00037" />
+      <option name="presentableId" value="LOCAL−00037" />
+      <updated>1739748979587</updated>
+    </task>
+    <task id="LOCAL−00038" summary="added support for try and catch aswell as throw">
+      <option name="closed" value="true" />
+      <created>1739758607850</created>
+      <option name="number" value="LOCAL−00038" />
+      <option name="presentableId" value="LOCAL−00038" />
+      <updated>1739758607850</updated>
+    </task>
+    <task id="LOCAL−00039" summary="added support for try and catch aswell as throw">
+      <option name="closed" value="true" />
+      <created>1739759337966</created>
+      <option name="number" value="LOCAL−00039" />
+      <option name="presentableId" value="LOCAL−00039" />
+      <updated>1739759337966</updated>
+    </task>
+    <task id="LOCAL−00040" summary="added a new example">
+      <option name="closed" value="true" />
+      <created>1739825860952</created>
+      <option name="number" value="LOCAL−00040" />
+      <option name="presentableId" value="LOCAL−00040" />
+      <updated>1739825860952</updated>
+    </task>
+    <task id="LOCAL−00041" summary="added a new example">
+      <option name="closed" value="true" />
+      <created>1739826013194</created>
+      <option name="number" value="LOCAL−00041" />
+      <option name="presentableId" value="LOCAL−00041" />
+      <updated>1739826013194</updated>
+    </task>
+    <task id="LOCAL−00042" summary="added a new example and added some changes to function logic">
+      <option name="closed" value="true" />
+      <created>1739826502070</created>
+      <option name="number" value="LOCAL−00042" />
+      <option name="presentableId" value="LOCAL−00042" />
+      <updated>1739826502070</updated>
+    </task>
+    <task id="LOCAL−00043" summary="bases for java connection logic">
+      <option name="closed" value="true" />
+      <created>1739845136995</created>
+      <option name="number" value="LOCAL−00043" />
+      <option name="presentableId" value="LOCAL−00043" />
+      <updated>1739845136995</updated>
+    </task>
+    <task id="LOCAL−00044" summary="bases for java connection logic">
+      <option name="closed" value="true" />
+      <created>1739845209011</created>
+      <option name="number" value="LOCAL−00044" />
+      <option name="presentableId" value="LOCAL−00044" />
+      <updated>1739845209011</updated>
+    </task>
+    <task id="LOCAL−00045" summary="bases for java connection logic">
+      <option name="closed" value="true" />
+      <created>1739845216130</created>
+      <option name="number" value="LOCAL−00045" />
+      <option name="presentableId" value="LOCAL−00045" />
+      <updated>1739845216130</updated>
+    </task>
+    <task id="LOCAL−00046" summary="bases for java connection logic">
+      <option name="closed" value="true" />
+      <created>1739848735197</created>
+      <option name="number" value="LOCAL−00046" />
+      <option name="presentableId" value="LOCAL−00046" />
+      <updated>1739848735197</updated>
+    </task>
+    <task id="LOCAL−00047" summary="bases for java connection logic">
+      <option name="closed" value="true" />
+      <created>1740045898738</created>
+      <option name="number" value="LOCAL−00047" />
+      <option name="presentableId" value="LOCAL−00047" />
+      <updated>1740045898738</updated>
+    </task>
+    <task id="LOCAL−00048" summary="bases for java connection logic">
+      <option name="closed" value="true" />
+      <created>1740178886742</created>
+      <option name="number" value="LOCAL−00048" />
+      <option name="presentableId" value="LOCAL−00048" />
+      <updated>1740178886742</updated>
+    </task>
+    <task id="LOCAL−00049" summary="added some changes for page deployment on web and google">
+      <option name="closed" value="true" />
+      <created>1740179144586</created>
+      <option name="number" value="LOCAL−00049" />
+      <option name="presentableId" value="LOCAL−00049" />
+      <updated>1740179144586</updated>
+    </task>
+    <task id="LOCAL−00050" summary="added some changes for page deployment on web and google">
+      <option name="closed" value="true" />
+      <created>1740179689047</created>
+      <option name="number" value="LOCAL−00050" />
+      <option name="presentableId" value="LOCAL−00050" />
+      <updated>1740179689048</updated>
+    </task>
+    <task id="LOCAL−00051" summary="added some changes for page deployment on web and google">
+      <option name="closed" value="true" />
+      <created>1740180402049</created>
+      <option name="number" value="LOCAL−00051" />
+      <option name="presentableId" value="LOCAL−00051" />
+      <updated>1740180402049</updated>
+    </task>
+    <task id="LOCAL−00052" summary="added some changes for page deployment on web and google">
+      <option name="closed" value="true" />
+      <created>1740329785056</created>
+      <option name="number" value="LOCAL−00052" />
+      <option name="presentableId" value="LOCAL−00052" />
+      <updated>1740329785056</updated>
+    </task>
+    <task id="LOCAL−00053" summary="changes to example file">
+      <option name="closed" value="true" />
+      <created>1740364945856</created>
+      <option name="number" value="LOCAL−00053" />
+      <option name="presentableId" value="LOCAL−00053" />
+      <updated>1740364945856</updated>
+    </task>
+    <task id="LOCAL−00054" summary="added a new favicon to the documentation site">
+      <option name="closed" value="true" />
+      <created>1740365959563</created>
+      <option name="number" value="LOCAL−00054" />
+      <option name="presentableId" value="LOCAL−00054" />
+      <updated>1740365959563</updated>
+    </task>
+    <task id="LOCAL−00055" summary="added a new favicon to the documentation site">
+      <option name="closed" value="true" />
+      <created>1740367027495</created>
+      <option name="number" value="LOCAL−00055" />
+      <option name="presentableId" value="LOCAL−00055" />
+      <updated>1740367027496</updated>
+    </task>
+    <task id="LOCAL−00056" summary="added some changes to the documentation site">
+      <option name="closed" value="true" />
+      <created>1740872091673</created>
+      <option name="number" value="LOCAL−00056" />
+      <option name="presentableId" value="LOCAL−00056" />
+      <updated>1740872091674</updated>
+    </task>
+    <task id="LOCAL−00057" summary="added some changes to the documentation site">
+      <option name="closed" value="true" />
+      <created>1740872761192</created>
+      <option name="number" value="LOCAL−00057" />
+      <option name="presentableId" value="LOCAL−00057" />
+      <updated>1740872761193</updated>
+    </task>
+    <task id="LOCAL−00058" summary="new feature,bridge between java and our language via a built in method">
+      <option name="closed" value="true" />
+      <created>1741061336269</created>
+      <option name="number" value="LOCAL−00058" />
+      <option name="presentableId" value="LOCAL−00058" />
+      <updated>1741061336272</updated>
+    </task>
+    <task id="LOCAL−00059" summary="configurations">
+      <option name="closed" value="true" />
+      <created>1741063560533</created>
+      <option name="number" value="LOCAL−00059" />
+      <option name="presentableId" value="LOCAL−00059" />
+      <updated>1741063560533</updated>
+    </task>
+    <task id="LOCAL−00060" summary="configurations">
+      <option name="closed" value="true" />
+      <created>1741064144436</created>
+      <option name="number" value="LOCAL−00060" />
+      <option name="presentableId" value="LOCAL−00060" />
+      <updated>1741064144436</updated>
+    </task>
+    <task id="LOCAL−00061" summary="configurations">
+      <option name="closed" value="true" />
+      <created>1741064303401</created>
+      <option name="number" value="LOCAL−00061" />
+      <option name="presentableId" value="LOCAL−00061" />
+      <updated>1741064303401</updated>
+    </task>
+    <task id="LOCAL−00062" summary="java connection logic">
+      <option name="closed" value="true" />
+      <created>1741066379618</created>
+      <option name="number" value="LOCAL−00062" />
+      <option name="presentableId" value="LOCAL−00062" />
+      <updated>1741066379618</updated>
+    </task>
+    <task id="LOCAL−00063" summary="java connection logic">
+      <option name="closed" value="true" />
+      <created>1741066516038</created>
+      <option name="number" value="LOCAL−00063" />
+      <option name="presentableId" value="LOCAL−00063" />
+      <updated>1741066516038</updated>
+    </task>
+    <task id="LOCAL−00064" summary="configurations">
+      <option name="closed" value="true" />
+      <created>1741067276013</created>
+      <option name="number" value="LOCAL−00064" />
+      <option name="presentableId" value="LOCAL−00064" />
+      <updated>1741067276013</updated>
+    </task>
+    <task id="LOCAL−00065" summary="added support for libraries, namespaces to modulirize code">
+      <option name="closed" value="true" />
+      <created>1741543573598</created>
+      <option name="number" value="LOCAL−00065" />
+      <option name="presentableId" value="LOCAL−00065" />
+      <updated>1741543573598</updated>
+    </task>
+    <task id="LOCAL−00066" summary="updated version number">
+      <option name="closed" value="true" />
+      <created>1741702648841</created>
+      <option name="number" value="LOCAL−00066" />
+      <option name="presentableId" value="LOCAL−00066" />
+      <updated>1741702648841</updated>
+    </task>
+    <task id="LOCAL−00067" summary="added more libraries to the set of libraries(standard library)">
+      <option name="closed" value="true" />
+      <created>1742694686406</created>
+      <option name="number" value="LOCAL−00067" />
+      <option name="presentableId" value="LOCAL−00067" />
+      <updated>1742694686406</updated>
+    </task>
+    <task id="LOCAL−00068" summary="added simple but useful error messages, and a custome made erorr handling mechanism">
+      <option name="closed" value="true" />
+      <created>1742704100349</created>
+      <option name="number" value="LOCAL−00068" />
+      <option name="presentableId" value="LOCAL−00068" />
+      <updated>1742704100349</updated>
+    </task>
+    <task id="LOCAL−00069" summary="added simple but useful error messages, and a custome made erorr handling mechanism">
+      <option name="closed" value="true" />
+      <created>1742704338270</created>
+      <option name="number" value="LOCAL−00069" />
+      <option name="presentableId" value="LOCAL−00069" />
+      <updated>1742704338270</updated>
+    </task>
+    <option name="localTasksCounter" value="70" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="changes" />
+    <MESSAGE value="added some changes to the statements file" />
+    <MESSAGE value="added some changes to the introduction and index file" />
+    <MESSAGE value="renamed statements to Statements" />
+    <MESSAGE value="renamed a bunch of files" />
+    <MESSAGE value="renamed commands to Commands" />
+    <MESSAGE value="added a download button for latest version for easier access to the software" />
+    <MESSAGE value="added a favicon for the documentation website" />
+    <MESSAGE value="added basic functions grammar" />
+    <MESSAGE value="added support for functions and return statements for functions, that means function decleration, function calling" />
+    <MESSAGE value="added support for try and catch aswell as throw" />
+    <MESSAGE value="added a new example" />
+    <MESSAGE value="added a new example and added some changes to function logic" />
+    <MESSAGE value="bases for java connection logic" />
+    <MESSAGE value="added some changes for page deployment on web and google" />
+    <MESSAGE value="changes to example file" />
+    <MESSAGE value="added a new favicon to the documentation site" />
+    <MESSAGE value="added some changes to the documentation site" />
+    <MESSAGE value="new feature,bridge between java and our language via a built in method" />
+    <MESSAGE value="java connection logic" />
+    <MESSAGE value="configurations" />
+    <MESSAGE value="added support for libraries, namespaces to modulirize code" />
+    <MESSAGE value="updated version number" />
+    <MESSAGE value="added more libraries to the set of libraries(standard library)" />
+    <MESSAGE value="added simple but useful error messages, and a custome made erorr handling mechanism" />
+    <option name="LAST_COMMIT_MESSAGE" value="added simple but useful error messages, and a custome made erorr handling mechanism" />
+  </component>
+</project>
