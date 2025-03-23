@@ -20,6 +20,8 @@ statement
     | doWhileStatement
     | libraryDeclaration
     | importStatement
+    | structDeclaration
+     | enumDeclaration
     ;
 
         importStatement
@@ -97,14 +99,21 @@ assignmentNoSemi
     ;
 leftHandSide
     : IDENTIFIER ( '[' expression ']' )*
+    | IDENTIFIER '.' IDENTIFIER
     ;
 printStatement
     : 'print' '(' expression (',' expression)* ')' ';'
     ;
 expression
     : logicalOrExpression
+     | functionReference
     ;
-
+functionReference
+    : '&' qualifiedIdentifier '(' argumentList? ')'
+    ;
+    qualifiedIdentifier
+        : IDENTIFIER ('.' IDENTIFIER)*
+        ;
 logicalOrExpression
     : logicalAndExpression ( '||' logicalAndExpression )*
     ;
@@ -145,6 +154,20 @@ elseIfStatement
 elseStatement
     : 'else' block
     ;
+    structDeclaration
+        : 'struct' IDENTIFIER '{' structField* '}'
+        ;
+
+    structField
+        : IDENTIFIER ';'
+        ;
+
+    enumDeclaration
+        : 'enum' IDENTIFIER '{' enumValue (',' enumValue)* '}'
+        ;
+        enumValue
+            : IDENTIFIER ('=' expression)?
+            ;
 block
     : '{' statement* '}'
     ;
@@ -162,16 +185,13 @@ postfixOp
     | IDENTIFIER
     | '(' expression ')'
     | functionCall
-    | functionReference
+
     ;
 
     functionCall
         : (IDENTIFIER) '(' argumentList? ')'
         ;
 
-    functionReference
-        : '&' IDENTIFIER '(' argumentList? ')'
-        ;
 
     argumentList
         : expression (',' expression)*

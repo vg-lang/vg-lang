@@ -685,6 +685,10 @@ public class MyGUI extends JFrame {
             boolean shouldPaint = painted != 0;
             super.setBorderPainted(shouldPaint);
         }
+        public void setOnClick(ActionListener listener) {
+            this.addActionListener(listener);
+        }
+
 
         }
 

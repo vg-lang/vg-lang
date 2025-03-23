@@ -248,6 +248,26 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitExpression(vg_langParser.ExpressionContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#functionReference}.
+	 * @param ctx the parse tree
+	 */
+	void enterFunctionReference(vg_langParser.FunctionReferenceContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#functionReference}.
+	 * @param ctx the parse tree
+	 */
+	void exitFunctionReference(vg_langParser.FunctionReferenceContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#qualifiedIdentifier}.
+	 * @param ctx the parse tree
+	 */
+	void enterQualifiedIdentifier(vg_langParser.QualifiedIdentifierContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#qualifiedIdentifier}.
+	 * @param ctx the parse tree
+	 */
+	void exitQualifiedIdentifier(vg_langParser.QualifiedIdentifierContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#logicalOrExpression}.
 	 * @param ctx the parse tree
 	 */
@@ -348,6 +368,46 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitElseStatement(vg_langParser.ElseStatementContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#structDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterStructDeclaration(vg_langParser.StructDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#structDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitStructDeclaration(vg_langParser.StructDeclarationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#structField}.
+	 * @param ctx the parse tree
+	 */
+	void enterStructField(vg_langParser.StructFieldContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#structField}.
+	 * @param ctx the parse tree
+	 */
+	void exitStructField(vg_langParser.StructFieldContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#enumDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterEnumDeclaration(vg_langParser.EnumDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#enumDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitEnumDeclaration(vg_langParser.EnumDeclarationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#enumValue}.
+	 * @param ctx the parse tree
+	 */
+	void enterEnumValue(vg_langParser.EnumValueContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#enumValue}.
+	 * @param ctx the parse tree
+	 */
+	void exitEnumValue(vg_langParser.EnumValueContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#block}.
 	 * @param ctx the parse tree
 	 */
@@ -397,16 +457,6 @@ public interface vg_langListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitFunctionCall(vg_langParser.FunctionCallContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link vg_langParser#functionReference}.
-	 * @param ctx the parse tree
-	 */
-	void enterFunctionReference(vg_langParser.FunctionReferenceContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link vg_langParser#functionReference}.
-	 * @param ctx the parse tree
-	 */
-	void exitFunctionReference(vg_langParser.FunctionReferenceContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vg_langParser#argumentList}.
 	 * @param ctx the parse tree

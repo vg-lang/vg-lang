@@ -1,31 +1,54 @@
 ### IntelliJ IDEA ###
+# Ignore compiled output
 out/
-!**/src/main/**/out/
-!**/src/test/**/out/
-!.idea/
-!*.iml
+
+# Ignore most of the .idea folder
+.idea/
+# But allow sharing these useful settings if you want
+!/.idea/codeStyles/
+!/.idea/inspectionProfiles/
+!/.idea/runConfigurations/
+
+# Ignore IntelliJ-specific files
+workspace.xml
+tasks.xml
+shelf/
+*.iws
+*.ipr
+*.iml
+
 ### Eclipse ###
 .apt_generated
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
 .sts4-cache
 bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
 
 ### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
 
 ### VS Code ###
 .vscode/
 
-### Mac OS ###
+### macOS ###
 .DS_Store
-.jar
+
+### Windows ###
+Thumbs.db
+
+### Java / Build ###
+*.log
+*.tmp
+*.bak
+*.swp
+.gradle/
+build/
+target/
+*.jar

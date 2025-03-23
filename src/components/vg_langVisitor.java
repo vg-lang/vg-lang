@@ -155,6 +155,18 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitExpression(vg_langParser.ExpressionContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#functionReference}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitFunctionReference(vg_langParser.FunctionReferenceContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#qualifiedIdentifier}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitQualifiedIdentifier(vg_langParser.QualifiedIdentifierContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#logicalOrExpression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -215,6 +227,30 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitElseStatement(vg_langParser.ElseStatementContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#structDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitStructDeclaration(vg_langParser.StructDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#structField}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitStructField(vg_langParser.StructFieldContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#enumDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitEnumDeclaration(vg_langParser.EnumDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#enumValue}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitEnumValue(vg_langParser.EnumValueContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#block}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -244,12 +280,6 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitFunctionCall(vg_langParser.FunctionCallContext ctx);
-	/**
-	 * Visit a parse tree produced by {@link vg_langParser#functionReference}.
-	 * @param ctx the parse tree
-	 * @return the visitor result
-	 */
-	T visitFunctionReference(vg_langParser.FunctionReferenceContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vg_langParser#argumentList}.
 	 * @param ctx the parse tree

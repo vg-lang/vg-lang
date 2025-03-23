@@ -3,68 +3,124 @@ package components;
 import java.util.List;
 
 public class VariableReference {
-    private SymbolTable symbolTable;
+     private SymbolTable table;
     private String name;
     private List<Integer> indices;
+    private String fieldName;
 
-    public VariableReference(SymbolTable symbolTable, String name, List<Integer> indices) {
-        this.symbolTable = symbolTable;
+    private Struct struct;
+    public VariableReference(SymbolTable table, String name, List<Integer> indices) {
+
+        this.table = table;
+
         this.name = name;
+
         this.indices = indices;
     }
+    public VariableReference(Struct struct, String fieldName) {
+
+        this.struct = struct;
+
+        this.fieldName = fieldName;
+
+    }
+
+
 
     public void setValue(Object value) {
-        if (indices.isEmpty()) {
-            symbolTable.set(name, value);
+        if (struct != null) {
+
+            struct.setField(fieldName, value);
+
+            return;
+
         }
-        else if(isConstant()) {
-            throw new RuntimeException("Cannot assign to a constant variable: " + name);
-        }
-        else {
-            // Array element assignment
-            Object array = symbolTable.get(name);
+
+        Object currentValue = table.get(name);
+
+        if (!indices.isEmpty() && currentValue instanceof List) {
+
+            List<Object> list = (List<Object>) currentValue;
             for (int i = 0; i < indices.size() - 1; i++) {
-                int idx = indices.get(i);
-                if (!(array instanceof List)) {
-                    throw new RuntimeException("Cannot index into non-array value.");
+
+                int index = indices.get(i);
+
+                if (index < 0 || index >= list.size() || !(list.get(index) instanceof List)) {
+
+                    throw new RuntimeException("Invalid array access");
+
                 }
-                List<?> list = (List<?>) array;
-                if (idx < 0 || idx >= list.size()) {
-                    throw new RuntimeException("Array index out of bounds.");
-                }
-                array = list.get(idx);
+
+                list = (List<Object>) list.get(index);
+
             }
-            int lastIndex = indices.get(indices.size() - 1);
-            if (!(array instanceof List)) {
-                throw new RuntimeException("Cannot index into non-array value.");
+
+
+
+
+
+            int finalIndex = indices.get(indices.size() - 1);
+
+            if (finalIndex < 0 || finalIndex >= list.size()) {
+
+                throw new RuntimeException("Array index out of bounds");
+
             }
-            List<Object> list = (List<Object>) array;
-            if (lastIndex < 0 || lastIndex >= list.size()) {
-                throw new RuntimeException("Array index out of bounds.");
-            }
-            list.set(lastIndex, value);
+
+            list.set(finalIndex, value);
+
+        } else {
+
+
+
+            table.set(name, value);
+
         }
+
     }
+
+
     public Object getValue() {
-        Object value = symbolTable.get(name);
-        for (int idx : indices) {
-            if (!(value instanceof List)) {
-                throw new RuntimeException("Cannot index into non-array value.");
+        if (struct != null) {
+
+            return struct.getField(fieldName);
+        }
+        Object value = table.get(name);
+
+        if (!indices.isEmpty() && value instanceof List) {
+
+            List<Object> list = (List<Object>) value;
+            for (int index : indices) {
+
+                if (index < 0 || index >= list.size()) {
+
+                    throw new RuntimeException("Array index out of bounds");
+
+                }
+
+                value = list.get(index);
+
+                if (value instanceof List && index < indices.size() - 1) {
+
+                    list = (List<Object>) value;
+
+                }
+
             }
-            List<?> list = (List<?>) value;
-            if (idx < 0 || idx >= list.size()) {
-                throw new RuntimeException("Array index out of bounds.");
-            }
-            value = list.get(idx);
+
         }
         return value;
-
     }
     public String getName() {
         return name;
     }
     public boolean isConstant() {
+        if (struct != null) {
 
-        return symbolTable.isConstant(name);
+            return false;
+
+        }
+        return table != null && table.isConstant(name);
+
     }
 }

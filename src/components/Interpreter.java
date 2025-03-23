@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+import java.awt.event.*;
 import java.io.IOException;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
@@ -34,8 +35,8 @@ public class Interpreter extends vg_langBaseVisitor {
         symbolTableStack.push(globalSymbolTable);
         registerBuiltInFunction();
 
-        // String configPath = System.getenv("MY_APP_CONFIG");
-        String configPath = "C:/Users/hodif/Desktop/usn2024/vg lang/Configuration";
+         String configPath = System.getenv("MY_APP_CONFIG");
+        //String configPath = "C:/Users/hodif/Desktop/usn2024/vg lang/Configuration";
         loadLangConfigFile(configPath + "/allowed_configurations.vgenv");
         moduleRegistry = new ModuleRegistry();
         loadLibrariesFromFolder(libraryFolder);
@@ -201,7 +202,7 @@ public class Interpreter extends vg_langBaseVisitor {
                     globalSymbolTable.set(entry.getKey(), entry.getValue());
                 }
             }
-            System.out.println("DEBUG: Imported all symbols from nested namespace '" + String.join(".", nsPath) + "'.");
+           // System.out.println("DEBUG: Imported all symbols from nested namespace '" + String.join(".", nsPath) + "'.");
             return;
         }
 
@@ -213,7 +214,7 @@ public class Interpreter extends vg_langBaseVisitor {
                 throw new RuntimeException("Namespace not found: " + nsName);
             }
             globalSymbolTable.set(nsName, ns);
-            System.out.println("DEBUG: Imported namespace '" + nsName + "' into global scope.");
+            // System.out.println("DEBUG: Imported namespace '" + nsName + "' into global scope.");
             return;
         }
 
@@ -250,7 +251,7 @@ public class Interpreter extends vg_langBaseVisitor {
             } else {
                 globalSymbolTable.set(symbolName, symbol);
             }
-            System.out.println("DEBUG: Imported symbol or namespace '" + symbolName + "' from nested path '" + String.join(".", nsPath) + "' into global scope.");
+           // System.out.println("DEBUG: Imported symbol or namespace '" + symbolName + "' from nested path '" + String.join(".", nsPath) + "' into global scope.");
 
         }
 
@@ -530,7 +531,69 @@ public class Interpreter extends vg_langBaseVisitor {
         try {
 
             Class<?> clazz = Class.forName(className);
+            if (className.equals("components.MyGUI$MyButton") && memberName.equals("setOnClick") && methodArgs.size() == 2) {
 
+                Object instanceObj = methodArgs.get(0);
+                if (instanceObj instanceof LanguageObjectWrapper) {
+                    instanceObj = ((LanguageObjectWrapper) instanceObj).getObject();
+                }
+
+                Object secondArg = methodArgs.get(1);
+                if (!(secondArg instanceof FunctionReference)) {
+                    throw new RuntimeException("setOnClick requires a FunctionReference argument");
+                }
+                FunctionReference funcRef = (FunctionReference) secondArg;
+
+
+                ActionListener listener = new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+
+                        List<Object> finalArgs = new ArrayList<>(funcRef.getCapturedArgs());
+
+                        funcRef.getFunction().call(finalArgs);
+                    }
+                };
+
+
+                Method setOnClickMethod = clazz.getMethod("setOnClick", ActionListener.class);
+                setOnClickMethod.invoke(instanceObj, listener);
+
+                return null;
+            }
+            if (className.equals("components.MyGUI") && memberName.equals("setOnKeyPress") && methodArgs.size() == 2) {
+
+                Object instanceObj = methodArgs.get(0);
+                if (instanceObj instanceof LanguageObjectWrapper) {
+                    instanceObj = ((LanguageObjectWrapper) instanceObj).getObject();
+                }
+
+
+                Object secondArg = methodArgs.get(1);
+                if (!(secondArg instanceof FunctionReference)) {
+                    throw new RuntimeException("setOnKeyPress requires a FunctionReference argument.");
+                }
+                FunctionReference funcRef = (FunctionReference) secondArg;
+
+
+                KeyListener listener = new KeyAdapter() {
+                    @Override
+                    public void keyPressed(KeyEvent e) {
+
+                        List<Object> argValues = new ArrayList<>(funcRef.getCapturedArgs());
+                        argValues.add(e.getKeyCode());
+
+                        funcRef.getFunction().call(argValues);
+                    }
+                };
+
+
+                Method method = clazz.getMethod("setOnKeyPress", KeyListener.class);
+                method.invoke(instanceObj, listener);
+
+
+                return null;
+            }
             if (!isMethodAllowed(clazz, memberName)) {
                 throw new RuntimeException("Access to method '" + memberName + "' in class '" + className + "' is not allowed.");
             }
@@ -600,6 +663,8 @@ public class Interpreter extends vg_langBaseVisitor {
             throw new RuntimeException(e);
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
         }
 
     }
@@ -643,7 +708,7 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
                 allowedMethods.put(className, methodsSet);
             }
-            System.out.println("Loaded allowed classes and methods from " + filepath);
+            // System.out.println("Loaded allowed classes and methods from " + filepath);
         } catch (Exception e) {
             throw new RuntimeException("Error reading allowed configuration file: " + e.getMessage(), e);
         }
@@ -738,7 +803,10 @@ public class Interpreter extends vg_langBaseVisitor {
                 break;
             }
         }
-
+        if (funcObj instanceof FunctionReference) {
+            FunctionReference funcRef = (FunctionReference) funcObj;
+            return funcRef.call(argValues);
+        }
         if (!(funcObj instanceof Function)) {
             int line = ctx.getStart().getLine();
             throw new RuntimeException("Function '" + functionName + "' is not defined at line: " + line);
@@ -862,9 +930,23 @@ public class Interpreter extends vg_langBaseVisitor {
 
     @Override
     public Object visitLeftHandSide(vg_langParser.LeftHandSideContext ctx) {
-        if (ctx.IDENTIFIER() != null) {
-            String varName = ctx.IDENTIFIER().getText();
+        if (ctx.IDENTIFIER().size() == 1) {
+            // Regular variable or array access
+            String varName = ctx.IDENTIFIER(0).getText();
 
+            // Handle array indices if present
+            List<Integer> indices = new ArrayList<>();
+            if (ctx.expression() != null && !ctx.expression().isEmpty()) {
+                for (vg_langParser.ExpressionContext exprCtx : ctx.expression()) {
+                    Object indexObj = visit(exprCtx);
+                    if (!(indexObj instanceof Number)) {
+                        throw new RuntimeException("Array index must be a number.");
+                    }
+                    indices.add(((Number) indexObj).intValue());
+                }
+            }
+
+            // Find the variable in the symbol tables
             SymbolTable targetTable = null;
             for (SymbolTable table : symbolTableStack) {
                 if (table.contains(varName)) {
@@ -877,18 +959,19 @@ public class Interpreter extends vg_langBaseVisitor {
                 throw new RuntimeException("Variable '" + varName + "' is not defined.");
             }
 
-            List<Integer> indices = new ArrayList<>();
-            if (ctx.expression() != null && !ctx.expression().isEmpty()) {
-                for (vg_langParser.ExpressionContext exprCtx : ctx.expression()) {
-                    Object indexObj = visit(exprCtx);
-                    if (!(indexObj instanceof Number)) {
-                        throw new RuntimeException("Array index must be a number.");
-                    }
-                    indices.add(((Number) indexObj).intValue());
-                }
-            }
-
             return new VariableReference(targetTable, varName, indices);
+        } else if (ctx.IDENTIFIER().size() == 2) {
+
+            String objName = ctx.IDENTIFIER(0).getText();
+            String fieldName = ctx.IDENTIFIER(1).getText();
+            
+            Object obj = getVariable(objName);
+            if (!(obj instanceof Struct)) {
+                throw new RuntimeException("Cannot access field '" + fieldName + "' on non-struct object '" + objName + "'");
+            }
+            
+            Struct struct = (Struct) obj;
+            return new VariableReference(struct, fieldName);
         } else {
             throw new RuntimeException("Invalid assignment target.");
         }
@@ -1141,8 +1224,14 @@ public class Interpreter extends vg_langBaseVisitor {
         if (ctx.literal() != null) {
             return visit(ctx.literal());
         } else if (ctx.IDENTIFIER() != null) {
-            String varName = ctx.IDENTIFIER().getText();
-            return getVariable(varName);
+            String name = ctx.IDENTIFIER().getText();
+            Object value = getVariable(name);
+
+            if (value instanceof StructDefinition) {
+                return ((StructDefinition) value).createInstance();
+            }
+
+            return value;
         } else if (ctx.expression() != null) {
             return visit(ctx.expression());
         } else if (ctx.functionCall() != null) {
@@ -1246,7 +1335,22 @@ public class Interpreter extends vg_langBaseVisitor {
                         );
                     }
                     value = member;
-                } else {
+                } else if (value instanceof Struct) {
+
+                    Struct struct = (Struct) value;
+                    if (!struct.hasField(memberName)) {
+                        throw new RuntimeException("Field '" + memberName + "' not found in struct '" + struct.getName() + "'");
+                    }
+                    value = struct.getField(memberName);
+                } else if (value instanceof Enum) {
+
+                    Enum enumObj = (Enum) value;
+                    if (!enumObj.hasValue(memberName)) {
+                        throw new RuntimeException("Value '" + memberName + "' not found in enum '" + enumObj.getName() + "'");
+                    }
+                    value = enumObj.getValue(memberName);
+                }
+                else {
                     updatePosition(opCtx.start);
                     throw new ErrorHandler.VGTypeException(
                             "Dot operator not supported on type: " + (value != null ? value.getClass().getName() : "null"),
@@ -1478,4 +1582,78 @@ public class Interpreter extends vg_langBaseVisitor {
         this.processImport(importPath);
         return null;
     }
+
+    @Override
+    public Object visitFunctionReference(vg_langParser.FunctionReferenceContext ctx) {
+        String functionPath = ctx.qualifiedIdentifier().getText();
+
+        // Retrieve the function (handle namespaces and libraries)
+        Function function = resolveFunctionFromNamespace(functionPath);
+
+        if (function == null) {
+            throw new RuntimeException("Function '" + functionPath + "' is not defined.");
+        }
+
+        // Capture optional arguments
+        List<Object> capturedArgs = new ArrayList<>();
+        if (ctx.argumentList() != null) {
+            for (vg_langParser.ExpressionContext exprCtx : ctx.argumentList().expression()) {
+                capturedArgs.add(visit(exprCtx));
+            }
+        }
+
+        return new FunctionReference(function, capturedArgs);
+    }
+
+
+    @Override
+    public Object visitStructDeclaration(vg_langParser.StructDeclarationContext ctx) {
+        String structName = ctx.IDENTIFIER().getText();
+
+        // Create a new struct type definition
+        Map<String, Object> fieldDefaults = new HashMap<>();
+        for (vg_langParser.StructFieldContext fieldCtx : ctx.structField()) {
+            String fieldName = fieldCtx.IDENTIFIER().getText();
+            fieldDefaults.put(fieldName, null);
+        }
+
+        // Store the struct definition in the symbol table
+        StructDefinition structDef = new StructDefinition(structName, fieldDefaults);
+        currentSymbolTable().set(structName, structDef);
+
+        return null;
+    }
+
+    @Override
+    public Object visitEnumDeclaration(vg_langParser.EnumDeclarationContext ctx) {
+        String enumName = ctx.IDENTIFIER().getText();
+        Enum enumObj = new Enum(enumName);
+
+        // Process enum values
+        int autoValue = 0;
+        for (vg_langParser.EnumValueContext valueCtx : ctx.enumValue()) {
+            String valueName = valueCtx.IDENTIFIER().getText();
+            Object value;
+
+            if (valueCtx.expression() != null) {
+                // Explicit value provided
+                value = visit(valueCtx.expression());
+                if (value instanceof Number) {
+                    autoValue = ((Number) value).intValue() + 1;
+                }
+            } else {
+                // Auto-increment value
+                value = autoValue++;
+            }
+
+            enumObj.addValue(valueName, value);
+        }
+
+        // Store the enum in the symbol table
+        currentSymbolTable().set(enumName, enumObj);
+
+        return null;
+    }
+
+
 }
