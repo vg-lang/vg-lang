@@ -51,6 +51,12 @@ public class Interpreter extends vg_langBaseVisitor {
             throw new RuntimeException("Error loading libraries from folder: " + folderPath, e);
         }
     }
+    private void updatePosition(Token token) {
+        if (token != null) {
+            currentLine = token.getLine();
+            currentColumn = token.getCharPositionInLine();
+        }
+    }
     public void processLibraryDeclaration(vg_langParser.LibraryDeclarationContext ctx) {
         String libraryName = ctx.IDENTIFIER().getText();
         Library library = new Library(libraryName);
@@ -84,8 +90,8 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Error reading library file: " + filePath);
-        }
+            e.printStackTrace();
+            throw new RuntimeException("Error reading library file: " + filePath);        }
     }
     private void processNamespaceBody(vg_langParser.NamespaceDeclarationContext nsCtx, Namespace namespace) {
 
@@ -119,7 +125,7 @@ public class Interpreter extends vg_langBaseVisitor {
     }
 
     public void processImport(String importPath) {
-
+        try{
         importPath = importPath.trim();
         if (importPath.endsWith(";")) {
             importPath = importPath.substring(0, importPath.length() - 1);
@@ -136,19 +142,36 @@ public class Interpreter extends vg_langBaseVisitor {
         String[] parts = partsList.toArray(new String[0]);
 
         if (parts.length < 2) {
-            throw new RuntimeException("Invalid import path: " + importPath);
+            throw new ErrorHandler.VGImportException(
+                    "Invalid import path: " + importPath,
+                    currentLine, currentColumn
+            );
         }
 
 
         String libName = parts[0];
         Library lib = moduleRegistry.getLibrary(libName);
         if (lib == null) {
+            try {
+                String libraryFilePath = libraryFolder + "/" + libName + ".vglib";
+                loadLibraryFile(libraryFilePath);
+                lib = moduleRegistry.getLibrary(libName);
+                if (lib == null) {
+                    throw new ErrorHandler.VGImportException(
+                            "Library not found after attempting load: " + libName,
+                            currentLine, currentColumn
+                    );
+                }
 
-            String libraryFilePath = libraryFolder + "/" + libName + ".vglib";
-            loadLibraryFile(libraryFilePath);
-            lib = moduleRegistry.getLibrary(libName);
-            if (lib == null) {
-                throw new RuntimeException("Library not found after attempting load: " + libName);
+            } catch (RuntimeException e) {
+                if (e.getCause() instanceof IOException) {
+                    throw new ErrorHandler.VGImportException(
+                            "Cannot import library '" + libName + "': Library file not found",
+                            currentLine, currentColumn
+                    );
+                } else {
+                    throw e; // Re-throw other runtime exceptions
+                }
             }
         }
 
@@ -228,10 +251,18 @@ public class Interpreter extends vg_langBaseVisitor {
                 globalSymbolTable.set(symbolName, symbol);
             }
             System.out.println("DEBUG: Imported symbol or namespace '" + symbolName + "' from nested path '" + String.join(".", nsPath) + "' into global scope.");
-            return;
+
         }
 
-        throw new RuntimeException("Import path format not recognized: " + importPath);
+        } catch (ErrorHandler.VGException e) {
+            throw e;
+        } catch (Exception e) {
+
+            throw new ErrorHandler.VGImportException(
+                    "Error importing '" + importPath + "': " + e.getMessage(),
+                    currentLine, currentColumn
+            );
+        }
     }
 
     private void importNamespace(Namespace ns) {
@@ -1208,11 +1239,19 @@ public class Interpreter extends vg_langBaseVisitor {
                     Namespace ns = (Namespace) value;
                     Object member = ns.getSymbol(memberName);
                     if (member == null) {
-                        throw new RuntimeException("Member '" + memberName + "' not found in namespace.");
+                        updatePosition(opCtx.start);
+                        throw new ErrorHandler.VGNameException(
+                                "Member '" + memberName + "' not found in namespace.",
+                                currentLine, currentColumn
+                        );
                     }
                     value = member;
                 } else {
-                    throw new RuntimeException("Dot operator not supported on type: " + value.getClass().getName());
+                    updatePosition(opCtx.start);
+                    throw new ErrorHandler.VGTypeException(
+                            "Dot operator not supported on type: " + (value != null ? value.getClass().getName() : "null"),
+                            currentLine, currentColumn
+                    );
                 }
             } else if ("(".equals(opText)) {
 
@@ -1225,23 +1264,55 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
 
                 if (value instanceof Function) {
-                    value = ((Function) value).call(argValues);
+                    try{
+                        value = ((Function) value).call(argValues);
+                    }
+                    catch (IndexOutOfBoundsException e) {
+                        updatePosition(opCtx.start);
+                        throw new ErrorHandler.VGTypeException(
+                                "Incorrect number of arguments for function call. Check the function signature.",
+                                currentLine, currentColumn
+                        );
+                    } catch (Exception e) {
+                        updatePosition(opCtx.start);
+                        throw new ErrorHandler.VGException(
+                                "Error in function call: " + e.getMessage(),
+                                currentLine, currentColumn
+                        );
+                    }
+
                 } else {
-                    throw new RuntimeException("Attempted to call a non-function: " + value);
+                    updatePosition(opCtx.start);
+                    throw new ErrorHandler.VGTypeException(
+                            "Cannot call a non-function value: " + (value != null ? value.getClass().getSimpleName() : "null"),
+                            currentLine, currentColumn
+                    );
                 }
             } else if ("[".equals(opText)) {
 
                 Object indexObj = visit(opCtx.expression());
                 if (!(indexObj instanceof Number)) {
-                    throw new RuntimeException("Array index must be a number.");
+                    updatePosition(opCtx.start);
+                    throw new ErrorHandler.VGTypeException(
+                            "Array index must be a number, got: " + (indexObj != null ? indexObj.getClass().getSimpleName() : "null"),
+                            currentLine, currentColumn
+                    );
                 }
                 int index = ((Number) indexObj).intValue();
                 if (!(value instanceof List)) {
-                    throw new RuntimeException("Cannot index into non-array value.");
+                    updatePosition(opCtx.start);
+                    throw new ErrorHandler.VGTypeException(
+                            "Cannot use [] operator on non-array value: " + (value != null ? value.getClass().getSimpleName() : "null"),
+                            currentLine, currentColumn
+                    );
                 }
                 List<?> list = (List<?>) value;
                 if (index < 0 || index >= list.size()) {
-                    throw new RuntimeException("Array index out of bounds.");
+                    updatePosition(opCtx.start);
+                    throw new ErrorHandler.VGException(
+                            "Array index out of bounds: index " + index + " exceeds array length " + list.size(),
+                            currentLine, currentColumn
+                    );
                 }
                 value = list.get(index);
             }
