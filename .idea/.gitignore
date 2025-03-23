@@ -1,8 +1,31 @@
-# Default ignored files
-/shelf/
-/workspace.xml
-# Editor-based HTTP Client requests
-/httpRequests/
-# Datasource local storage ignored files
-/dataSources/
-/dataSources.local.xml
+# IntelliJ project files (mostly user-specific)
+.idea/
+*.iml
+*.iws
+workspace.xml
+shelf/
+out/
+
+# Build output
+/build/
+target/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.bak
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# HTTP Client requests (optional)
+httpRequests/
+
+# IntelliJ data sources (optional)
+dataSources/
+dataSources.local.xml
+
+# Exclude database files or IDE-created files
+*.db
