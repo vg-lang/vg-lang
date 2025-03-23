@@ -1,6 +1,7 @@
 package components;
 
 
+import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.Timer;
 import javax.swing.border.Border;
@@ -30,7 +31,7 @@ public class MyGUI extends JFrame {
         setFocusable(true);
         requestFocusInWindow();
 
-        setWindowIcon("vg transparent.png");
+        setWindowIcon("logo.png");
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -694,6 +695,78 @@ public class MyGUI extends JFrame {
 
         public void setFontStyle(int style) {
             setFont(new Font(getFont().getName(), style, getFont().getSize()));
+        }
+
+        public class mySoundManager{
+            private static List<Clip> soundclips = new ArrayList<>();
+            private static FloatControl  volumadjuster;
+
+            private static void  playSound(String filepath){
+                try{
+                    File soundfile  = new File(filepath);
+                    if(!soundfile.exists()){
+                        System.err.println("Sound file not found: " + filepath);
+                        return;
+                    }
+                    AudioInputStream audioInput = AudioSystem.getAudioInputStream(soundfile);
+                    Clip clip = AudioSystem.getClip();
+                    clip.open(audioInput);
+                    soundclips.add(clip);
+                    clip.start();
+
+                } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+                    System.err.println("Error playing sound: " + e.getMessage());
+                }
+            }
+
+            public static void stopAllSounds() {
+                for (Clip clip : soundclips) {
+                    if (clip.isRunning()) {
+                        clip.stop();
+                        clip.close();
+                    }
+                }
+                soundclips.clear();
+            }
+
+            public static void setVolume(int volumeLevel) {
+                float volume = (float) volumeLevel / 100f;
+                try {
+                    Mixer mixer = AudioSystem.getMixer(null);
+                    Line.Info[] lineInfonormation = mixer.getTargetLineInfo();
+                    for (Line.Info info : lineInfonormation) {
+                        Line line = mixer.getLine(info);
+                        if (line.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                            line.open();
+                            volumadjuster = (FloatControl) line.getControl(FloatControl.Type.MASTER_GAIN);
+                            float min = volumadjuster.getMinimum();
+                            float max = volumadjuster.getMaximum();
+                            float gain = min + (max - min) * volume;
+                            volumadjuster.setValue(gain);
+                        }
+                    }
+                } catch (LineUnavailableException e) {
+                    System.err.println("Error setting volume: " + e.getMessage());
+                }
+            }
+
+            public static void playSoundLoop(String filePath, int loopCount) {
+                try {
+                    File soundFile = new File(filePath);
+                    if (!soundFile.exists()) {
+                        System.err.println("Sound file not found: " + filePath);
+                        return;
+                    }
+
+                    AudioInputStream audioIn = AudioSystem.getAudioInputStream(soundFile);
+                    Clip clip = AudioSystem.getClip();
+                    clip.open(audioIn);
+                    soundclips.add(clip);
+                    clip.loop(loopCount);
+                } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
+                    System.err.println("Error playing sound: " + e.getMessage());
+                }
+            }
         }
     }
 

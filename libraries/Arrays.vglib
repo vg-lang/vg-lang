@@ -1,0 +1,35 @@
+library Arrays {
+namespace array{
+    function getLength(array) {
+        return VgSystemCall("components.ArrayUtils", "length", array);
+    }
+
+    ## Function to add an element to the end of the array (push)
+    function push(array, element) {
+        VgSystemCall("components.ArrayUtils", "push", array, element);
+        return array;  ## Return the modified array
+    }
+
+    ## Utility function to replace all occurrences of a substring
+    function replaceAll(original, target, replacement) {
+        return VgSystemCall("components.ArrayUtils", "replaceAll", original, target, replacement);
+    }
+
+
+    ## Function to remove the last element of the array (pop)
+    function pop(array) {
+        return VgSystemCall("components.ArrayUtils", "pop", array);
+    }
+
+    ## Function to add an element to the beginning of the array (unshift)
+    function unshift(array, element) {
+        VgSystemCall("components.ArrayUtils", "unshift", array, element);
+        return array;
+    }
+
+    ## Function to remove the first element of the array (shift)
+    function shift(array) {
+        return VgSystemCall("components.ArrayUtils", "shift", array);
+    }
+    }
+}
