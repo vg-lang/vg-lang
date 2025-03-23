@@ -1,0 +1,59 @@
+library Random {
+    namespace number {
+        ## Generate a random integer between min (inclusive) and max (inclusive)
+        function integer(min, max) {
+            var range = max - min + 1;
+            var random = VgSystemCall("java.lang.Math", "random");
+            var scaled = random * range;
+            var result = VgSystemCall("java.lang.Math", "floor", scaled) + min;
+            return result;
+        }
+        
+        ## Generate a random float between 0.0 (inclusive) and 1.0 (exclusive)
+        function float() {
+            return VgSystemCall("java.lang.Math", "random");
+        }
+        
+        ## Generate a random float between min (inclusive) and max (exclusive)
+        function floatRange(min, max) {
+            var random = VgSystemCall("java.lang.Math", "random");
+            return min + (random * (max - min));
+        }
+        
+        ## Generate a random boolean value
+        function boolean() {
+            var random = VgSystemCall("java.lang.Math", "random");
+            return random < 0.5;
+        }
+    }
+    
+    namespace arrayTools {
+        ## Get a random element from an array
+        function element(arr) {
+            var length = VgSystemCall("components.ArrayUtils", "length", arr);
+            if (length == 0) {
+                return null;
+            }
+            var random = VgSystemCall("java.lang.Math", "random");
+            var index = VgSystemCall("java.lang.Math", "floor", random * length);
+            return arr[index];
+        }
+        
+        ## Shuffle an array (Fisher-Yates algorithm)
+        function shuffle(arr) {
+            var length = VgSystemCall("components.ArrayUtils", "length", arr);
+            for (var i = length - 1; i > 0; i = i - 1) {
+                var random = VgSystemCall("java.lang.Math", "random");
+                var j = VgSystemCall("java.lang.Math", "floor", random * (i + 1));
+                
+                ## Swap elements
+                var temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+            }
+            
+            ## Return the array itself, not a string representation
+            return arr;
+        }
+    }
+} 

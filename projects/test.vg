@@ -1,13 +1,17 @@
-## imports
-import Guilibrary.window;
-import Guilibrary.style.*;
-import Guilibrary.Button;
-import Guilibrary.component;
+import OSLib.sys;
 
-## actual code
-var mywindow = window.create("hei",300,300);
-setBackgroundColor(mywindow,"#B5E61D");
-var mybtn = Button.createButton("hei",150,150,150,150);
-Button.setButtonColor(mybtn,"#00A2E8");
-component.add(mywindow,mybtn);
-window.launch(mywindow);
+function main() {
+    var osName = sys.getOSName();
+    print("Operating System: " + osName);
+
+    var userHome = sys.getUserHome();
+    print("User Home Directory: " + userHome);
+
+    var userDir = sys.getUserDir();
+    print("Current Working Directory: " + userDir);
+
+    var pathEnv = sys.getEnv("PATH");
+    print("PATH environment variable: " + pathEnv);
+}
+
+main();

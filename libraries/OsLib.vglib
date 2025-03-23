@@ -1,0 +1,24 @@
+library OSLib {
+    namespace sys {
+
+        ## Returns the value of an environment variable (or null if not set)
+        function getEnv(key) {
+            return VgSystemCall("components.SystemWrapper", "getEnv", key);
+        }
+
+        ## Returns the operating system name (e.g., "Windows 10", "Linux")
+        function getOSName() {
+            return VgSystemCall("components.SystemWrapper", "getOSName");
+        }
+
+        ## Returns the user's home directory path
+        function getUserHome() {
+            return VgSystemCall("components.SystemWrapper", "getUserHome");
+        }
+
+        ## Returns the current working directory
+        function getUserDir() {
+            return VgSystemCall("components.SystemWrapper", "getUserDir");
+        }
+    }
+}

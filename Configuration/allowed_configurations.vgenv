@@ -10,15 +10,25 @@ components.MyGUI: <init>, launch, setWindowIcon, add, addComponentToWindow, setO
 javax.swing.Timer: <init>, start
 java.lang.Thread: <init>, start, join, sleep
 java.awt.Color: <init>, decode
-components.MyGUI.MyTextField: <init>, setPlaceholder, getText, setFontFamily, setFontStyle
-components.MyGUI.MyLabel: <init>, setTextColor, setLabelBorder, setBackgroundColor, setText, getText, setFontFamily, setFontSize
-components.MyGUI.MyPane: <init>, setPaneColor, setPaneBackgroundImage, setPaneBorder
-components.MyGUI.MyAnimator: <init>, start, stop
-components.MyGUI.MyImage: <init>, setImage, resizeImage, moveImage, getTile, setTile
-components.MyGUI.MyTextArea: <init>, setFontFamily, setFontStyle
-components.MyGUI.LineNumberingTextArea: <init>, updateLineNumbers
-components.MyGUI.MyColorPicker: <init>
-components.MyGUI.MyProgressIndicator: <init>, setProgress
-components.MyGUI.MyDatePicker: <init>, getSelectedDate
+components.MyGUI$MyTextField: <init>, setPlaceholder, getText, setFontFamily, setFontStyle
+components.MyGUI$MyLabel: <init>, setTextColor, setLabelBorder, setBackgroundColor, setText, getText, setFontFamily, setFontSize
+components.MyGUI$MyPane: <init>, setPaneColor, setPaneBackgroundImage, setPaneBorder,add
+components.MyGUI$MyAnimator: <init>, start, stop
+components.MyGUI$MyImage: <init>, setImage, resizeImage, moveImage, getTile, setTile
+components.MyGUI$MyTextArea: <init>, setFontFamily, setFontStyle
+components.MyGUI$LineNumberingTextArea: <init>, updateLineNumbers
+components.MyGUI$MyColorPicker: <init>
+components.MyGUI$MyProgressIndicator: <init>, setProgress
+components.MyGUI$MyDatePicker: <init>, getSelectedDate
 components.MyGUI$MyButton: <init>,setButtonColor
+components.MyGUI$mySoundManager: playSound,stopAllSounds,setVolume,playSoundLoop
+components.MyGUI$MyImage: <init>,setImage,resizeImage,moveImage,loadImage,isGIF,getTitle
+components.ArrayUtils: length,push,pop,unshift,shift,split,joinArray
+java.lang.Math:floor,ceil,random
+components.IoUtils:getSystemIn,writeFile,appendToFile,readFile
+components.SQLiteDB: <init>, executeUpdate, executeQuery, close
+java.util.Date: <init>, getHours, getMinutes, getSeconds, getDay, getMonth, getYear, getDate
+java.util.regex.Pattern: compile, matcher
+java.util.regex.Matcher: find, group, replaceAll, matches
+components.SystemWrapper: getEnv, getOSName, getUserHome, getUserDir
 

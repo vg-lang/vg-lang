@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import org.antlr.v4.runtime.Token;
 import java.util.stream.Stream;
 
 public class Interpreter extends vg_langBaseVisitor {
@@ -26,6 +27,8 @@ public class Interpreter extends vg_langBaseVisitor {
     SymbolTable globalSymbolTable;
     ModuleRegistry moduleRegistry;
     private String libraryFolder = "libraries";
+    private int currentLine = 0;
+    private int currentColumn = 0;
     public Interpreter() {
         globalSymbolTable = new SymbolTable();
         symbolTableStack.push(globalSymbolTable);
@@ -81,7 +84,6 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
             throw new RuntimeException("Error reading library file: " + filePath);
         }
     }
@@ -1406,4 +1408,3 @@ public class Interpreter extends vg_langBaseVisitor {
         return null;
     }
 }
-

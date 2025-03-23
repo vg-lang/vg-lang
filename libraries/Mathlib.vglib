@@ -1,0 +1,236 @@
+library MathLib {
+    ## Constants namespace for mathematical constants
+    namespace constants {
+        function pi() {
+            return 3.14159;
+        }
+
+        function e() {
+            return 2.718281828459045;
+        }
+    }
+
+    ## Arithmetic namespace for elementary operations
+    namespace arithmetic {
+        function add(a, b) {
+            return a + b;
+        }
+
+        function subtract(a, b) {
+            return a - b;
+        }
+
+        function multiply(a, b) {
+            return a * b;
+        }
+
+        function divide(a, b) {
+            if (b == 0) {
+                return "Error: Division by zero";
+            } else {
+                return a / b;
+            }
+        }
+
+        function abs(x) {
+            if (x < 0) {
+                return -x;
+            } else {
+                return x;
+            }
+        }
+
+        function min(a, b) {
+            if (a > b) {
+                return b;
+            } else {
+                return a;
+            }
+        }
+
+        function max(a, b) {
+            if (a > b) {
+                return a;
+            } else {
+                return b;
+            }
+        }
+
+        function floor(x) {
+            if (x >= 0) {
+                return x - (x % 1);
+            } else {
+                return x - (x % 1) - 1;
+            }
+        }
+
+        function ceil(x) {
+            if (x % 1 == 0) {
+                return x;
+            } else if (x > 0) {
+                return x - (x % 1) + 1;
+            } else {
+                return x - (x % 1);
+            }
+        }
+    }
+
+    namespace power {
+        function pow(base, exponent) {
+            var result = 1;
+            var isNegative = 0;
+            if (exponent < 0) {
+                isNegative = 1;
+                exponent = -exponent;
+            }
+
+            for (var i = 0; i < exponent; i = i + 1) {
+                result = result * base;
+            }
+
+            if (isNegative) {
+                return 1 / result;
+            } else {
+                return result;
+            }
+        }
+
+        function sqrt(x) {
+            if (x < 0) {
+                return -1;
+            }
+            var guess = x;
+            var tolerance = 1 / 100000; ## 0.00001
+            while ((guess * guess - x > tolerance) || (guess * guess - x < -tolerance)) {
+                guess = (guess + x / guess) / 2;
+            }
+            return guess;
+        }
+    }
+
+    namespace sequence {
+        function factorial(n) {
+            var result = 1;
+            for (var i = 2; i <= n; i = i + 1) {
+                result = result * i;
+            }
+            return result;
+        }
+
+        function fibonacci(n) {
+            if (n == 0){return 0;}
+            if (n == 1){return 1;}
+
+            var a = 0;
+            var b = 1;
+            var result = 0;
+
+            for (var i = 2; i <= n; i = i + 1) {
+                result = a + b;
+                a = b;
+                b = result;
+            }
+
+            return result;
+        }
+    }
+
+    namespace trig {
+        function sin(x) {
+            var pi = 3.14159;
+            var tolerance = 1.0 / 1000000000000000.0;
+            x = x % (2 * pi);
+            if (x > pi) {
+                x = x - (2 * pi);
+            } else if (x < -pi) {
+                x = x + (2 * pi);
+            }
+
+            var term = x;
+            var sum = term;
+            var n = 1;
+
+            while (term > tolerance || term < -tolerance) {
+                term = term * -1 * x * x / ((2 * n) * (2 * n + 1));
+                sum = sum + term;
+                n = n + 1;
+            }
+
+            return sum;
+        }
+
+        function cos(x) {
+            var pi = 3.14159;
+            var tolerance = 1.0 / 1000000000000000.0;
+            x = x % (2 * pi);
+            if (x > pi) {
+                x = x - (2 * pi);
+            } else if (x < -pi) {
+                x = x + (2 * pi);
+            }
+
+            var term = 1;
+            var sum = term;
+            var n = 1;
+
+            while (term > tolerance || term < -tolerance) {
+                term = term * -1 * x * x / ((2 * n - 1) * (2 * n));
+                sum = sum + term;
+                n = n + 1;
+            }
+
+            return sum;
+        }
+
+        function tan(x) {
+            var pi = 3.14159;
+            var tolerance = 1.0 / 1000000000000000.0;
+            x = x % (2 * pi);
+            if (x > pi) {
+                x = x - (2 * pi);
+            } else if (x < -pi) {
+                x = x + (2 * pi);
+            }
+
+            ## sin(x)
+            var sinx = x;
+            var sinTerm = x;
+            var n = 1;
+            while (sinTerm > tolerance || sinTerm < -tolerance) {
+                sinTerm = sinTerm * -1 * x * x / ((2 * n) * (2 * n + 1));
+                sinx = sinx + sinTerm;
+                n = n + 1;
+            }
+
+            ## cos(x)
+            var cosx = 1;
+            var cosTerm = 1;
+            n = 1;
+            while (cosTerm > tolerance || cosTerm < -tolerance) {
+                cosTerm = cosTerm * -1 * x * x / ((2 * n - 1) * (2 * n));
+                cosx = cosx + cosTerm;
+                n = n + 1;
+            }
+
+            if (cosx > -tolerance && cosx < tolerance) {
+                if (sinx > 0) {
+                    return 1 / tolerance;
+                } else {
+                    return -1 / tolerance;
+                }
+            } else {
+                return sinx / cosx;
+            }
+        }
+
+        function hypot(x, y) {
+            var sum = x * x + y * y;
+            var guess = sum;
+            var tolerance = 1.0 / 100000.0;
+            while ((guess * guess - sum > tolerance) || (guess * guess - sum < -tolerance)) {
+                guess = (guess + sum / guess) / 2;
+            }
+            return guess;
+        }
+    }
+}

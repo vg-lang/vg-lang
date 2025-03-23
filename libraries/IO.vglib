@@ -1,0 +1,26 @@
+library IO {
+namespace File {
+ ## Read content from a file and return it as a string.
+ function readFile(path) {
+     return VgSystemCall("components.IoUtils", "readFile", path);
+ }
+
+ ## Write content to a file, overwriting any existing content.
+ function writeFile(path, content) {
+     VgSystemCall("components.IoUtils", "writeFile", path, content);
+ }
+
+ ## Append content to an existing file.
+ function appendToFile(path, content) {
+     VgSystemCall("components.IoUtils", "appendToFile", path, content);
+ }
+}
+namespace Prompt{
+function input(text) {
+print(text);
+ var scanner = VgSystemCall("java.util.Scanner", "<init>", VgSystemCall("components.IoUtils", "getSystemIn"));
+    return VgSystemCall("java.util.Scanner", "nextLine", scanner);
+    }
+}
+
+}

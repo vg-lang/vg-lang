@@ -12,20 +12,18 @@ library Guilibrary {
             ## Sets the window icon
             return VgSystemCall("components.MyGUI", "setWindowIcon", window, iconName);
         }
-    }
-    namespace component {
-        function add(window, component) {
-            ## Adds a component to the window
-            return VgSystemCall("components.MyGUI", "addComponentToWindow", window,window, component);
-        }
-    }
-    namespace style {
-        function setBackgroundColor(window, colorCode) {
-            var color = VgSystemCall("java.awt.Color", "decode", colorCode);
-            return VgSystemCall("components.MyGUI", "setWindowBackgroundColor", window, color);
-        }
+            function addComponentToWindow(window, component) {
+                    ## Adds a component to the window
+                    return VgSystemCall("components.MyGUI", "addComponentToWindow", window,window, component);
+                }
 
+          function setBackgroundColor(window, colorCode) {
+                    var color = VgSystemCall("java.awt.Color", "decode", colorCode);
+                    return VgSystemCall("components.MyGUI", "setWindowBackgroundColor", window, color);
+                }
     }
+
+
     namespace popup {
         function info(window, message, title) {
             return VgSystemCall("components.MyGUI", "showInfoPopup", window, message, title);
@@ -59,4 +57,76 @@ library Guilibrary {
             return VgSystemCall("components.MyGUI$MyButton", "setOnClick", button, method);
         }
     }
+    namespace Image{
+       
+        function createImage(imagePath, x, y, width, height) {
+            return VgSystemCall("components.MyGUI$MyImage", "<init>", imagePath, x, y, width, height);
+        }
+    
+        
+        function setImage(imageComponent, imagePath) {
+            return VgSystemCall("components.MyGUI$MyImage", "setImage", imageComponent, imagePath);
+        }
+    
+      
+        function moveImage(imageComponent, x, y) {
+            return VgSystemCall("components.MyGUI$MyImage", "moveImage", imageComponent, x, y);
+        }
+    
+        
+        function resizeImage(imageComponent, width, height) {
+            return VgSystemCall("components.MyGUI$MyImage", "resizeImage", imageComponent, width, height);
+        }
+    
+       
+        function addImageToWindow(window, imageComponent) {
+            return VgSystemCall("components.MyGUI", "add", window, imageComponent);
+        }
+    }
+    namespace Pane {
+        function createPane(x, y, width, height) {
+                return VgSystemCall("components.MyGUI$MyPane", "<init>", x, y, width, height);
+             }
+        function setPaneColor(pane, colorCode) {
+                  var color = VgSystemCall("java.awt.Color", "decode", colorCode);
+                   return VgSystemCall("components.MyGUI$MyPane", "setPaneColor", pane, color);
+              }
+
+        function addComponentToPane(pane, component) {
+                  return VgSystemCall("components.MyGUI$MyPane", "add", pane, component);
+            }
+         function setPaneBounds(pane, x, y, width, height) {
+                return VgSystemCall("components.MyGUI$MyPane", "setBounds", pane, x, y, width, height);
+            }
+            function setPaneBackgroundImage(images){
+                return VgSystemCall("components.MyGUI$MyPane","setPaneBackgroundImage",images);
+            }
+            function setPaneBorder(pane, colorCode, thickness) {
+                var color = VgSystemCall("java.awt.Color", "decode", colorCode);
+                return VgSystemCall("components.MyGUI$MyPane", "setPaneBorder", pane, color, thickness);
+            }
+    }
+
+    namespace Sound{
+         ## Function to play a sound from a file
+            function playSound(filePath) {
+                return VgSystemCall("components.MyGUI$mySoundManager", "playSound", filePath);
+            }
+        
+            ## Function to stop all playing sounds
+            function stopAllSounds() {
+                return VgSystemCall("components.MyGUI$mySoundManager", "stopAllSounds");
+            }
+        
+            ## Function to play a sound looped a specified number of times
+            function playSoundLoop(filePath, loopCount) {
+                return VgSystemCall("components.MyGUI$mySoundManager", "playSoundLoop", filePath, loopCount);
+            }
+        
+            ## Function to set the volume of the sound
+            function setVolume(volumeLevel) {
+                return VgSystemCall("components.MyGUI$mySoundManager", "setVolume", volumeLevel);
+            }
+    }
+
 }

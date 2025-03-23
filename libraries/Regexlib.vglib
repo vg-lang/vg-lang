@@ -1,0 +1,29 @@
+library RegexLib {
+    namespace regex {
+        function findAll(input, pattern) {
+            var pat = VgSystemCall("java.util.regex.Pattern", "compile", pattern);
+            var matcher = VgSystemCall("java.util.regex.Pattern", "matcher", pat, input);
+
+            var results = [];
+            while (VgSystemCall("java.util.regex.Matcher", "find", matcher)) {
+                var match = VgSystemCall("java.util.regex.Matcher", "group", matcher);
+                VgSystemCall("components.ArrayUtils", "push",results, match);
+            }
+            return results;
+        }
+
+       function matches(input, pattern) {
+           var pat = VgSystemCall("java.util.regex.Pattern", "compile", pattern);
+           var matcher = VgSystemCall("java.util.regex.Pattern", "matcher", pat, input);
+           return VgSystemCall("java.util.regex.Matcher", "matches", matcher);
+       }
+
+
+
+        function replaceAll(input, pattern, replacement) {
+            var pat = VgSystemCall("java.util.regex.Pattern", "compile", pattern);
+            var matcher = VgSystemCall("java.util.regex.Pattern", "matcher", pat, input);
+            return VgSystemCall("java.util.regex.Matcher", "replaceAll", matcher, replacement);
+        }
+    }
+}

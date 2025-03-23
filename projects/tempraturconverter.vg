@@ -1,18 +1,90 @@
-## Temperature Converter Program
+## Import specific namespaces from MathLib
+import MathLib.constants;
+import MathLib.utils;
+import MathLib.arithmetic;
+import MathLib.power;
+import MathLib.sequence;
+import MathLib.trig;
+import Arrays.array;
 
-function celsiusToFahrenheit(celsius) {
-    return (celsius * 9 / 5) + 32;
+## Main function to demonstrate all MathLib features
+function demonstrateMathLib() {
+    print("===== MATHLIB DEMONSTRATION =====");
+
+    ## Constants namespace
+    print("\n--- Constants ---");
+    print("Pi: " + constants.pi());
+    print("e: " + constants.e());
+
+    ## Utils namespace
+    print("\n--- Utils ---");
+    print("Absolute value of -5: ", utils.abs(-5));
+    print("2^4 using utils.pow: ", utils.pow(2, 4));
+    print("Square root of 16 using utils.sqrt: ", utils.sqrt(16));
+
+    ## Arithmetic namespace
+    print("\n--- Arithmetic ---");
+    print("5 + 3 = " + arithmetic.add(5, 3));
+    print("10 - 4 = " + arithmetic.subtract(10, 4));
+    print("6 * 7 = " + arithmetic.multiply(6, 7));
+    print("20 / 4 = " + arithmetic.divide(20, 4));
+    print("Division by zero: " + arithmetic.divide(5, 0));
+    print("Absolute value of -10: " + arithmetic.abs(-10));
+    print("Minimum of 8 and 3: " + arithmetic.min(8, 3));
+    print("Maximum of 8 and 3: " + arithmetic.max(8, 3));
+    print("Floor of 7.8: " + arithmetic.floor(7.8));
+    print("Ceiling of 7.2: " + arithmetic.ceil(7.2));
+
+    ## Power namespace
+    print("\n--- Power ---");
+    print("2^5 = " + power.pow(2, 5));
+    print("2^-2 = " + power.pow(2, -2));
+    print("Square root of 25: " + power.sqrt(25));
+
+    ## Sequence namespace
+    print("\n--- Sequence ---");
+    print("Factorial of 5: " + sequence.factorial(5));
+    print("Fibonacci(7): " + sequence.fibonacci(7));
+
+    ## Trigonometry namespace
+    print("\n--- Trigonometry ---");
+    var angle = constants.pi() / 4;  ## 45 degrees
+    print("Angle in radians: " + angle);
+    print("sin(π/4): " + trig.sin(angle));
+    print("cos(π/4): " + trig.cos(angle));
+    print("tan(π/4): " + trig.tan(angle));
+    print("Hypotenuse of triangle with sides 3 and 4: " + trig.hypot(3, 4));
+
+
+    ## Practical examples
+    print("\n--- Practical Examples ---");
+
+    ## Calculate area of a circle
+    var radius = 5;
+    var area = constants.pi() * power.pow(radius, 2);
+    print("Area of circle with radius " + radius + ": " + area);
+
+    ## Calculate compound interest
+    var principal = 1000;
+    var rate = 0.05;  ## 5% interest
+    var time = 3;     ## 3 years
+    var compoundInterest = principal * power.pow(1 + rate, time);
+    print("Compound interest after " + time + " years: " + compoundInterest);
+
+    ## Calculate distance between two points
+    var x1 = 1; var y1 = 2;
+    var x2 = 4; var y2 = 6;
+    var distance = trig.hypot(arithmetic.subtract(x2, x1), arithmetic.subtract(y2, y1));
+    print("Distance between points (1,2) and (4,6): " + distance);
+
+    ## Calculate the nth term of a geometric sequence
+    var firstTerm = 2;
+    var ratio = 3;
+    var n = 5;
+    var nthTerm = firstTerm * power.pow(ratio, n - 1);
+    print("5th term of geometric sequence with first term 2 and ratio 3: " + nthTerm);
 }
 
-function fahrenheitToCelsius(fahrenheit) {
-    return (fahrenheit - 32) * 5 / 9;
-}
-
-var tempC = 25;
-var tempF = celsiusToFahrenheit(tempC);
-print(tempC, "°C is", tempF, "°F");
-
-var tempF2 = 77;
-var tempC2 = fahrenheitToCelsius(tempF2);
-print(tempF2, "°F is", tempC2, "°C");
+## Run the demonstration
+demonstrateMathLib();
 
