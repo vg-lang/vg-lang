@@ -228,6 +228,7 @@ expressionStatement
 comments
     : SINGLE_LINE_COMMENT
     | MULTI_LINE_COMMENT
+    | DOC_COMMENT
     ;
 
 SINGLE_LINE_COMMENT
@@ -237,6 +238,10 @@ SINGLE_LINE_COMMENT
 MULTI_LINE_COMMENT
     : '/#' .*? '#/' -> skip
     ;
+DOC_COMMENT
+    : '/##' .*? '##/' -> skip
+    ;
+
 IDENTIFIER
     : [a-zA-Z_] [a-zA-Z_0-9]*
     ;
