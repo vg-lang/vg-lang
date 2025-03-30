@@ -106,61 +106,145 @@ public class DocGenerator {
     }
 
     private void extractNamespacesAndFunctions(String content, LibraryDoc libraryDoc) {
-        String[] lines = content.split("\n");
-        NamespaceDoc currentNamespace = null;
-        StringBuilder functionComment = new StringBuilder();
-        for (int i = 0; i < lines.length; i++) {
-            String line = lines[i].trim();
-            Matcher namespaceMatcher = NAMESPACE_PATTERN.matcher(line);
-            if (namespaceMatcher.find()) {
-                String namespaceName = namespaceMatcher.group(1);
-                currentNamespace = new NamespaceDoc();
-                currentNamespace.name = namespaceName;
-                StringBuilder namespaceDesc = new StringBuilder();
-                for (int j = i - 1; j >= 0; j--) {
-                    String prevLine = lines[j].trim();
-                    Matcher commentMatcher = COMMENT_PATTERN.matcher(prevLine);
-                    if (commentMatcher.find()) {
-                        namespaceDesc.insert(0, commentMatcher.group(1) + "\n");
-                    } else if (!prevLine.isEmpty()) {
+        Matcher namespaceMatcher = NAMESPACE_PATTERN.matcher(content);
+        while (namespaceMatcher.find()) {
+            int namespaceStart = namespaceMatcher.start();
+            String namespaceName = namespaceMatcher.group(1);
+            
+
+            processNamespaceDeclaration(content, namespaceStart, namespaceName, libraryDoc);
+        }
+        
+
+        Matcher functionMatcher = FUNCTION_PATTERN.matcher(content);
+        while (functionMatcher.find()) {
+            int functionStart = functionMatcher.start();
+            String functionName = functionMatcher.group(1);
+            
+
+            boolean isInNamespace = false;
+            for (NamespaceDoc namespace : libraryDoc.namespaces) {
+                for (FunctionDoc function : namespace.functions) {
+                    if (function.name.equals(functionName)) {
+                        isInNamespace = true;
                         break;
                     }
                 }
-                currentNamespace.description = namespaceDesc.toString().trim();
-                libraryDoc.namespaces.add(currentNamespace);
-                continue;
+                if (isInNamespace) break;
             }
-            Matcher functionMatcher = FUNCTION_PATTERN.matcher(line);
-            if (functionMatcher.find()) {
-                FunctionDoc functionDoc = new FunctionDoc();
-                functionDoc.name = functionMatcher.group(1);
-                int startPos = 0;
-                int endPos = content.indexOf("function", functionMatcher.end());
-                if (endPos == -1) {
-                    int namespaceEnd = content.indexOf("}", functionMatcher.end());
-                    if (namespaceEnd == -1) {
-                        endPos = content.length();
-                    } else {
-                        endPos = namespaceEnd;
-                    }
-                }
-                String functionContent = content.substring(startPos, endPos);
-                functionDoc.description = extractFunctionDoc(functionContent);
-                functionDoc.parameters = parseParameters(functionMatcher.group(2), functionContent);
-                if (currentNamespace != null) {
-                    currentNamespace.functions.add(functionDoc);
-                } else {
-                    libraryDoc.globalFunctions.add(functionDoc);
-                }
-                continue;
-            }
-            Matcher commentMatcher = COMMENT_PATTERN.matcher(line);
-            if (commentMatcher.find()) {
-                functionComment.append(commentMatcher.group(1)).append("\n");
-            } else if (!line.isEmpty() && !line.startsWith("function")) {
-                functionComment = new StringBuilder();
+            
+            if (!isInNamespace) {
+
+                FunctionDoc functionDoc = processFunctionDeclaration(content, functionStart, functionName);
+                libraryDoc.globalFunctions.add(functionDoc);
             }
         }
+    }
+
+    private void processNamespaceDeclaration(String content, int namespaceStart, String namespaceName, LibraryDoc libraryDoc) {
+        NamespaceDoc namespaceDoc = new NamespaceDoc();
+        namespaceDoc.name = namespaceName;
+        
+        int docStart = content.lastIndexOf("/##", namespaceStart);
+        if (docStart >= 0) {
+            int docEnd = content.indexOf("##/", docStart);
+            if (docEnd > docStart && docEnd < namespaceStart) {
+                String docBlock = content.substring(docStart, docEnd);
+                namespaceDoc.description = extractDocumentation(docBlock);
+            }
+        }
+        
+
+        int namespaceBodyStart = content.indexOf("{", namespaceStart) + 1;
+        int namespaceBodyEnd = findMatchingCloseBrace(content, namespaceBodyStart);
+        
+        if (namespaceBodyStart > 0 && namespaceBodyEnd > namespaceBodyStart) {
+            String namespaceBody = content.substring(namespaceBodyStart, namespaceBodyEnd);
+            
+            Matcher functionMatcher = FUNCTION_PATTERN.matcher(namespaceBody);
+            while (functionMatcher.find()) {
+                int functionStart = functionMatcher.start();
+                String functionName = functionMatcher.group(1);
+                
+                FunctionDoc functionDoc = processFunctionDeclaration(namespaceBody, functionStart, functionName);
+                namespaceDoc.functions.add(functionDoc);
+            }
+        }
+        
+        libraryDoc.namespaces.add(namespaceDoc);
+    }
+
+    private FunctionDoc processFunctionDeclaration(String content, int functionStart, String functionName) {
+        FunctionDoc functionDoc = new FunctionDoc();
+        functionDoc.name = functionName;
+        
+        Pattern paramListPattern = Pattern.compile("function\\s+" + Pattern.quote(functionName) + "\\s*\\(([^)]*)\\)");
+        Matcher paramListMatcher = paramListPattern.matcher(content.substring(functionStart));
+        if (paramListMatcher.find()) {
+            String paramList = paramListMatcher.group(1);
+            
+            int docStart = content.lastIndexOf("/##", functionStart);
+            if (docStart >= 0) {
+                int docEnd = content.indexOf("##/", docStart);
+                if (docEnd > docStart && docEnd < functionStart) {
+                    String docBlock = content.substring(docStart, docEnd + 3);
+                    functionDoc.description = extractDocumentation(docBlock);
+                    
+
+                    functionDoc.parameters = parseParameters(paramList, docBlock);
+                    
+                    return functionDoc;
+                }
+            }
+            
+
+            functionDoc.parameters = parseParameters(paramList, "");
+        }
+        
+        return functionDoc;
+    }
+
+    private int findMatchingCloseBrace(String content, int openBracePos) {
+        int count = 1;
+        for (int i = openBracePos; i < content.length(); i++) {
+            if (content.charAt(i) == '{') {
+                count++;
+            } else if (content.charAt(i) == '}') {
+                count--;
+                if (count == 0) {
+                    return i;
+                }
+            }
+        }
+        return content.length();
+    }
+
+    private String extractDocumentation(String docBlock) {
+        StringBuilder sb = new StringBuilder();
+        boolean inDocBlock = false;
+        
+        for (String line : docBlock.split("\n")) {
+            line = line.trim();
+            
+            if (line.startsWith("/##")) {
+                inDocBlock = true;
+                String content = line.substring(3).trim();
+                if (!content.isEmpty()) {
+                    sb.append(content).append("\n");
+                }
+            } else if (line.equals("##/")) {
+
+                inDocBlock = false;
+            } else if (inDocBlock && line.startsWith("#") && !line.equals("##/")) {
+                if (!line.contains("@param") && !line.contains("@field") &&
+                    !line.contains("@value") && !line.contains("@return")) {
+                    String content = line.substring(1).trim();
+                    sb.append(content).append("\n");
+                }
+            }
+        }
+        
+        return sb.toString().trim();
     }
 
     private List<ParameterDoc> parseParameters(String paramString, String docBlock) {
@@ -169,17 +253,17 @@ public class DocGenerator {
         if (paramString == null || paramString.trim().isEmpty()) {
             return parameters;
         }
+        
         Map<String, String> paramDocs = new HashMap<>();
         if (!docBlock.isEmpty()) {
-
-            Matcher paramMatcher = DOC_PARAM_PATTERN.matcher(docBlock);
-            while (paramMatcher.find()) {
-                String paramName = paramMatcher.group(1);
-                String paramDesc = paramMatcher.group(2);
+            Pattern paramDocPattern = Pattern.compile("#\\s*@param\\s+(\\w+)\\s+(.+)");
+            Matcher paramDocMatcher = paramDocPattern.matcher(docBlock);
+            while (paramDocMatcher.find()) {
+                String paramName = paramDocMatcher.group(1);
+                String paramDesc = paramDocMatcher.group(2);
                 paramDocs.put(paramName, paramDesc);
             }
         }
-
 
         String[] paramNames = paramString.split(",");
         for (String param : paramNames) {
@@ -188,10 +272,8 @@ public class DocGenerator {
                 ParameterDoc paramDoc = new ParameterDoc();
                 paramDoc.name = trimmedParam;
 
-
                 if (paramDocs.containsKey(trimmedParam)) {
                     paramDoc.description = paramDocs.get(trimmedParam);
-
                 }
 
                 parameters.add(paramDoc);
@@ -200,45 +282,7 @@ public class DocGenerator {
 
         return parameters;
     }
-    private String extractFunctionDoc(String functionContent) {
-        StringBuilder docBuilder = new StringBuilder();
-        
-        int docStart = functionContent.lastIndexOf("/##", functionContent.indexOf("function"));
-        if (docStart >= 0) {
-            int docEnd = functionContent.indexOf("##/", docStart);
-            if (docEnd > docStart) {
-                String docBlock = functionContent.substring(docStart, docEnd);
-                String[] lines = docBlock.split("\n");
-                
-                boolean inDocBlock = false;
-                for (String line : lines) {
-                    line = line.trim();
-                    
-                    if (line.startsWith("/##")) {
-                        inDocBlock = true;
-                        Matcher startMatcher = DOC_COMMENT_START_PATTERN.matcher(line);
-                        if (startMatcher.find()) {
-                            String content = startMatcher.group(1).trim();
-                            if (!content.isEmpty()) {
-                                docBuilder.append(content).append("\n");
-                            }
-                        }
-                    } else if (inDocBlock && line.startsWith("#") && !line.equals("##/")) {
-                        if (!line.contains("@param") && !line.contains("@field") &&
-                            !line.contains("@value") && !line.contains("@return")) {
-                            Matcher lineMatcher = DOC_COMMENT_LINE_PATTERN.matcher(line);
-                            if (lineMatcher.find()) {
-                                String content = lineMatcher.group(1).trim();
-                                docBuilder.append(content).append("\n");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        return docBuilder.toString().trim();
-    }
+
     private ProgramDoc parseProgramContent(String content, String filename) {
         ProgramDoc programDoc = new ProgramDoc();
         programDoc.filename = filename;
@@ -303,9 +347,7 @@ public class DocGenerator {
         return programDoc;
     }
 
-    /**
-     * Process an enum declaration and extract its documentation
-     */
+
     private EnumDoc processEnumDeclaration(String content, int enumStart, String enumName) {
         EnumDoc enumDoc = new EnumDoc();
         enumDoc.name = enumName;
@@ -374,9 +416,7 @@ public class DocGenerator {
         return enumDoc;
     }
 
-    /**
-     * Process a struct declaration and extract its documentation
-     */
+
     private StructDoc processStructDeclaration(String content, int structStart, String structName) {
         StructDoc structDoc = new StructDoc();
         structDoc.name = structName;
@@ -442,50 +482,7 @@ public class DocGenerator {
         
         return structDoc;
     }
-    private int findMatchingCloseBrace(String content, int start) {
-        int count = 1;
-        for (int i = start; i < content.length(); i++) {
-            if (content.charAt(i) == '{') {
-                count++;
-            } else if (content.charAt(i) == '}') {
-                count--;
-                if (count == 0) {
-                    return i;
-                }
-            }
-        }
-        return content.length();
-    }
-    private String extractDocumentation(String docBlock) {
-        StringBuilder docBuilder = new StringBuilder();
-        String[] lines = docBlock.split("\n");
 
-        boolean inDocBlock = false;
-        for (String line : lines) {
-            line = line.trim();
-
-            if (line.startsWith("/##")) {
-                inDocBlock = true;
-                Matcher startMatcher = DOC_COMMENT_START_PATTERN.matcher(line);
-                if (startMatcher.find()) {
-                    String content = startMatcher.group(1).trim();
-                    if (!content.isEmpty()) {
-                        docBuilder.append(content).append("\n");
-                    }
-                }
-            } else if (inDocBlock && line.startsWith("#") && !line.equals("##/")) {
-                if (!line.contains("@param") && !line.contains("@field") && !line.contains("@value")) {
-                    Matcher lineMatcher = DOC_COMMENT_LINE_PATTERN.matcher(line);
-                    if (lineMatcher.find()) {
-                        String content = lineMatcher.group(1).trim();
-                        docBuilder.append(content).append("\n");
-                    }
-                }
-            }
-        }
-
-        return docBuilder.toString().trim();
-    }
     private void generateIndex() throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>\n");
@@ -561,6 +558,7 @@ public class DocGenerator {
 
         generateCSS();
     }
+
     private void generateCSS() throws IOException {
         StringBuilder css = new StringBuilder();
         css.append("* {\n");
@@ -684,6 +682,7 @@ public class DocGenerator {
 
         writeToFile("styles.css", css.toString());
     }
+
     private void generateLibraryDoc(LibraryDoc lib) throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>\n");
@@ -827,6 +826,7 @@ public class DocGenerator {
 
         writeToFile("libraries/" + lib.name + ".html", sb.toString());
     }
+
     private void generateProgramDoc(ProgramDoc program) throws IOException {
 
         new File(outputDir + "/programs").mkdirs();
@@ -942,11 +942,13 @@ public class DocGenerator {
 
         writeToFile("programs/" + program.name + ".html", sb.toString());
     }
+
     private void writeToFile(String filename, String content) throws IOException {
         try (FileWriter writer = new FileWriter(outputDir + "/" + filename)) {
             writer.write(content);
         }
     }
+
     static class LibraryDoc {
         String name;
         String filename;
@@ -1003,6 +1005,7 @@ public class DocGenerator {
         String value = "";
         String description = "";
     }
+
     private void updateCSS() throws IOException {
         StringBuilder css = new StringBuilder();
         css.append(".view-full-docs{display:inline-block;background-color:#3498db;color:white;padding:0.5rem 1rem;border-radius:4px;text-decoration:none;margin-top:1rem;font-weight:bold;}\n");
@@ -1020,6 +1023,7 @@ public class DocGenerator {
             writer.write(css.toString());
         }
     }
+
     public void generateFileDoc(String filePath) throws IOException {
         File file = new File(filePath);
         if (!file.exists()) {
@@ -1057,6 +1061,7 @@ public class DocGenerator {
 
         System.out.println("Documentation generated successfully for " + filePath + " in: " + outputDir);
     }
+
     private void updateIndexWithLibrary(LibraryDoc lib) throws IOException {
         File indexFile = new File(outputDir, "index.html");
 
@@ -1089,6 +1094,7 @@ public class DocGenerator {
             Files.write(indexFile.toPath(), newContent.toString().getBytes());
         }
     }
+
     private void updateIndexWithProgram(ProgramDoc program) throws IOException {
         File indexFile = new File(outputDir, "index.html");
 
@@ -1147,6 +1153,7 @@ public class DocGenerator {
             }
         }
     }
+
     private void generateNewIndex() throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>\n")
@@ -1210,5 +1217,4 @@ public class DocGenerator {
             generateCSS();
         }
     }
-
 }
