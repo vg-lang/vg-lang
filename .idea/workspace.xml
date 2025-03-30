@@ -2,33 +2,22 @@
 <project version="4">
   <component name="ArtifactsWorkspaceSettings">
     <artifacts-to-build>
-      <artifact name="vg" />
+      <artifact name="vgpkg" />
     </artifacts-to-build>
   </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5b8ecab8-df26-4e25-afa1-93332a737f99" name="Changes" comment="added simple but useful error messages, and a custome made erorr handling mechanism">
-      <change afterPath="$PROJECT_DIR$/src/components/FunctionReference.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="5b8ecab8-df26-4e25-afa1-93332a737f99" name="Changes" comment="added support for a PackageManager">
+      <change afterPath="$PROJECT_DIR$/src/PackageManager.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Configuration/allowed_configurations.vgenv" beforeDir="false" afterPath="$PROJECT_DIR$/Configuration/allowed_configurations.vgenv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/grammar/vg_lang.g4" beforeDir="false" afterPath="$PROJECT_DIR$/grammar/vg_lang.g4" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/projects/test.vg" beforeDir="false" afterPath="$PROJECT_DIR$/projects/test.vg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/libraries/Database.vglib" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/libraries/Guilibrary.vglib" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/libraries/Regexlib.vglib" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/META-INF/MANIFEST.MF" beforeDir="false" afterPath="$PROJECT_DIR$/src/META-INF/MANIFEST.MF" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Main.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/Interpreter.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Interpreter.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/MyGUI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/MyGUI.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/VariableReference.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/VariableReference.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/vg_lang.interp" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/vg_lang.interp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/vg_lang.tokens" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/vg_lang.tokens" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/vg_langBaseListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/vg_langBaseListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/vg_langBaseVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/vg_langBaseVisitor.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/vg_langLexer.interp" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/vg_langLexer.interp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/vg_langLexer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/vg_langLexer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/vg_langLexer.tokens" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/vg_langLexer.tokens" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/vg_langListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/vg_langListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/vg_langParser.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/vg_langParser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/vg_langVisitor.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/vg_langVisitor.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vg lang.iml" beforeDir="false" afterPath="$PROJECT_DIR$/vg lang.iml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -49,7 +38,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="improved-error-messages" />
+        <entry key="$PROJECT_DIR$" value="vg_documentation_generator" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -85,30 +74,32 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.Main (1).executor&quot;: &quot;Run&quot;,
-    &quot;Application.Main.executor&quot;: &quot;Run&quot;,
-    &quot;Application.Unnamed.executor&quot;: &quot;Run&quot;,
-    &quot;Application.encrypter.executor&quot;: &quot;Run&quot;,
-    &quot;Application.repl.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/hodif/Desktop/usn2024/vg lang/out/artifacts/testenmin&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;onboarding.tips.debug.path&quot;: &quot;C:/Users/hodif/Desktop/usn2024/vg lang/src/Main.java&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Artifacts&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.Main (1).executor": "Run",
+    "Application.Main.executor": "Run",
+    "Application.Unnamed.executor": "Run",
+    "Application.encrypter.executor": "Run",
+    "Application.repl.executor": "Run",
+    "Application.vgdoc.executor": "Run",
+    "Application.vgpkg.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "git-widget-placeholder": "master",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/hodif/Downloads/json-20250107.jar",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "onboarding.tips.debug.path": "C:/Users/hodif/Desktop/usn2024/vg lang/src/Main.java",
+    "project.structure.last.edited": "Artifacts",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\hodif\Desktop\usn2024\vg lang" />
@@ -119,7 +110,7 @@
       <recent name="C:\Users\hodif\Desktop\usn2024\vg lang\assets" />
     </key>
   </component>
-  <component name="RunManager" selected="Application.Main">
+  <component name="RunManager" selected="Application.vgpkg">
     <configuration name="Main (1)" type="Application" factoryName="Application">
       <option name="ALTERNATIVE_JRE_PATH" value="21" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
@@ -147,8 +138,26 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <configuration name="vgdoc" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="Main" />
+      <module name="vg lang" />
+      <option name="PROGRAM_PARAMETERS" value="--docgen libraries ./documentation" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="vgpkg" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="PackageManager" />
+      <module name="vg lang" />
+      <option name="PROGRAM_PARAMETERS" value="remove Regexlib" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
     <list>
       <item itemvalue="Application.Main" />
+      <item itemvalue="Application.vgdoc" />
+      <item itemvalue="Application.vgpkg" />
       <item itemvalue="Application.Main (1)" />
       <item itemvalue="Application.Unnamed" />
     </list>
@@ -214,55 +223,6 @@
       <workItem from="1742707062892" duration="1747000" />
       <workItem from="1742711802172" duration="86000" />
       <workItem from="1742711926966" duration="5441000" />
-    </task>
-    <task id="LOCAL−00023" summary="added a new file">
-      <option name="closed" value="true" />
-      <created>1739681867618</created>
-      <option name="number" value="LOCAL−00023" />
-      <option name="presentableId" value="LOCAL−00023" />
-      <updated>1739681867618</updated>
-    </task>
-    <task id="LOCAL−00024" summary="changes">
-      <option name="closed" value="true" />
-      <created>1739683291908</created>
-      <option name="number" value="LOCAL−00024" />
-      <option name="presentableId" value="LOCAL−00024" />
-      <updated>1739683291908</updated>
-    </task>
-    <task id="LOCAL−00025" summary="changes">
-      <option name="closed" value="true" />
-      <created>1739684023099</created>
-      <option name="number" value="LOCAL−00025" />
-      <option name="presentableId" value="LOCAL−00025" />
-      <updated>1739684023099</updated>
-    </task>
-    <task id="LOCAL−00026" summary="changes">
-      <option name="closed" value="true" />
-      <created>1739684388952</created>
-      <option name="number" value="LOCAL−00026" />
-      <option name="presentableId" value="LOCAL−00026" />
-      <updated>1739684388952</updated>
-    </task>
-    <task id="LOCAL−00027" summary="changes">
-      <option name="closed" value="true" />
-      <created>1739684512822</created>
-      <option name="number" value="LOCAL−00027" />
-      <option name="presentableId" value="LOCAL−00027" />
-      <updated>1739684512822</updated>
-    </task>
-    <task id="LOCAL−00028" summary="added some changes to the statements file">
-      <option name="closed" value="true" />
-      <created>1739686299854</created>
-      <option name="number" value="LOCAL−00028" />
-      <option name="presentableId" value="LOCAL−00028" />
-      <updated>1739686299854</updated>
-    </task>
-    <task id="LOCAL−00029" summary="added some changes to the introduction and index file">
-      <option name="closed" value="true" />
-      <created>1739686647081</created>
-      <option name="number" value="LOCAL−00029" />
-      <option name="presentableId" value="LOCAL−00029" />
-      <updated>1739686647081</updated>
     </task>
     <task id="LOCAL−00030" summary="renamed statements to Statements">
       <option name="closed" value="true" />
@@ -558,7 +518,56 @@
       <option name="presentableId" value="LOCAL−00071" />
       <updated>1742706133413</updated>
     </task>
-    <option name="localTasksCounter" value="72" />
+    <task id="LOCAL−00072" summary="added support for structs and enums">
+      <option name="closed" value="true" />
+      <created>1743261193898</created>
+      <option name="number" value="LOCAL−00072" />
+      <option name="presentableId" value="LOCAL−00072" />
+      <updated>1743261193898</updated>
+    </task>
+    <task id="LOCAL−00073" summary="start of the documentation generator for the vg programming Language">
+      <option name="closed" value="true" />
+      <created>1743265673394</created>
+      <option name="number" value="LOCAL−00073" />
+      <option name="presentableId" value="LOCAL−00073" />
+      <updated>1743265673394</updated>
+    </task>
+    <task id="LOCAL−00074" summary="created the files for a documentation generator for this programming Language.">
+      <option name="closed" value="true" />
+      <created>1743290363380</created>
+      <option name="number" value="LOCAL−00074" />
+      <option name="presentableId" value="LOCAL−00074" />
+      <updated>1743290363380</updated>
+    </task>
+    <task id="LOCAL−00075" summary="updated the grammar to ignore the documentation comments and everything in between while letting the documentation generator understand and use those comments to generate a documentation page for the user project.">
+      <option name="closed" value="true" />
+      <created>1743290754996</created>
+      <option name="number" value="LOCAL−00075" />
+      <option name="presentableId" value="LOCAL−00075" />
+      <updated>1743290754996</updated>
+    </task>
+    <task id="LOCAL−00076" summary="stable version of the documentation generator">
+      <option name="closed" value="true" />
+      <created>1743300033327</created>
+      <option name="number" value="LOCAL−00076" />
+      <option name="presentableId" value="LOCAL−00076" />
+      <updated>1743300033327</updated>
+    </task>
+    <task id="LOCAL−00077" summary="stable version of the documentation generator">
+      <option name="closed" value="true" />
+      <created>1743309869647</created>
+      <option name="number" value="LOCAL−00077" />
+      <option name="presentableId" value="LOCAL−00077" />
+      <updated>1743309869647</updated>
+    </task>
+    <task id="LOCAL−00078" summary="fix: changed some directories settings">
+      <option name="closed" value="true" />
+      <created>1743310605035</created>
+      <option name="number" value="LOCAL−00078" />
+      <option name="presentableId" value="LOCAL−00078" />
+      <updated>1743310605035</updated>
+    </task>
+    <option name="localTasksCounter" value="79" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -576,12 +585,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="changes" />
-    <MESSAGE value="added some changes to the statements file" />
-    <MESSAGE value="added some changes to the introduction and index file" />
-    <MESSAGE value="renamed statements to Statements" />
-    <MESSAGE value="renamed a bunch of files" />
-    <MESSAGE value="renamed commands to Commands" />
     <MESSAGE value="added a download button for latest version for easier access to the software" />
     <MESSAGE value="added a favicon for the documentation website" />
     <MESSAGE value="added basic functions grammar" />
@@ -601,6 +604,12 @@
     <MESSAGE value="updated version number" />
     <MESSAGE value="added more libraries to the set of libraries(standard library)" />
     <MESSAGE value="added simple but useful error messages, and a custome made erorr handling mechanism" />
-    <option name="LAST_COMMIT_MESSAGE" value="added simple but useful error messages, and a custome made erorr handling mechanism" />
+    <MESSAGE value="added support for structs and enums" />
+    <MESSAGE value="start of the documentation generator for the vg programming Language" />
+    <MESSAGE value="created the files for a documentation generator for this programming Language." />
+    <MESSAGE value="updated the grammar to ignore the documentation comments and everything in between while letting the documentation generator understand and use those comments to generate a documentation page for the user project." />
+    <MESSAGE value="stable version of the documentation generator" />
+    <MESSAGE value="fix: changed some directories settings" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix: changed some directories settings" />
   </component>
 </project>
