@@ -2,7 +2,12 @@ import IO.Prompt.*;
 import Guilibrary.window.*;
 import Guilibrary.popup.*;
 
-## Define a Person struct to store user information
+/## This represents a Person with basic user information.
+# @field name The name of the person.
+# @field age The age of the person.
+# @field occupation The person's occupation.
+# @field hobby The person's favorite hobby.
+##/
 struct Person {
     name;
     age;
@@ -10,35 +15,31 @@ struct Person {
     hobby;
 }
 
-## Main program
+/## The main function collects user information, creates a GUI window,
+# and displays the user profile in a popup.
+# @return Returns 0 upon successful execution.
+##/
 function main() {
-    ## Create a Person struct instance
     var user = Person;
-    
-    ## Collect user information using the IO.Prompt library
     print("Please enter your information:");
     user.name = input("Enter your name: ");
     user.age = input("Enter your age: ");
     user.occupation = input("Enter your occupation: ");
     user.hobby = input("Enter your favorite hobby: ");
-    
-    ## Create a window
+
     var mainWindow = create("User Profile", 400, 300);
     setBackgroundColor(mainWindow, "#f0f0f0");
-    
-    ## Format the user information as a string
+
     var userInfo = "User Profile:\n\n" +
-                  "Name: " + user.name + "\n" +
-                  "Age: " + user.age + "\n" +
-                  "Occupation: " + user.occupation + "\n" +
-                  "Hobby: " + user.hobby;
-    
-    ## Launch the window and show the popup with user information
+                   "Name: " + user.name + "\n" +
+                   "Age: " + user.age + "\n" +
+                   "Occupation: " + user.occupation + "\n" +
+                   "Hobby: " + user.hobby;
+
     launch(mainWindow);
     info(mainWindow, userInfo, "Welcome " + user.name + "!");
-    
+
     return 0;
 }
 
-## Call the main function to start the program
 main();

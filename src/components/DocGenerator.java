@@ -202,26 +202,20 @@ public class DocGenerator {
     }
     private String extractFunctionDoc(String functionContent) {
         StringBuilder docBuilder = new StringBuilder();
-
-        int docStart = functionContent.indexOf("/##");
+        
+        int docStart = functionContent.lastIndexOf("/##", functionContent.indexOf("function"));
         if (docStart >= 0) {
             int docEnd = functionContent.indexOf("##/", docStart);
-            if (docEnd == -1) {
-
-                docEnd = functionContent.indexOf("function", docStart);
-            }
-
             if (docEnd > docStart) {
                 String docBlock = functionContent.substring(docStart, docEnd);
                 String[] lines = docBlock.split("\n");
-
+                
                 boolean inDocBlock = false;
                 for (String line : lines) {
                     line = line.trim();
-
+                    
                     if (line.startsWith("/##")) {
                         inDocBlock = true;
-
                         Matcher startMatcher = DOC_COMMENT_START_PATTERN.matcher(line);
                         if (startMatcher.find()) {
                             String content = startMatcher.group(1).trim();
@@ -229,10 +223,9 @@ public class DocGenerator {
                                 docBuilder.append(content).append("\n");
                             }
                         }
-                    }
-                    else if (inDocBlock && line.startsWith("#") && !line.equals("##/")) {
-
-                        if (!line.contains("@param")) {
+                    } else if (inDocBlock && line.startsWith("#") && !line.equals("##/")) {
+                        if (!line.contains("@param") && !line.contains("@field") &&
+                            !line.contains("@value") && !line.contains("@return")) {
                             Matcher lineMatcher = DOC_COMMENT_LINE_PATTERN.matcher(line);
                             if (lineMatcher.find()) {
                                 String content = lineMatcher.group(1).trim();
@@ -243,7 +236,7 @@ public class DocGenerator {
                 }
             }
         }
-
+        
         return docBuilder.toString().trim();
     }
     private ProgramDoc parseProgramContent(String content, String filename) {
@@ -310,122 +303,143 @@ public class DocGenerator {
         return programDoc;
     }
 
+    /**
+     * Process an enum declaration and extract its documentation
+     */
     private EnumDoc processEnumDeclaration(String content, int enumStart, String enumName) {
         EnumDoc enumDoc = new EnumDoc();
         enumDoc.name = enumName;
-
-
+        
         int docStart = content.lastIndexOf("/##", enumStart);
         if (docStart >= 0) {
-
             int otherDeclaration = Math.max(
-                    content.lastIndexOf("function", enumStart - 1),
-                    Math.max(
-                            content.lastIndexOf("struct", enumStart - 1),
-                            content.lastIndexOf("enum", enumStart - 1)
-                    )
+                content.lastIndexOf("function", enumStart - 1),
+                Math.max(
+                    content.lastIndexOf("struct", enumStart - 1),
+                    content.lastIndexOf("enum", enumStart - 1)
+                )
             );
-
+            
             if (otherDeclaration < docStart) {
-
                 int docEnd = content.indexOf("##/", docStart);
                 if (docEnd > docStart && docEnd < enumStart) {
                     String docBlock = content.substring(docStart, docEnd);
                     enumDoc.description = extractDocumentation(docBlock);
-                }
-            }
-        }
+                    
 
+                    Pattern valueDocPattern = Pattern.compile("#\\s*@value\\s+(\\w+)(?:\\s*=\\s*\\d+)?\\s+(.+)");
+                    Matcher valueDocMatcher = valueDocPattern.matcher(docBlock);
+                    Map<String, String> valueDocs = new HashMap<>();
+                    while (valueDocMatcher.find()) {
+                        String valueName = valueDocMatcher.group(1);
+                        String valueDesc = valueDocMatcher.group(2).trim();
+                        valueDocs.put(valueName, valueDesc);
+                    }
+                    
 
-        int enumBodyStart = content.indexOf("{", enumStart) + 1;
-        int enumBodyEnd = findMatchingCloseBrace(content, enumBodyStart);
+                    int enumBodyStart = content.indexOf("{", enumStart) + 1;
+                    int enumBodyEnd = findMatchingCloseBrace(content, enumBodyStart);
+                    
+                    if (enumBodyStart > 0 && enumBodyEnd > enumBodyStart) {
+                        String enumBody = content.substring(enumBodyStart, enumBodyEnd);
+                        String[] values = enumBody.split(",");
+                        
+                        for (String value : values) {
+                            value = value.trim();
+                            if (!value.isEmpty()) {
+                                Matcher valueMatcher = ENUM_VALUE_PATTERN.matcher(value);
+                                if (valueMatcher.find()) {
+                                    EnumValueDoc valueDoc = new EnumValueDoc();
+                                    valueDoc.name = valueMatcher.group(1);
+                                    
 
-        if (enumBodyStart > 0 && enumBodyEnd > enumBodyStart) {
-            String enumBody = content.substring(enumBodyStart, enumBodyEnd);
-            String[] values = enumBody.split(",");
+                                    if (valueMatcher.group(2) != null) {
+                                        valueDoc.value = valueMatcher.group(2).trim();
+                                    }
+                                    
 
-            for (String value : values) {
-                value = value.trim();
-                if (!value.isEmpty()) {
-                    Matcher valueMatcher = ENUM_VALUE_PATTERN.matcher(value);
-                    if (valueMatcher.find()) {
-                        EnumValueDoc valueDoc = new EnumValueDoc();
-                        valueDoc.name = valueMatcher.group(1);
-
-
-                        if (valueMatcher.group(2) != null) {
-                            valueDoc.value = valueMatcher.group(2).trim();
+                                    if (valueDocs.containsKey(valueDoc.name)) {
+                                        valueDoc.description = valueDocs.get(valueDoc.name);
+                                    }
+                                    
+                                    enumDoc.values.add(valueDoc);
+                                }
+                            }
                         }
-
-
-                        Pattern valueDocPattern = Pattern.compile("#\\s*@value\\s+" + valueDoc.name + "\\s+(.+)");
-                        Matcher valueDocMatcher = valueDocPattern.matcher(enumBody);
-                        if (valueDocMatcher.find()) {
-                            valueDoc.description = valueDocMatcher.group(1).trim();
-                        }
-
-                        enumDoc.values.add(valueDoc);
                     }
                 }
             }
         }
-
+        
         return enumDoc;
     }
 
+    /**
+     * Process a struct declaration and extract its documentation
+     */
     private StructDoc processStructDeclaration(String content, int structStart, String structName) {
         StructDoc structDoc = new StructDoc();
         structDoc.name = structName;
+        
 
         int docStart = content.lastIndexOf("/##", structStart);
         if (docStart >= 0) {
-            int otherDeclaration = Math.max(
-                    content.lastIndexOf("function", structStart - 1),
-                    Math.max(
-                            content.lastIndexOf("struct", structStart - 1),
-                            content.lastIndexOf("enum", structStart - 1)
-                    )
-            );
 
+            int otherDeclaration = Math.max(
+                content.lastIndexOf("function", structStart - 1),
+                Math.max(
+                    content.lastIndexOf("struct", structStart - 1),
+                    content.lastIndexOf("enum", structStart - 1)
+                )
+            );
+            
             if (otherDeclaration < docStart) {
 
                 int docEnd = content.indexOf("##/", docStart);
                 if (docEnd > docStart && docEnd < structStart) {
                     String docBlock = content.substring(docStart, docEnd);
                     structDoc.description = extractDocumentation(docBlock);
-                }
-            }
-        }
+                    
 
-
-        int structBodyStart = content.indexOf("{", structStart) + 1;
-        int structBodyEnd = findMatchingCloseBrace(content, structBodyStart);
-
-        if (structBodyStart > 0 && structBodyEnd > structBodyStart) {
-            String structBody = content.substring(structBodyStart, structBodyEnd);
-            String[] lines = structBody.split(";");
-
-            for (String line : lines) {
-                line = line.trim();
-                if (!line.isEmpty()) {
-
-                    String fieldName = line.trim();
-
-                    FieldDoc fieldDoc = new FieldDoc();
-                    fieldDoc.name = fieldName;
-
-
-                    Pattern fieldDocPattern = Pattern.compile("#\\s*@field\\s+" + fieldName + "\\s+(.+)");
-                    Matcher fieldDocMatcher = fieldDocPattern.matcher(structBody);
-                    if (fieldDocMatcher.find()) {
-                        fieldDoc.description = fieldDocMatcher.group(1).trim();
+                    Pattern fieldDocPattern = Pattern.compile("#\\s*@field\\s+(\\w+)\\s+(.+)");
+                    Matcher fieldDocMatcher = fieldDocPattern.matcher(docBlock);
+                    Map<String, String> fieldDocs = new HashMap<>();
+                    while (fieldDocMatcher.find()) {
+                        String fieldName = fieldDocMatcher.group(1);
+                        String fieldDesc = fieldDocMatcher.group(2).trim();
+                        fieldDocs.put(fieldName, fieldDesc);
                     }
+                    
 
-                    structDoc.fields.add(fieldDoc);
+                    int structBodyStart = content.indexOf("{", structStart) + 1;
+                    int structBodyEnd = findMatchingCloseBrace(content, structBodyStart);
+                    
+                    if (structBodyStart > 0 && structBodyEnd > structBodyStart) {
+                        String structBody = content.substring(structBodyStart, structBodyEnd);
+                        String[] lines = structBody.split(";");
+                        
+                        for (String line : lines) {
+                            line = line.trim();
+                            if (!line.isEmpty()) {
+
+                                String fieldName = line.trim();
+                                
+                                FieldDoc fieldDoc = new FieldDoc();
+                                fieldDoc.name = fieldName;
+                                
+
+                                if (fieldDocs.containsKey(fieldName)) {
+                                    fieldDoc.description = fieldDocs.get(fieldName);
+                                }
+                                
+                                structDoc.fields.add(fieldDoc);
+                            }
+                        }
+                    }
                 }
             }
         }
-
+        
         return structDoc;
     }
     private int findMatchingCloseBrace(String content, int start) {
