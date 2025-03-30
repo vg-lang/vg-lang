@@ -2,20 +2,37 @@
 # Ignore compiled output
 out/
 
-# Ignore most of the .idea folder
-.idea/
-# But allow sharing these useful settings if you want
-!/.idea/codeStyles/
-!/.idea/inspectionProfiles/
-!/.idea/runConfigurations/
+# Ignore most of the .idea folder EXCEPT useful project settings
+.idea/*
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+!.idea/runConfigurations/
+!.idea/artifacts/
 
-# Ignore IntelliJ-specific files
+.idea/shelf/
+
+# Keep IntelliJ project/module structure
+!*.iml
+
+# Ignore IntelliJ-specific clutter
 workspace.xml
 tasks.xml
 shelf/
 *.iws
 *.ipr
-*.iml
+
+### Java / Build ###
+*.log
+*.tmp
+*.bak
+*.swp
+.gradle/
+build/
+target/
+
+# Ignore generated .jar but keep your manual ones
+out/**/*.jar
+!libraries/**/*.jar
 
 ### Eclipse ###
 .apt_generated
@@ -42,13 +59,3 @@ nbdist/
 
 ### Windows ###
 Thumbs.db
-
-### Java / Build ###
-*.log
-*.tmp
-*.bak
-*.swp
-.gradle/
-build/
-target/
-*.jar
