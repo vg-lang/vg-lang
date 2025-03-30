@@ -30,7 +30,7 @@ public class Interpreter extends vg_langBaseVisitor {
     private String libraryFolder = "libraries";
     private int currentLine = 0;
     private int currentColumn = 0;
-    public Interpreter() {
+    public Interpreter(String projectPackageFolder) {
         globalSymbolTable = new SymbolTable();
         symbolTableStack.push(globalSymbolTable);
         registerBuiltInFunction();
@@ -39,7 +39,8 @@ public class Interpreter extends vg_langBaseVisitor {
         //String configPath = "C:/Users/hodif/Desktop/usn2024/vg lang/Configuration";
         loadLangConfigFile(configPath + "/allowed_configurations.vgenv");
         moduleRegistry = new ModuleRegistry();
-        loadLibrariesFromFolder(libraryFolder);
+        loadLibrariesFromFolder("libraries");
+        loadLibrariesFromFolder(projectPackageFolder);
 
 
     }

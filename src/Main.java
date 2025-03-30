@@ -3,6 +3,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.io.IOException;
 
@@ -58,8 +59,11 @@ public class Main {
                     }
                     ErrorHandler.setCurrentFile(filePath);
                     try {
+                        Path scriptPath = Paths.get(filePath).toAbsolutePath();
+                        Path projectRoot = scriptPath.getParent();
+                        Path packageFolder = projectRoot.resolve("packages");
                         String source = new String(Files.readAllBytes(Paths.get(filePath)));
-                        Interpreter interpreter = new Interpreter();
+                        Interpreter interpreter = new Interpreter(packageFolder.toString());
 
                         vg_langLexer lexer = new vg_langLexer(CharStreams.fromString(source));
                         lexer.removeErrorListeners();
