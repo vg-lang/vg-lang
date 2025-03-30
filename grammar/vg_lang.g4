@@ -228,6 +228,15 @@ expressionStatement
 comments
     : SINGLE_LINE_COMMENT
     | MULTI_LINE_COMMENT
+    | DOC_COMMENT
+    ;
+
+// Define a fragment for the doc comment start
+fragment DOC_START : '/##';
+fragment DOC_END : '##/';
+
+DOC_COMMENT
+    : DOC_START .*? DOC_END -> skip
     ;
 
 SINGLE_LINE_COMMENT
@@ -237,6 +246,7 @@ SINGLE_LINE_COMMENT
 MULTI_LINE_COMMENT
     : '/#' .*? '#/' -> skip
     ;
+
 IDENTIFIER
     : [a-zA-Z_] [a-zA-Z_0-9]*
     ;
