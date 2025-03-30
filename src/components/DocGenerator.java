@@ -33,8 +33,10 @@ public class DocGenerator {
     }
 
     public void generateProjectDocs(String projectDir) throws IOException {
-        processDirectory(projectDir + "/libraries", ".vglib");
-        processDirectory(projectDir + "/projects", ".vg");
+
+        processDirectory(projectDir, ".vglib");
+        processDirectory(projectDir, ".vg");
+        
         generateIndex();
         for (LibraryDoc lib : libraries.values()) {
             generateLibraryDoc(lib);
@@ -52,6 +54,8 @@ public class DocGenerator {
             System.out.println("Directory " + directory + " does not exist or is not a directory");
             return;
         }
+        
+
         File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(extension));
         if (files == null) return;
 
@@ -60,6 +64,17 @@ public class DocGenerator {
                 processLibraryFile(file);
             } else if (extension.equals(".vg")) {
                 processProgramFile(file);
+            }
+        }
+        
+
+        File[] subdirs = dir.listFiles(File::isDirectory);
+        if (subdirs != null) {
+            for (File subdir : subdirs) {
+
+                if (!subdir.getAbsolutePath().equals(new File(outputDir).getAbsolutePath())) {
+                    processDirectory(subdir.getAbsolutePath(), extension);
+                }
             }
         }
     }
