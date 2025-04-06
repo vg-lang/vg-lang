@@ -22,6 +22,8 @@ public class DocGenerator {
     private static final Pattern DOC_PARAM_PATTERN = Pattern.compile("#\\s*@param\\s+(\\w+)\\s+(.+)");
     private static final Pattern ENUM_PATTERN = Pattern.compile("enum\\s+(\\w+)\\s*\\{");
     private static final Pattern ENUM_VALUE_PATTERN = Pattern.compile("\\s*(\\w+)(?:\\s*=\\s*([^,}]+))?");
+    private static final Pattern DOC_FIELD_PATTERN = Pattern.compile("#\\s*@field\\s+(\\w+)\\s+(.+)");
+    private static final Pattern DOC_VALUE_PATTERN = Pattern.compile("#\\s*@value\\s+(\\w+)\\s+(.+)");
 
     private String outputDir;
     private Map<String, LibraryDoc> libraries = new HashMap<>();
@@ -236,25 +238,27 @@ public class DocGenerator {
 
     private String extractDocumentation(String docBlock) {
         StringBuilder sb = new StringBuilder();
-        boolean inDocBlock = false;
         
+        // Remove the opening /## and closing ##/ tags
+        docBlock = docBlock.replaceAll("/##\\s*", "").replaceAll("##/", "");
+        
+        // Process each line
         for (String line : docBlock.split("\n")) {
-            line = line.trim();
-            
-            if (line.startsWith("/##")) {
-                inDocBlock = true;
-                String content = line.substring(3).trim();
-                if (!content.isEmpty()) {
+            // Remove the # prefix from each line and trim
+            Matcher m = DOC_COMMENT_LINE_PATTERN.matcher(line);
+            if (m.find()) {
+                String content = m.group(1).trim();
+                // Skip @param, @field, and @value lines
+                if (!content.startsWith("@param") && 
+                    !content.startsWith("@field") && 
+                    !content.startsWith("@value")) {
                     sb.append(content).append("\n");
                 }
-            } else if (line.equals("##/")) {
-
-                inDocBlock = false;
-            } else if (inDocBlock && line.startsWith("#") && !line.equals("##/")) {
-                if (!line.contains("@param") && !line.contains("@field") &&
-                    !line.contains("@value") && !line.contains("@return")) {
-                    String content = line.substring(1).trim();
-                    sb.append(content).append("\n");
+            } else {
+                // If no # prefix, just add the trimmed line
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    sb.append(trimmed).append("\n");
                 }
             }
         }
@@ -303,62 +307,173 @@ public class DocGenerator {
         programDoc.filename = filename;
         programDoc.name = filename.replace(".vg", "");
 
+        // Variables to track doc comments
+        StringBuilder currentDocComment = new StringBuilder();
+        Map<String, String> paramDescriptions = new HashMap<>();
+        boolean inDocComment = false;
 
-        Matcher importMatcher = IMPORT_PATTERN.matcher(content);
-        while (importMatcher.find()) {
-            programDoc.imports.add(importMatcher.group(1));
-        }
-
-
-        Matcher structMatcher = STRUCT_PATTERN.matcher(content);
-        while (structMatcher.find()) {
-            String structName = structMatcher.group(1);
-            StructDoc structDoc = processStructDeclaration(content, structMatcher.start(), structName);
-            programDoc.structs.add(structDoc);
-        }
-
-
-        Matcher enumMatcher = ENUM_PATTERN.matcher(content);
-        while (enumMatcher.find()) {
-            String enumName = enumMatcher.group(1);
-            EnumDoc enumDoc = processEnumDeclaration(content, enumMatcher.start(), enumName);
-            programDoc.enums.add(enumDoc);
-        }
-
-
-        Matcher functionMatcher = FUNCTION_PATTERN.matcher(content);
-        while (functionMatcher.find()) {
-            FunctionDoc functionDoc = new FunctionDoc();
-            functionDoc.name = functionMatcher.group(1);
-
-
-            int functionStart = functionMatcher.start();
-
-
-            int docStart = content.lastIndexOf("/##", functionStart);
-            if (docStart >= 0) {
-                int otherFunction = content.lastIndexOf("function", functionStart - 1);
-                if (otherFunction < docStart) {
-                    int docEnd = content.indexOf("##/", docStart);
-                    if (docEnd > docStart && docEnd < functionStart) {
-                        String docBlock = content.substring(docStart, docEnd);
-
-                        functionDoc.description = extractDocumentation(docBlock);
-
-                        functionDoc.parameters = parseParameters(functionMatcher.group(2), docBlock);
-                    } else {
-                        functionDoc.parameters = parseParameters(functionMatcher.group(2), "");
-                    }
-                } else {
-                    functionDoc.parameters = parseParameters(functionMatcher.group(2), "");
-                }
-            } else {
-                functionDoc.parameters = parseParameters(functionMatcher.group(2), "");
+        String[] lines = content.split("\n");
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            
+            // Check for doc comment start
+            Matcher docStartMatcher = DOC_COMMENT_START_PATTERN.matcher(line);
+            if (docStartMatcher.find()) {
+                inDocComment = true;
+                currentDocComment.append(docStartMatcher.group(1)).append("\n");
+                continue;
             }
-
-            programDoc.functions.add(functionDoc);
+            
+            // Check for doc comment line
+            if (inDocComment) {
+                Matcher docLineMatcher = DOC_COMMENT_LINE_PATTERN.matcher(line);
+                if (docLineMatcher.find()) {
+                    String commentText = docLineMatcher.group(1);
+                    
+                    // Check if it's a param, field, or value description
+                    Matcher paramMatcher = DOC_PARAM_PATTERN.matcher(line);
+                    Matcher fieldMatcher = DOC_FIELD_PATTERN.matcher(line);
+                    Matcher valueMatcher = DOC_VALUE_PATTERN.matcher(line);
+                    
+                    if (paramMatcher.find()) {
+                        String paramName = paramMatcher.group(1);
+                        String paramDesc = paramMatcher.group(2);
+                        paramDescriptions.put(paramName, paramDesc);
+                    } else if (fieldMatcher.find()) {
+                        String fieldName = fieldMatcher.group(1);
+                        String fieldDesc = fieldMatcher.group(2);
+                        paramDescriptions.put(fieldName, fieldDesc);
+                    } else if (valueMatcher.find()) {
+                        String valueName = valueMatcher.group(1);
+                        String valueDesc = valueMatcher.group(2);
+                        paramDescriptions.put(valueName, valueDesc);
+                    } else {
+                        // Regular comment line
+                        currentDocComment.append(commentText).append("\n");
+                    }
+                    continue;
+                }
+                
+                // Check for doc comment end
+                Matcher docEndMatcher = DOC_COMMENT_END_PATTERN.matcher(line);
+                if (docEndMatcher.find()) {
+                    inDocComment = false;
+                    continue;
+                }
+            }
+            
+            // Process function declarations and attach doc comments
+            Matcher funcMatcher = FUNCTION_PATTERN.matcher(line);
+            if (funcMatcher.find()) {
+                FunctionDoc functionDoc = new FunctionDoc();
+                functionDoc.name = funcMatcher.group(1);
+                
+                // Set description from doc comment if available
+                if (currentDocComment.length() > 0) {
+                    functionDoc.description = currentDocComment.toString().trim();
+                    currentDocComment = new StringBuilder(); // Clear for next use
+                }
+                
+                // Parse parameters
+                String paramsStr = funcMatcher.group(2);
+                if (!paramsStr.trim().isEmpty()) {
+                    String[] params = paramsStr.split(",");
+                    for (String param : params) {
+                        ParameterDoc paramDoc = new ParameterDoc();
+                        paramDoc.name = param.trim();
+                        
+                        // Set parameter description if available
+                        if (paramDescriptions.containsKey(paramDoc.name)) {
+                            paramDoc.description = paramDescriptions.get(paramDoc.name);
+                        }
+                        
+                        functionDoc.parameters.add(paramDoc);
+                    }
+                }
+                
+                programDoc.functions.add(functionDoc);
+                paramDescriptions.clear(); // Clear for next function
+            }
+            
+            // Process imports
+            Matcher importMatcher = IMPORT_PATTERN.matcher(line);
+            if (importMatcher.find()) {
+                programDoc.imports.add(importMatcher.group(1));
+            }
+            
+            // Process struct declarations and attach doc comments
+            Matcher structMatcher = STRUCT_PATTERN.matcher(line);
+            if (structMatcher.find()) {
+                StructDoc structDoc = new StructDoc();
+                structDoc.name = structMatcher.group(1);
+                
+                // Set description from doc comment if available
+                if (currentDocComment.length() > 0) {
+                    structDoc.description = currentDocComment.toString().trim();
+                    currentDocComment = new StringBuilder(); // Clear for next use
+                }
+                
+                // Parse fields from the next few lines
+                StringBuilder structBody = new StringBuilder();
+                int j = i + 1;
+                int braceCount = 1;
+                while (j < lines.length && braceCount > 0) {
+                    String nextLine = lines[j];
+                    if (nextLine.contains("{")) braceCount++;
+                    if (nextLine.contains("}")) braceCount--;
+                    structBody.append(nextLine).append("\n");
+                    j++;
+                }
+                
+                // Extract field documentation from comments
+                for (Map.Entry<String, String> entry : paramDescriptions.entrySet()) {
+                    FieldDoc fieldDoc = new FieldDoc();
+                    fieldDoc.name = entry.getKey();
+                    fieldDoc.description = entry.getValue();
+                    structDoc.fields.add(fieldDoc);
+                }
+                
+                programDoc.structs.add(structDoc);
+                paramDescriptions.clear(); // Clear for next struct
+            }
+            
+            // Process enum declarations and attach doc comments
+            Matcher enumMatcher = ENUM_PATTERN.matcher(line);
+            if (enumMatcher.find()) {
+                EnumDoc enumDoc = new EnumDoc();
+                enumDoc.name = enumMatcher.group(1);
+                
+                // Set description from doc comment if available
+                if (currentDocComment.length() > 0) {
+                    enumDoc.description = currentDocComment.toString().trim();
+                    currentDocComment = new StringBuilder(); // Clear for next use
+                }
+                
+                // Parse enum values from the next few lines
+                StringBuilder enumBody = new StringBuilder();
+                int j = i + 1;
+                int braceCount = 1;
+                while (j < lines.length && braceCount > 0) {
+                    String nextLine = lines[j];
+                    if (nextLine.contains("{")) braceCount++;
+                    if (nextLine.contains("}")) braceCount--;
+                    enumBody.append(nextLine).append("\n");
+                    j++;
+                }
+                
+                // Extract enum value documentation from comments
+                for (Map.Entry<String, String> entry : paramDescriptions.entrySet()) {
+                    EnumValueDoc valueDoc = new EnumValueDoc();
+                    valueDoc.name = entry.getKey();
+                    valueDoc.description = entry.getValue();
+                    enumDoc.values.add(valueDoc);
+                }
+                
+                programDoc.enums.add(enumDoc);
+                paramDescriptions.clear(); // Clear for next enum
+            }
         }
-
+        
         return programDoc;
     }
 
@@ -843,9 +958,6 @@ public class DocGenerator {
     }
 
     private void generateProgramDoc(ProgramDoc program) throws IOException {
-
-        new File(outputDir + "/programs").mkdirs();
-
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>")
                 .append(program.name)
@@ -864,25 +976,37 @@ public class DocGenerator {
 
 
         if (!program.structs.isEmpty()) {
-            sb.append("<section>\n<h2>Structs</h2>\n");
+            sb.append("<section id=\"structs\">\n")
+              .append("<h2>Structs</h2>\n");
             for (StructDoc struct : program.structs) {
-                sb.append("<div class=\"struct\">\n<h3>")
-                        .append(struct.name)
-                        .append("</h3>\n");
-                if (!struct.description.isEmpty()) {
-                    sb.append("<p>").append(struct.description).append("</p>\n");
+                sb.append("<div class=\"struct\">\n")
+                  .append("<h3 id=\"").append(struct.name).append("\">").append(struct.name).append("</h3>\n");
+                
+                // Add struct description
+                if (struct.description != null && !struct.description.isEmpty()) {
+                    String cleanDesc = cleanDocText(struct.description);
+                    sb.append("<p>").append(cleanDesc).append("</p>\n");
                 }
+                
+                // Add fields table
                 if (!struct.fields.isEmpty()) {
-                    sb.append("<h4>Fields</h4>\n<table>\n<thead>\n<tr>\n<th>Name</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n");
+                    sb.append("<h4>Fields</h4>\n")
+                      .append("<table class=\"fields\">\n")
+                      .append("<thead><tr><th>Name</th><th>Description</th></tr></thead>\n")
+                      .append("<tbody>\n");
                     for (FieldDoc field : struct.fields) {
-                        sb.append("<tr>\n<td class=\"field-name\">")
-                                .append(field.name)
-                                .append("</td>\n<td>")
-                                .append(field.description.isEmpty() ? "No description available" : field.description)
-                                .append("</td>\n</tr>\n");
+                        sb.append("<tr><td>").append(field.name).append("</td><td>");
+                        if (field.description != null && !field.description.isEmpty()) {
+                            String cleanDesc = cleanDocText(field.description);
+                            sb.append(cleanDesc);
+                        } else {
+                            sb.append("No description available");
+                        }
+                        sb.append("</td></tr>\n");
                     }
-                    sb.append("</tbody>\n</table>\n");
+                    sb.append("</tbody></table>\n");
                 }
+                
                 sb.append("</div>\n");
             }
             sb.append("</section>\n");
@@ -890,27 +1014,37 @@ public class DocGenerator {
 
 
         if (!program.enums.isEmpty()) {
-            sb.append("<section>\n<h2>Enums</h2>\n");
-            for (EnumDoc enumDoc : program.enums) {
-                sb.append("<div class=\"enum\">\n<h3>")
-                        .append(enumDoc.name)
-                        .append("</h3>\n");
-                if (!enumDoc.description.isEmpty()) {
-                    sb.append("<p>").append(enumDoc.description).append("</p>\n");
+            sb.append("<section id=\"enums\">\n")
+              .append("<h2>Enums</h2>\n");
+            for (EnumDoc enum_ : program.enums) {
+                sb.append("<div class=\"enum\">\n")
+                  .append("<h3 id=\"").append(enum_.name).append("\">").append(enum_.name).append("</h3>\n");
+                
+                // Add enum description
+                if (enum_.description != null && !enum_.description.isEmpty()) {
+                    String cleanDesc = cleanDocText(enum_.description);
+                    sb.append("<p>").append(cleanDesc).append("</p>\n");
                 }
-                if (!enumDoc.values.isEmpty()) {
-                    sb.append("<h4>Values</h4>\n<table>\n<thead>\n<tr>\n<th>Name</th>\n<th>Value</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n");
-                    for (EnumValueDoc value : enumDoc.values) {
-                        sb.append("<tr>\n<td class=\"enum-name\">")
-                                .append(value.name)
-                                .append("</td>\n<td>")
-                                .append(value.value.isEmpty() ? "(default)" : value.value)
-                                .append("</td>\n<td>")
-                                .append(value.description.isEmpty() ? "No description available" : value.description)
-                                .append("</td>\n</tr>\n");
+                
+                // Add values table
+                if (!enum_.values.isEmpty()) {
+                    sb.append("<h4>Values</h4>\n")
+                      .append("<table class=\"values\">\n")
+                      .append("<thead><tr><th>Name</th><th>Description</th></tr></thead>\n")
+                      .append("<tbody>\n");
+                    for (EnumValueDoc value : enum_.values) {
+                        sb.append("<tr><td>").append(value.name).append("</td><td>");
+                        if (value.description != null && !value.description.isEmpty()) {
+                            String cleanDesc = cleanDocText(value.description);
+                            sb.append(cleanDesc);
+                        } else {
+                            sb.append("No description available");
+                        }
+                        sb.append("</td></tr>\n");
                     }
-                    sb.append("</tbody>\n</table>\n");
+                    sb.append("</tbody></table>\n");
                 }
+                
                 sb.append("</div>\n");
             }
             sb.append("</section>\n");
@@ -933,16 +1067,22 @@ public class DocGenerator {
                 }
                 sb.append(")</code></pre>\n");
                 if (!function.description.isEmpty()) {
-                    sb.append("<p>").append(function.description).append("</p>\n");
+                    String cleanDesc = cleanDocText(function.description);
+                    sb.append("<p>").append(cleanDesc).append("</p>\n");
                 }
                 if (!function.parameters.isEmpty()) {
                     sb.append("<h4>Parameters</h4>\n<table>\n<thead>\n<tr>\n<th>Name</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody>\n");
                     for (ParameterDoc param : function.parameters) {
                         sb.append("<tr>\n<td class=\"parameter-name\">")
                                 .append(param.name)
-                                .append("</td>\n<td>")
-                                .append(param.description.isEmpty() ? "No description available" : param.description)
-                                .append("</td>\n</tr>\n");
+                                .append("</td>\n<td>");
+                        if (param.description != null && !param.description.isEmpty()) {
+                            String cleanDesc = cleanDocText(param.description);
+                            sb.append(cleanDesc);
+                        } else {
+                            sb.append("No description available");
+                        }
+                        sb.append("</td></tr>\n");
                     }
                     sb.append("</tbody>\n</table>\n");
                 }
@@ -1231,5 +1371,14 @@ public class DocGenerator {
         if (!cssFile.exists()) {
             generateCSS();
         }
+    }
+
+    // Add this helper method to clean up documentation text
+    private String cleanDocText(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        // Remove any remaining markup tags and trim
+        return text.replaceAll("/#|#/|@\\w+", "").trim();
     }
 }

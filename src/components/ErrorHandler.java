@@ -1,7 +1,7 @@
 package components;
 
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
-
 
 public class ErrorHandler {
     private static final String ANSI_RED = "\u001B[31m";
@@ -116,5 +116,32 @@ public class ErrorHandler {
         public VGImportException(String message, int line, int column) {
             super(message, line, column);
         }
+    }
+
+    public static RuntimeException createSyntaxError(ParserRuleContext ctx, String message) {
+        int line = ctx.start.getLine();
+        int column = ctx.start.getCharPositionInLine();
+        return new RuntimeException("Syntax error at line " + line + ", column " + column + ": " + message);
+    }
+    
+    public static RuntimeException createSyntaxError(Token token, String message) {
+        int line = token.getLine();
+        int column = token.getCharPositionInLine();
+        return new RuntimeException("Syntax error at line " + line + ", column " + column + ": " + message);
+    }
+    
+    public static RuntimeException createRuntimeError(String message) {
+        return new RuntimeException("Runtime error: " + message);
+    }
+    
+    public static RuntimeException handleException(Exception e, ParserRuleContext ctx) {
+        String msg = e.getMessage();
+        if (msg != null) {
+            if (msg.contains("Index -1 out of bounds")) {
+                return createSyntaxError(ctx, "Invalid syntax. Check for missing semicolons or extra semicolons.");
+            }
+
+        }
+        return createSyntaxError(ctx, "Unexpected error: " + e.getMessage());
     }
 }

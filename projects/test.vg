@@ -1,45 +1,53 @@
-import IO.Prompt.*;
-import Guilibrary.window.*;
-import Guilibrary.popup.*;
-
-/## This represents a Person with basic user information.
-# @field name The name of the person.
-# @field age The age of the person.
-# @field occupation The person's occupation.
-# @field hobby The person's favorite hobby.
+/##
+# @param a testparameter
+# @param b test2
 ##/
-struct Person {
-    name;
-    age;
-    occupation;
-    hobby;
+function add(a,b){return a+b;}
+
+/##
+# @field id the id of the person
+# @field name the name of the person
+# @field age the age of the person
+# @field gender the gender of the person
+##/
+struct person{
+id;
+name;
+age;
+gender;
+}
+/##
+# @field workid the id of the person
+# @field firstname the firstname of the person
+# @field lastname the lastname of the person
+# @field age the age of the person
+# @field role the role of the person
+##/
+struct worker{
+workid;
+firstname;
+lastname;
+age;
+role;
+}
+/## This is an enum description
+# @value MONDAY the first day of the week
+# @value SUNDAY the last day of the week
+##/
+enum WEEKDAY {
+MONDAY = 1,
+TUESDAY = 2,
+WEDNESDAY = 3,
+THURSDAY = 4,
+FRIDAY = 5,
+SATURDAY = 6,
+SUNDAY = 7
 }
 
-/## The main function collects user information, creates a GUI window,
-# and displays the user profile in a popup.
-# @return Returns 0 upon successful execution.
-##/
-function main() {
-    var user = Person;
-    print("Please enter your information:");
-    user.name = input("Enter your name: ");
-    user.age = input("Enter your age: ");
-    user.occupation = input("Enter your occupation: ");
-    user.hobby = input("Enter your favorite hobby: ");
-
-    var mainWindow = create("User Profile", 400, 300);
-    setBackgroundColor(mainWindow, "#f0f0f0");
-
-    var userInfo = "User Profile:\n\n" +
-                   "Name: " + user.name + "\n" +
-                   "Age: " + user.age + "\n" +
-                   "Occupation: " + user.occupation + "\n" +
-                   "Hobby: " + user.hobby;
-
-    launch(mainWindow);
-    info(mainWindow, userInfo, "Welcome " + user.name + "!");
-
-    return 0;
-}
-
-main();
+## Create a new struct instance
+var minp = person;
+minp.id = 1;
+minp.name = "hussein";
+minp.age = 24;
+minp.gender = "Male";
+print(minp.age);

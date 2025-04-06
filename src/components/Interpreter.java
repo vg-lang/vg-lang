@@ -1609,51 +1609,65 @@ public class Interpreter extends vg_langBaseVisitor {
 
     @Override
     public Object visitStructDeclaration(vg_langParser.StructDeclarationContext ctx) {
-        String structName = ctx.IDENTIFIER().getText();
+        try {
+            String structName = ctx.IDENTIFIER().getText();
 
-        // Create a new struct type definition
-        Map<String, Object> fieldDefaults = new HashMap<>();
-        for (vg_langParser.StructFieldContext fieldCtx : ctx.structField()) {
-            String fieldName = fieldCtx.IDENTIFIER().getText();
-            fieldDefaults.put(fieldName, null);
+            // Create a new struct type definition
+            Map<String, Object> fieldDefaults = new HashMap<>();
+            for (vg_langParser.StructFieldContext fieldCtx : ctx.structField()) {
+                String fieldName = fieldCtx.IDENTIFIER().getText();
+                fieldDefaults.put(fieldName, null);
+            }
+
+            // Store the struct definition in the symbol table
+            StructDefinition structDef = new StructDefinition(structName, fieldDefaults);
+            currentSymbolTable().set(structName, structDef);
+
+            return null;
+        } catch (Exception e) {
+            throw ErrorHandler.handleException(e, ctx);
         }
-
-        // Store the struct definition in the symbol table
-        StructDefinition structDef = new StructDefinition(structName, fieldDefaults);
-        currentSymbolTable().set(structName, structDef);
-
-        return null;
     }
 
     @Override
     public Object visitEnumDeclaration(vg_langParser.EnumDeclarationContext ctx) {
-        String enumName = ctx.IDENTIFIER().getText();
-        Enum enumObj = new Enum(enumName);
+        try {
+            String enumName = ctx.IDENTIFIER().getText();
+            Enum enumObj = new Enum(enumName);
 
-        // Process enum values
-        int autoValue = 0;
-        for (vg_langParser.EnumValueContext valueCtx : ctx.enumValue()) {
-            String valueName = valueCtx.IDENTIFIER().getText();
-            Object value;
+            // Process enum values
+            int autoValue = 0;
+            for (vg_langParser.EnumValueContext valueCtx : ctx.enumValue()) {
+                String valueName = valueCtx.IDENTIFIER().getText();
+                Object value;
 
-            if (valueCtx.expression() != null) {
-                // Explicit value provided
-                value = visit(valueCtx.expression());
-                if (value instanceof Number) {
-                    autoValue = ((Number) value).intValue() + 1;
+                if (valueCtx.expression() != null) {
+                    // Explicit value provided
+                    value = visit(valueCtx.expression());
+                    if (value instanceof Number) {
+                        autoValue = ((Number) value).intValue() + 1;
+                    }
+                } else {
+                    // Auto-increment value
+                    value = autoValue++;
                 }
-            } else {
-                // Auto-increment value
-                value = autoValue++;
+
+                enumObj.addValue(valueName, value);
             }
 
-            enumObj.addValue(valueName, value);
+            // Store the enum in the symbol table
+            currentSymbolTable().set(enumName, enumObj);
+
+            return null;
+        } catch (Exception e) {
+            throw ErrorHandler.handleException(e, ctx);
         }
+    }
 
-        // Store the enum in the symbol table
-        currentSymbolTable().set(enumName, enumObj);
-
-        return null;
+    private void handleSyntaxError(String message, vg_langParser.StructDeclarationContext ctx) {
+        int line = ctx.start.getLine();
+        int column = ctx.start.getCharPositionInLine();
+        throw new RuntimeException("Syntax error at line " + line + ", column " + column + ": " + message);
     }
 
 

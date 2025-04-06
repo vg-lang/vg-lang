@@ -85,8 +85,42 @@ public class Main {
                     } catch (ErrorHandler.VGException e) {
                         ErrorHandler.reportRuntimeError(e.getLine(), e.getColumn(), e.getMessage());
                     } catch (Exception e) {
-                        ErrorHandler.reportError("Unexpected Error",
-                                "An unexpected error occurred: " + e.getMessage());
+                        if (e.getMessage() != null && e.getMessage().contains("Index -1 out of bounds")) {
+                            String source = new String(Files.readAllBytes(Paths.get(filePath)));
+                            String[] lines = source.split("\n");
+                            
+                            // Find problematic lines
+                            int structLine = -1;
+                            int enumLine = -1;
+                            
+                            for (int i = 0; i < lines.length; i++) {
+                                String line = lines[i].trim();
+                                if (line.endsWith("};")) {
+                                    if (line.startsWith("}") || findMatchingOpenBrace(lines, i).contains("struct")) {
+                                        structLine = i + 1; // +1 because line numbers are 1-based
+                                        break;
+                                    } else if (findMatchingOpenBrace(lines, i).contains("enum")) {
+                                        enumLine = i + 1;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            if (structLine != -1) {
+                                ErrorHandler.reportError("Syntax Error", 
+                                    "Invalid struct declaration at line " + structLine + ". Remove the semicolon after the closing brace '}' of the struct.");
+                            } 
+                            else if (enumLine != -1) {
+                                ErrorHandler.reportError("Syntax Error", 
+                                    "Invalid enum declaration at line " + enumLine + ". Remove the semicolon after the closing brace '}' of the enum.");
+                            }
+                            else {
+                                ErrorHandler.reportError("Syntax Error", 
+                                    "Invalid struct or enum declaration. Make sure each field ends with a semicolon and there is no semicolon after the closing brace.");
+                            }
+                        } else {
+                            ErrorHandler.reportError("Unexpected Error", e.getMessage());
+                        }
                     }
                 }
             } else {
@@ -131,5 +165,23 @@ public class Main {
         } else {
             throw new IOException("Input path does not exist: " + inputPath);
         }
+    }
+
+    // Helper method to find the matching opening brace and return the line content
+    private static String findMatchingOpenBrace(String[] lines, int closeBraceLine) {
+        int braceCount = 1;
+        for (int i = closeBraceLine - 1; i >= 0; i--) {
+            String line = lines[i];
+            for (int j = line.length() - 1; j >= 0; j--) {
+                if (line.charAt(j) == '}') braceCount++;
+                if (line.charAt(j) == '{') {
+                    braceCount--;
+                    if (braceCount == 0) {
+                        return line; // Return the line with the opening brace
+                    }
+                }
+            }
+        }
+        return "";
     }
 }
