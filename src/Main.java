@@ -62,65 +62,25 @@ public class Main {
                         Path scriptPath = Paths.get(filePath).toAbsolutePath();
                         Path projectRoot = scriptPath.getParent();
                         Path packageFolder = projectRoot.resolve("packages");
-                        String source = new String(Files.readAllBytes(Paths.get(filePath)));
+                        String sourceCode = new String(Files.readAllBytes(Paths.get(filePath)));
                         Interpreter interpreter = new Interpreter(packageFolder.toString());
-
-                        vg_langLexer lexer = new vg_langLexer(CharStreams.fromString(source));
-                        lexer.removeErrorListeners();
-                        lexer.addErrorListener(new VGErrorListener());
-
-                        CommonTokenStream tokens = new CommonTokenStream(lexer);
-                        vg_langParser parser = new vg_langParser(tokens);
-                        parser.removeErrorListeners();
-                        parser.addErrorListener(new VGErrorListener());
-                        interpreter.visit(parser.program());
-                    } catch (ParseCancellationException e) {
-                        ErrorHandler.reportError("Syntax Error", e.getMessage());
-                    } catch (ErrorHandler.VGTypeException e) {
-                        ErrorHandler.reportTypeError(e.getLine(), e.getColumn(), e.getMessage());
-                    } catch (ErrorHandler.VGNameException e) {
-                        ErrorHandler.reportRuntimeError(e.getLine(), e.getColumn(), e.getMessage());
-                    } catch (ErrorHandler.VGImportException e) {
-                        ErrorHandler.reportError("Import Error", e.getMessage());
-                    } catch (ErrorHandler.VGException e) {
-                        ErrorHandler.reportRuntimeError(e.getLine(), e.getColumn(), e.getMessage());
-                    } catch (Exception e) {
-                        if (e.getMessage() != null && e.getMessage().contains("Index -1 out of bounds")) {
-                            String source = new String(Files.readAllBytes(Paths.get(filePath)));
-                            String[] lines = source.split("\n");
+                        
+                        try {
+                            interpreter.interpret(sourceCode);
+                        } catch (ErrorHandler.VGException e) {
+                            int line = e.getLine();
+                            int column = e.getColumn();
                             
-                            // Find problematic lines
-                            int structLine = -1;
-                            int enumLine = -1;
+                            if (line <= 0) line = 1;
                             
-                            for (int i = 0; i < lines.length; i++) {
-                                String line = lines[i].trim();
-                                if (line.endsWith("};")) {
-                                    if (line.startsWith("}") || findMatchingOpenBrace(lines, i).contains("struct")) {
-                                        structLine = i + 1; // +1 because line numbers are 1-based
-                                        break;
-                                    } else if (findMatchingOpenBrace(lines, i).contains("enum")) {
-                                        enumLine = i + 1;
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            if (structLine != -1) {
-                                ErrorHandler.reportError("Syntax Error", 
-                                    "Invalid struct declaration at line " + structLine + ". Remove the semicolon after the closing brace '}' of the struct.");
-                            } 
-                            else if (enumLine != -1) {
-                                ErrorHandler.reportError("Syntax Error", 
-                                    "Invalid enum declaration at line " + enumLine + ". Remove the semicolon after the closing brace '}' of the enum.");
-                            }
-                            else {
-                                ErrorHandler.reportError("Syntax Error", 
-                                    "Invalid struct or enum declaration. Make sure each field ends with a semicolon and there is no semicolon after the closing brace.");
-                            }
-                        } else {
-                            ErrorHandler.reportError("Unexpected Error", e.getMessage());
+                            System.err.println(e.getMessage());
+                            System.err.println("At line " + line + ", column " + column);
+                        } catch (Exception e) {
+                            System.err.println("Unexpected error: " + e.getMessage());
+                            e.printStackTrace();
                         }
+                    } catch (IOException e) {
+                        ErrorHandler.reportError("File Error", "Error reading file: " + e.getMessage());
                     }
                 }
             } else {
@@ -167,7 +127,6 @@ public class Main {
         }
     }
 
-    // Helper method to find the matching opening brace and return the line content
     private static String findMatchingOpenBrace(String[] lines, int closeBraceLine) {
         int braceCount = 1;
         for (int i = closeBraceLine - 1; i >= 0; i--) {
@@ -177,7 +136,7 @@ public class Main {
                 if (line.charAt(j) == '{') {
                     braceCount--;
                     if (braceCount == 0) {
-                        return line; // Return the line with the opening brace
+                        return line;
                     }
                 }
             }

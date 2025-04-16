@@ -1,0 +1,110 @@
+import IO.Prompt;
+import RegexLib.regex; ## installable package REGEXLiB
+import Arrays.array;
+import Util.Double;
+
+function createStatement(cmd, arg1, arg2) {
+    var st = [];
+    array.push(st, cmd);
+    array.push(st, arg1);
+    array.push(st, arg2);
+    return st;
+}
+
+function main() {
+    print("Welcome to MyBASIC in vg_lang!");
+    var variables = [];
+    while (true) {
+        var line = Prompt.input("BASIC> ");
+        line = trimString(line);
+
+        if (line == "END" || line == "QUIT") {
+            print("Goodbye!");
+            return false;
+        }
+
+        var statement = parseBASICStatement(line);
+        executeStatement(statement, variables);
+    }
+}
+
+function parseBASICStatement(line) {
+    var tokens = tokenizeBASIC(line);
+    var count = array.getLength(tokens);
+
+    if (count == 0) {
+        return createStatement("UNKNOWN", "", "");
+    }
+
+    var cmd = tokens[0];
+
+    if (cmd == "PRINT") {
+        var rest = joinTokens(tokens, 1, count);
+        return createStatement("PRINT", rest, "");
+    }
+    if ((cmd == "ADD" || cmd == "SUBTRACT" || cmd == "MULTIPLY" || cmd == "DIVIDE") && count == 3) {
+        return createStatement(cmd, tokens[1], tokens[2]);
+    }
+    return createStatement("UNKNOWN", line, "");
+}
+
+function executeStatement(statement, variables) {
+    var cmd = statement[0];
+
+    if (cmd == "PRINT") {
+        print(statement[1]);
+        return;
+    }
+
+    if (cmd == "ADD" || cmd == "SUBTRACT" || cmd == "MULTIPLY" || cmd == "DIVIDE") {
+        var leftStr = statement[1];
+        var rightStr = statement[2];
+        var leftVal = Double.toDouble(leftStr);
+        var rightVal = Double.toDouble(rightStr);
+
+        if (cmd == "ADD") {
+            var sum = leftVal + rightVal;
+            print(sum);
+        } else if (cmd == "SUBTRACT") {
+            var diff = leftVal - rightVal;
+            print(diff);
+        } else if (cmd == "MULTIPLY") {
+            var product = leftVal * rightVal;
+            print(product);
+        } else if (cmd == "DIVIDE") {
+            if (rightVal == 0) {
+                print("Error: Division by zero");
+            } else {
+                var quotient = leftVal / rightVal;
+                print(quotient);
+            }
+        }
+        return;
+    }
+
+    print("Unknown statement: " + statement[1]);
+}
+
+function tokenizeBASIC(line) {
+    var pattern = "[^\\s]+";
+    var tokens = regex.findAll(line, pattern);
+    return tokens;
+}
+
+function trimString(str) {
+    var pattern = "^\\s+|\\s+$";
+    return regex.replaceAll(str, pattern, "");
+}
+
+function joinTokens(tokens, start, end) {
+    var result = "";
+    for (var i = start; i < end; i = i + 1) {
+        if (i > start) {
+            result = result + " ";
+        }
+        result = result + tokens[i];
+    }
+    return result;
+}
+
+main();

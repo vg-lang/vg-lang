@@ -1,6 +1,5 @@
 package components;
 
-import com.sun.jdi.InvocationException;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -19,31 +18,49 @@ import java.nio.file.Paths;
 import java.util.*;
 import org.antlr.v4.runtime.Token;
 import java.util.stream.Stream;
+import org.antlr.v4.runtime.BaseErrorListener;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Recognizer;
 
 public class Interpreter extends vg_langBaseVisitor {
     public Deque<SymbolTable> symbolTableStack = new ArrayDeque<>();
     private Map<String, Set<String>> allowedMethods = new HashMap<>();
     private Set<String> allowedClasses = new HashSet<>();
-    public Map<String,BuiltInFunction> builtInFunction = new HashMap<>();
+    public Map<String, BuiltInFunction> builtInFunction = new HashMap<>();
+
     SymbolTable globalSymbolTable;
     ModuleRegistry moduleRegistry;
-    private String libraryFolder = "libraries";
+    private String libraryFolder = System.getenv("VG_LIBRARIES_PATH");
     private int currentLine = 0;
     private int currentColumn = 0;
+
     public Interpreter(String projectPackageFolder) {
         globalSymbolTable = new SymbolTable();
         symbolTableStack.push(globalSymbolTable);
+        
+        globalSymbolTable.setConstant("true", true);
+        globalSymbolTable.setConstant("false", false);
+        
         registerBuiltInFunction();
 
-         String configPath = System.getenv("MY_APP_CONFIG");
-        //String configPath = "C:/Users/hodif/Desktop/usn2024/vg lang/Configuration";
+        String configPath = System.getenv("VG_APP_CONFIG");
         loadLangConfigFile(configPath + "/allowed_configurations.vgenv");
         moduleRegistry = new ModuleRegistry();
-        loadLibrariesFromFolder("libraries");
+        loadLibrariesFromFolder(libraryFolder);
         loadLibrariesFromFolder(projectPackageFolder);
-
-
     }
+
+    private void setupErrorHandling(vg_langParser parser) {
+        parser.removeErrorListeners();
+        parser.addErrorListener(new BaseErrorListener() {
+            @Override
+            public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol,
+                                  int line, int charPositionInLine, String msg, RecognitionException e) {
+                throw new ErrorHandler.VGSyntaxException(msg, line, charPositionInLine);
+            }
+        });
+    }
+
     public void loadLibrariesFromFolder(String folderPath) {
         try (Stream<Path> paths = Files.walk(Paths.get(folderPath))) {
             paths.filter(Files::isRegularFile)
@@ -53,12 +70,14 @@ public class Interpreter extends vg_langBaseVisitor {
             throw new RuntimeException("Error loading libraries from folder: " + folderPath, e);
         }
     }
+
     private void updatePosition(Token token) {
         if (token != null) {
             currentLine = token.getLine();
             currentColumn = token.getCharPositionInLine();
         }
     }
+
     public void processLibraryDeclaration(vg_langParser.LibraryDeclarationContext ctx) {
         String libraryName = ctx.IDENTIFIER().getText();
         Library library = new Library(libraryName);
@@ -70,33 +89,41 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         moduleRegistry.addLibrary(library);
     }
+
     public void loadLibraryFile(String filePath) {
         try {
-
             String content = new String(Files.readAllBytes(Paths.get(filePath)), StandardCharsets.UTF_8);
-
 
             CharStream input = CharStreams.fromString(content);
             vg_langLexer lexer = new vg_langLexer(input);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             vg_langParser parser = new vg_langParser(tokens);
-
+            
+            setupErrorHandling(parser);
 
             vg_langParser.ProgramContext programCtx = parser.program();
 
-
             for (vg_langParser.StatementContext stmtCtx : programCtx.statement()) {
                 if (stmtCtx.libraryDeclaration() != null) {
-
                     processLibraryDeclaration(stmtCtx.libraryDeclaration());
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Error reading library file: " + filePath);        }
+            if (e instanceof java.nio.file.NoSuchFileException) {
+                throw new ErrorHandler.VGFileException(
+                    "Library file not found: " + filePath + ". Make sure the Software is installed correctly or that the file exists.",
+                    currentLine, currentColumn
+                );
+            } else {
+                throw new ErrorHandler.VGFileException(
+                    "Error reading library file: " + filePath + " - " + e.getMessage(),
+                    currentLine, currentColumn
+                );
+            }
+        }
     }
-    private void processNamespaceBody(vg_langParser.NamespaceDeclarationContext nsCtx, Namespace namespace) {
 
+    private void processNamespaceBody(vg_langParser.NamespaceDeclarationContext nsCtx, Namespace namespace) {
         for (vg_langParser.FunctionDeclarationContext funcCtx : nsCtx.functionDeclaration()) {
             String functionName = funcCtx.IDENTIFIER().getText();
             Function function = new Function(
@@ -106,7 +133,6 @@ public class Interpreter extends vg_langBaseVisitor {
             );
             namespace.addSymbol(functionName, function);
         }
-
 
         for (vg_langParser.VariableDeclarationContext varCtx : nsCtx.variableDeclaration()) {
             String varName = varCtx.IDENTIFIER().getText();
@@ -127,142 +153,143 @@ public class Interpreter extends vg_langBaseVisitor {
     }
 
     public void processImport(String importPath) {
-        try{
-        importPath = importPath.trim();
-        if (importPath.endsWith(";")) {
-            importPath = importPath.substring(0, importPath.length() - 1);
-        }
-
-
-        String[] rawParts = importPath.split("\\.");
-        List<String> partsList = new ArrayList<>();
-        for (String part : rawParts) {
-            if (!part.isEmpty()) {
-                partsList.add(part);
+        try {
+            importPath = importPath.trim();
+            if (importPath.endsWith(";")) {
+                importPath = importPath.substring(0, importPath.length() - 1);
             }
-        }
-        String[] parts = partsList.toArray(new String[0]);
 
-        if (parts.length < 2) {
-            throw new ErrorHandler.VGImportException(
-                    "Invalid import path: " + importPath,
-                    currentLine, currentColumn
-            );
-        }
+            String[] rawParts = importPath.split("\\.");
+            List<String> partsList = new ArrayList<>();
+            for (String part : rawParts) {
+                if (!part.isEmpty()) {
+                    partsList.add(part);
+                }
+            }
+            String[] parts = partsList.toArray(new String[0]);
 
+            if (parts.length < 2) {
+                throw new ErrorHandler.VGImportException(
+                    "Invalid import path: " + importPath + ". Format should be 'library.namespace[.symbol]'",
+                    currentLine > 0 ? currentLine : 1,
+                    currentColumn > 0 ? currentColumn : 0
+                );
+            }
 
-        String libName = parts[0];
-        Library lib = moduleRegistry.getLibrary(libName);
-        if (lib == null) {
-            try {
-                String libraryFilePath = libraryFolder + "/" + libName + ".vglib";
-                loadLibraryFile(libraryFilePath);
-                lib = moduleRegistry.getLibrary(libName);
-                if (lib == null) {
-                    throw new ErrorHandler.VGImportException(
-                            "Library not found after attempting load: " + libName,
+            String libName = parts[0];
+            Library lib = moduleRegistry.getLibrary(libName);
+            if (lib == null) {
+                try {
+                    String libraryFilePath = libraryFolder + "/" + libName + ".vglib";
+                    loadLibraryFile(libraryFilePath);
+                    lib = moduleRegistry.getLibrary(libName);
+                    if (lib == null) {
+                        throw new ErrorHandler.VGImportException(
+                            "Library '" + libName + "' not found after attempting to load it",
                             currentLine, currentColumn
-                    );
-                }
+                        );
+                    }
 
-            } catch (RuntimeException e) {
-                if (e.getCause() instanceof IOException) {
+                } catch (ErrorHandler.VGFileException e) {
                     throw new ErrorHandler.VGImportException(
-                            "Cannot import library '" + libName + "': Library file not found",
-                            currentLine, currentColumn
+                        "Cannot import library '" + libName + "': " + e.getMessage(),
+                        currentLine, currentColumn
                     );
+                } catch (RuntimeException e) {
+                    if (e.getCause() instanceof IOException) {
+                        throw new ErrorHandler.VGFileException(
+                            "Cannot import library '" + libName + "': Library file not found or cannot be read. " +
+                            "Check if the library is installed in " + libraryFolder,
+                            currentLine, currentColumn
+                        );
+                    } else {
+                        throw e;
+                    }
+                }
+            }
+
+            if (parts[parts.length - 1].equals("*")) {
+                String[] nsPath = Arrays.copyOfRange(parts, 1, parts.length - 1);
+                Namespace ns;
+                if (nsPath.length == 1) {
+                    ns = lib.getNamespace(nsPath[0]);
                 } else {
-                    throw e; // Re-throw other runtime exceptions
+                    ns = lib.getNamespace(nsPath[0]);
+                    if (ns == null) {
+                        throw new RuntimeException("Namespace not found: " + nsPath[0]);
+                    }
+                    ns = ns.getNestedNamespace(nsPath, 1);
                 }
-            }
-        }
-
-
-        if (parts[parts.length - 1].equals("*")) {
-
-            String[] nsPath = Arrays.copyOfRange(parts, 1, parts.length - 1);
-            Namespace ns;
-            if (nsPath.length == 1) {
-                ns = lib.getNamespace(nsPath[0]);
-            } else {
-                ns = lib.getNamespace(nsPath[0]);
                 if (ns == null) {
-                    throw new RuntimeException("Namespace not found: " + nsPath[0]);
+                    throw new RuntimeException("Nested namespace not found for path: " + String.join(".", nsPath));
                 }
-                ns = ns.getNestedNamespace(nsPath, 1);
-            }
-            if (ns == null) {
-                throw new RuntimeException("Nested namespace not found for path: " + String.join(".", nsPath));
+
+                for (Map.Entry<String, Object> entry : ns.getSymbols().entrySet()) {
+                    if (entry.getValue() instanceof Function) {
+                        globalSymbolTable.setFunction(entry.getKey(), (Function) entry.getValue());
+                        globalSymbolTable.set(entry.getKey(), entry.getValue());
+                    } else {
+                        globalSymbolTable.set(entry.getKey(), entry.getValue());
+                    }
+                }
+
+                return;
             }
 
-            for (Map.Entry<String, Object> entry : ns.getSymbols().entrySet()) {
-                if (entry.getValue() instanceof Function) {
-                    globalSymbolTable.setFunction(entry.getKey(), (Function) entry.getValue());
-                    globalSymbolTable.set(entry.getKey(), entry.getValue());
+            if (parts.length == 2) {
+                String nsName = parts[1];
+                Namespace ns = lib.getNamespace(nsName);
+                if (ns == null) {
+                    throw new RuntimeException("Namespace not found: " + nsName);
+                }
+                globalSymbolTable.set(nsName, ns);
+                return;
+            }
+
+            if (parts.length >= 3) {
+                String symbolName = parts[parts.length - 1];
+
+                String[] nsPath = Arrays.copyOfRange(parts, 1, parts.length - 1);
+                Namespace ns;
+                if (nsPath.length == 1) {
+                    ns = lib.getNamespace(nsPath[0]);
                 } else {
-                    globalSymbolTable.set(entry.getKey(), entry.getValue());
+                    ns = lib.getNamespace(nsPath[0]);
+                    if (ns == null) {
+                        throw new RuntimeException("Namespace not found: " + nsPath[0]);
+                    }
+                    ns = ns.getNestedNamespace(nsPath, 1);
                 }
-            }
-           // System.out.println("DEBUG: Imported all symbols from nested namespace '" + String.join(".", nsPath) + "'.");
-            return;
-        }
-
-
-        if (parts.length == 2) {
-            String nsName = parts[1];
-            Namespace ns = lib.getNamespace(nsName);
-            if (ns == null) {
-                throw new RuntimeException("Namespace not found: " + nsName);
-            }
-            globalSymbolTable.set(nsName, ns);
-            // System.out.println("DEBUG: Imported namespace '" + nsName + "' into global scope.");
-            return;
-        }
-
-
-        if (parts.length >= 3) {
-
-            String symbolName = parts[parts.length - 1];
-
-            String[] nsPath = Arrays.copyOfRange(parts, 1, parts.length - 1);
-            Namespace ns;
-            if (nsPath.length == 1) {
-                ns = lib.getNamespace(nsPath[0]);
-            } else {
-                ns = lib.getNamespace(nsPath[0]);
                 if (ns == null) {
-                    throw new RuntimeException("Namespace not found: " + nsPath[0]);
+                    throw new RuntimeException("Nested namespace not found for path: " + String.join(".", nsPath));
                 }
-                ns = ns.getNestedNamespace(nsPath, 1);
-            }
-            if (ns == null) {
-                throw new RuntimeException("Nested namespace not found for path: " + String.join(".", nsPath));
-            }
-            Object symbol = ns.getSymbol(symbolName);
-            if (symbol == null) {
-
-                symbol = ns.getChildNamespace(symbolName);
+                Object symbol = ns.getSymbol(symbolName);
                 if (symbol == null) {
-                    throw new RuntimeException("Symbol or nested namespace not found: " + symbolName);
+                    symbol = ns.getChildNamespace(symbolName);
+                    if (symbol == null) {
+                        throw new RuntimeException("Symbol or nested namespace not found: " + symbolName);
+                    }
+                }
+                if (symbol instanceof Function) {
+                    globalSymbolTable.setFunction(symbolName, (Function) symbol);
+                    globalSymbolTable.set(symbolName, symbol);
+                } else {
+                    globalSymbolTable.set(symbolName, symbol);
                 }
             }
-            if (symbol instanceof Function) {
-                globalSymbolTable.setFunction(symbolName, (Function) symbol);
-                globalSymbolTable.set(symbolName, symbol);
-            } else {
-                globalSymbolTable.set(symbolName, symbol);
-            }
-           // System.out.println("DEBUG: Imported symbol or namespace '" + symbolName + "' from nested path '" + String.join(".", nsPath) + "' into global scope.");
-
-        }
 
         } catch (ErrorHandler.VGException e) {
-            throw e;
+            if (e.getLine() > 0) {
+                throw e;
+            }
+            throw new ErrorHandler.VGException(e.getMessage(), 
+                currentLine > 0 ? currentLine : 1,
+                currentColumn > 0 ? currentColumn : 0);
         } catch (Exception e) {
-
             throw new ErrorHandler.VGImportException(
-                    "Error importing '" + importPath + "': " + e.getMessage(),
-                    currentLine, currentColumn
+                "Error importing '" + importPath + "': " + e.getMessage(),
+                currentLine > 0 ? currentLine : 1,
+                currentColumn > 0 ? currentColumn : 0
             );
         }
     }
@@ -283,7 +310,6 @@ public class Interpreter extends vg_langBaseVisitor {
         return params;
     }
 
-
     private SymbolTable currentSymbolTable() {
         return symbolTableStack.peek();
     }
@@ -297,7 +323,7 @@ public class Interpreter extends vg_langBaseVisitor {
         throw new RuntimeException("Variable '" + name + "' is not defined.");
     }
 
-    private void registerBuiltInFunction(){
+    private void registerBuiltInFunction() {
         BuiltInFunction VgSystemCall = new BuiltInFunction() {
             @Override
             public Object call(List<Object> args) {
@@ -308,15 +334,14 @@ public class Interpreter extends vg_langBaseVisitor {
         builtInFunction.put("VgSystemCall", VgSystemCall);
         globalSymbolTable.setFunction("VgSystemCall", wrappedVgSystemCall);
         globalSymbolTable.set("VgSystemCall", wrappedVgSystemCall);
-
-
     }
+
     private boolean isMethodAllowed(Class<?> vgclass, String methodName) {
         while (vgclass != null) {
             String className = vgclass.getName();
-            if(allowedClasses.contains(className)){
+            if (allowedClasses.contains(className)) {
                 Set<String> classMethods = allowedMethods.get(className);
-                if(classMethods != null && classMethods.contains(methodName)) {
+                if (classMethods != null && classMethods.contains(methodName)) {
                     return true;
                 }
             }
@@ -327,7 +352,6 @@ public class Interpreter extends vg_langBaseVisitor {
 
     private Constructor<?> findConstructor(Class<?> vgclass, List<Object> args) {
         for (Constructor<?> constructor : vgclass.getConstructors()) {
-
             if (constructor.getParameterCount() == args.size()) {
                 if (matchParameterTypes(constructor.getParameterTypes(), args)) {
                     return constructor;
@@ -336,6 +360,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return null;
     }
+
     private boolean matchParameterTypes(Class<?>[] paramTypes, List<Object> args) {
         for (int i = 0; i < paramTypes.length; i++) {
             Object arg = args.get(i);
@@ -362,6 +387,7 @@ public class Interpreter extends vg_langBaseVisitor {
 
         return paramType.isAssignableFrom(arg.getClass());
     }
+
     private Class<?> getWrappedclasses(Class<?> primitiveType) {
         if (primitiveType == int.class) {
             return Integer.class;
@@ -397,7 +423,6 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return null;
     }
-
 
     private Object[] convertArguments(List<Object> args, AccessibleObject accessibleObject) {
         Class<?>[] paramTypes;
@@ -443,11 +468,9 @@ public class Interpreter extends vg_langBaseVisitor {
                 arg = ((LanguageObjectWrapper) arg).getLanguageObject();
             }
 
-
             if (paramType.isPrimitive()) {
                 paramType = getWrappedclasses(paramType);
             }
-            // Handle Object[][] conversion
             if (paramType.isArray() && paramType.getComponentType() == Object.class && arg instanceof List) {
                 List<?> outerList = (List<?>) arg;
                 Object[][] javaArray = new Object[outerList.size()][];
@@ -496,11 +519,11 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return javaArgs;
     }
+
     private List<Object> convertJavaListToLanguageArray(List<?> javaList) {
         List<Object> languageArray = new ArrayList<>();
         for (Object item : javaList) {
             if (item instanceof List) {
-
                 languageArray.add(convertJavaListToLanguageArray((List<?>) item));
             } else {
                 languageArray.add(item);
@@ -508,6 +531,7 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return languageArray;
     }
+
     private boolean isPrimitiveOrWrapper(Class<?> vgclass) {
         return vgclass.isPrimitive() ||
                 vgclass == Boolean.class ||
@@ -521,7 +545,21 @@ public class Interpreter extends vg_langBaseVisitor {
                 vgclass == String.class ||
                 vgclass == Void.class;
     }
-
+    private FunctionReference extractFunctionFromArg(Object arg) {
+        if (arg instanceof FunctionReference) {
+            return (FunctionReference) arg;
+        } else if (arg instanceof Function) {
+            return new FunctionReference((Function) arg, new ArrayList<>());
+        } else if (arg instanceof LanguageObjectWrapper) {
+            Object obj = ((LanguageObjectWrapper) arg).getObject();
+            if (obj instanceof FunctionReference) {
+                return (FunctionReference) obj;
+            } else if (obj instanceof Function) {
+                return new FunctionReference((Function) obj, new ArrayList<>());
+            }
+        }
+        throw new ErrorHandler.VGException("Argument must be a function reference",currentLine,currentColumn);
+    }
     private Object VgSystemCall(List<Object> args) {
         if (args.size() < 2) {
             throw new RuntimeException("CallJava requires at least 2 arguments: className and methodName");
@@ -530,10 +568,8 @@ public class Interpreter extends vg_langBaseVisitor {
         String memberName = args.get(1).toString();
         List<Object> methodArgs = args.size() > 2 ? args.subList(2, args.size()) : Collections.emptyList();
         try {
-
             Class<?> clazz = Class.forName(className);
             if (className.equals("components.MyGUI$MyButton") && memberName.equals("setOnClick") && methodArgs.size() == 2) {
-
                 Object instanceObj = methodArgs.get(0);
                 if (instanceObj instanceof LanguageObjectWrapper) {
                     instanceObj = ((LanguageObjectWrapper) instanceObj).getObject();
@@ -545,17 +581,13 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
                 FunctionReference funcRef = (FunctionReference) secondArg;
 
-
                 ActionListener listener = new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-
                         List<Object> finalArgs = new ArrayList<>(funcRef.getCapturedArgs());
-
                         funcRef.getFunction().call(finalArgs);
                     }
                 };
-
 
                 Method setOnClickMethod = clazz.getMethod("setOnClick", ActionListener.class);
                 setOnClickMethod.invoke(instanceObj, listener);
@@ -563,12 +595,10 @@ public class Interpreter extends vg_langBaseVisitor {
                 return null;
             }
             if (className.equals("components.MyGUI") && memberName.equals("setOnKeyPress") && methodArgs.size() == 2) {
-
                 Object instanceObj = methodArgs.get(0);
                 if (instanceObj instanceof LanguageObjectWrapper) {
                     instanceObj = ((LanguageObjectWrapper) instanceObj).getObject();
                 }
-
 
                 Object secondArg = methodArgs.get(1);
                 if (!(secondArg instanceof FunctionReference)) {
@@ -576,37 +606,112 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
                 FunctionReference funcRef = (FunctionReference) secondArg;
 
-
                 KeyListener listener = new KeyAdapter() {
                     @Override
                     public void keyPressed(KeyEvent e) {
-
                         List<Object> argValues = new ArrayList<>(funcRef.getCapturedArgs());
                         argValues.add(e.getKeyCode());
-
                         funcRef.getFunction().call(argValues);
                     }
                 };
 
-
                 Method method = clazz.getMethod("setOnKeyPress", KeyListener.class);
                 method.invoke(instanceObj, listener);
 
-
                 return null;
+            }
+            if (className.equals("components.MyGUI") && memberName.equals("setOnKeyPress") && methodArgs.size() == 2) {
+                Object instanceObj = methodArgs.get(0);
+                final Object keyPressArg1 = methodArgs.get(1);
+                final FunctionReference keyPressCallbackFunction = extractFunctionFromArg(keyPressArg1);
+
+                KeyListener listener = new KeyAdapter() {
+                    @Override
+                    public void keyPressed(KeyEvent e) {
+                        List<Object> argValues = new ArrayList<>();
+                        argValues.add(e.getKeyCode());
+                        keyPressCallbackFunction.getFunction().call(argValues);
+                    }
+                };
+
+                Method method = clazz.getMethod(memberName, KeyListener.class);
+                Object instance = ((LanguageObjectWrapper) instanceObj).getObject();
+                method.invoke(instance, listener);
+                return null;
+            }
+            if (className.equals("src.MyGUI") && memberName.equals("setOnMousePress") && methodArgs.size() == 2) {
+                Object instanceObj = methodArgs.get(0);
+                FunctionReference callbackFunction = extractFunctionFromArg(methodArgs.get(1));
+
+                MyGUI gui = (MyGUI) ((LanguageObjectWrapper) instanceObj).getObject();
+                gui.setOnMousePress(callbackFunction);
+                return null;
+            }
+            if (className.equals("src.MyGUI") && memberName.equals("setOnMouseDrag") && methodArgs.size() == 2) {
+                Object instanceObj = methodArgs.get(0);
+                FunctionReference callbackFunction = extractFunctionFromArg(methodArgs.get(1));
+
+                Method method = clazz.getMethod("setOnMouseDrag", FunctionReference.class);
+                Object instance = ((LanguageObjectWrapper) instanceObj).getObject();
+                method.invoke(instance, callbackFunction);
+                return null;
+            }
+
+            if (className.equals("components.MyGUI") && memberName.equals("setOnKeyReleased") && methodArgs.size() == 2) {
+                Object instanceObj = methodArgs.get(0);
+                final Object keyReleaseArg1 = methodArgs.get(1);
+                final FunctionReference keyReleaseCallbackFunction = extractFunctionFromArg(keyReleaseArg1);
+
+                KeyListener listener = new KeyAdapter() {
+                    @Override
+                    public void keyReleased(KeyEvent e) {
+                        List<Object> argValues = new ArrayList<>();
+                        argValues.add(e.getKeyCode());
+                        keyReleaseCallbackFunction.getFunction().call(argValues);
+                    }
+                };
+
+                Method method = clazz.getMethod(memberName, KeyListener.class);
+                Object instance = ((LanguageObjectWrapper) instanceObj).getObject();
+                method.invoke(instance, listener);
+                return null;
+            }
+
+            if (className.equals("javax.swing.Timer") && memberName.equals("<init>") && methodArgs.size() == 2) {
+                Object delayObj = methodArgs.get(0);
+                int delay;
+                if (delayObj instanceof Number) {
+                    delay = ((Number) delayObj).intValue();
+                } else {
+                    throw new ErrorHandler.VGException("First argument to Timer constructor must be a number",currentLine,currentColumn);
+                }
+
+                Object arg1 = methodArgs.get(1);
+                FunctionReference callbackFunction = extractFunctionFromArg(arg1);
+
+                ActionListener listener = new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        List<Object> argValues = new ArrayList<>();
+                        callbackFunction.getFunction().call(argValues);
+                    }
+                };
+
+                Constructor<?> constructor = clazz.getConstructor(int.class, ActionListener.class);
+                Object instance = constructor.newInstance(delay, listener);
+
+                return new LanguageObjectWrapper(instance);
             }
             if (!isMethodAllowed(clazz, memberName)) {
                 throw new RuntimeException("Access to method '" + memberName + "' in class '" + className + "' is not allowed.");
             }
             Object instance = null;
             if (!memberName.equals("<init>")) {
-
                 if (methodArgs.size() > 0 && methodArgs.get(0) instanceof LanguageObjectWrapper) {
                     instance = ((LanguageObjectWrapper) methodArgs.get(0)).getLanguageObject();
                     methodArgs = methodArgs.subList(1, methodArgs.size());
                 }
             }
-
 
             AccessibleObject accessibleObject = null;
             if (memberName.equals("<init>")) {
@@ -623,9 +728,7 @@ public class Interpreter extends vg_langBaseVisitor {
                 accessibleObject = method;
             }
 
-
             Object[] javaArgs = convertArguments(methodArgs, accessibleObject);
-
 
             Object result;
             if (accessibleObject instanceof Constructor<?>) {
@@ -634,7 +737,6 @@ public class Interpreter extends vg_langBaseVisitor {
                 result = ((Method) accessibleObject).invoke(instance, javaArgs);
             }
 
-
             if (result != null && !isPrimitiveOrWrapper(result.getClass())) {
                 return new LanguageObjectWrapper(result);
             } else if (result instanceof List) {
@@ -642,20 +744,12 @@ public class Interpreter extends vg_langBaseVisitor {
             } else {
                 return result;
             }
-        }
-        catch (InvocationTargetException ite) {
-
+        } catch (InvocationTargetException ite) {
             Throwable cause = ite.getCause();
             if (cause != null) {
-
                 String details = cause.toString();
-
-
-
-
                 throw new RuntimeException("Error invoking system method: " + details, ite);
             } else {
-
                 throw new RuntimeException("Error invoking system method: <no cause>", ite);
             }
         } catch (ClassNotFoundException e) {
@@ -667,22 +761,17 @@ public class Interpreter extends vg_langBaseVisitor {
         } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     private void loadLangConfigFile(String filepath) {
         try {
-
             String fileContent = new String(Files.readAllBytes(Paths.get(filepath)), StandardCharsets.UTF_8);
 
-
             if (fileContent.startsWith("ENCRYPTED:")) {
-
                 String encryptedPart = fileContent.substring("ENCRYPTED:".length());
                 fileContent = CryptoUtil.decrypt(encryptedPart);
                 System.out.println("Decrypted the configuration file.");
             }
-
 
             List<String> lines = Arrays.asList(fileContent.split("\\r?\\n"));
             for (String line : lines) {
@@ -709,14 +798,12 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
                 allowedMethods.put(className, methodsSet);
             }
-            // System.out.println("Loaded allowed classes and methods from " + filepath);
         } catch (Exception e) {
             throw new RuntimeException("Error reading allowed configuration file: " + e.getMessage(), e);
         }
     }
 
     private void setVariable(String name, Object value) {
-
         for (SymbolTable table : symbolTableStack) {
             if (table.contains(name)) {
                 table.set(name, value);
@@ -729,15 +816,11 @@ public class Interpreter extends vg_langBaseVisitor {
 
     @Override
     public Object visitProgram(vg_langParser.ProgramContext ctx) {
-
         for (vg_langParser.StatementContext stmtCtx : ctx.statement()) {
             if (stmtCtx.functionDeclaration() != null) {
                 visit(stmtCtx.functionDeclaration());
-
             }
-
         }
-
 
         for (vg_langParser.StatementContext stmtCtx : ctx.statement()) {
             if (stmtCtx.functionDeclaration() == null) {
@@ -770,11 +853,11 @@ public class Interpreter extends vg_langBaseVisitor {
 
         if (ctx.IDENTIFIER() != null) {
             functionName = ctx.IDENTIFIER().getText();
-            System.out.println(functionName);
         } else {
-            throw new RuntimeException("Invalid function call.");
+            throw new ErrorHandler.VGSyntaxException("Invalid function call syntax", 
+                                                   ctx.getStart().getLine(), 
+                                                   ctx.getStart().getCharPositionInLine());
         }
-
 
         List<vg_langParser.ExpressionContext> argExprs = ctx.argumentList() != null
                 ? ctx.argumentList().expression()
@@ -785,14 +868,12 @@ public class Interpreter extends vg_langBaseVisitor {
             argValues.add(visit(exprCtx));
         }
 
-
         if (builtInFunction.containsKey(functionName)) {
             BuiltInFunction builtInFunc = builtInFunction.get(functionName);
             return builtInFunc.call(argValues);
         }
 
         Object funcObj = null;
-
 
         for (SymbolTable table : symbolTableStack) {
             if (table.containsFunction(functionName)) {
@@ -816,21 +897,17 @@ public class Interpreter extends vg_langBaseVisitor {
         Function function = (Function) funcObj;
         List<String> parameters = function.getParameters();
 
-
         if (argValues.size() != parameters.size()) {
-            int line = ctx.getStart().getLine();
-            throw new RuntimeException("At line: " + line + " Function '" + functionName + "' expects " + parameters.size() + " arguments but got " + argValues.size());
+            throw ErrorHandler.createArgumentCountError(
+                functionName, parameters.size(), argValues.size(), ctx.getStart());
         }
-
 
         SymbolTable functionSymbolTable = new SymbolTable();
         symbolTableStack.push(functionSymbolTable);
 
-
         for (int i = 0; i < parameters.size(); i++) {
             functionSymbolTable.set(parameters.get(i), argValues.get(i));
         }
-
 
         Object returnValue = null;
         try {
@@ -843,6 +920,7 @@ public class Interpreter extends vg_langBaseVisitor {
 
         return returnValue;
     }
+
     public Function resolveFunctionFromNamespace(String functionPath) {
         String[] parts = functionPath.split("\\.");
         if (parts.length == 1) {
@@ -919,7 +997,6 @@ public class Interpreter extends vg_langBaseVisitor {
 
     @Override
     public Object visitAssignmentNoSemi(vg_langParser.AssignmentNoSemiContext ctx) {
-        // Use the same logic as the regular assignment.
         VariableReference varRef = (VariableReference) visit(ctx.leftHandSide());
         if (varRef.isConstant()) {
             throw new RuntimeException("Cannot reassign to a constant variable '" + varRef.getName() + "'.");
@@ -932,10 +1009,8 @@ public class Interpreter extends vg_langBaseVisitor {
     @Override
     public Object visitLeftHandSide(vg_langParser.LeftHandSideContext ctx) {
         if (ctx.IDENTIFIER().size() == 1) {
-            // Regular variable or array access
             String varName = ctx.IDENTIFIER(0).getText();
 
-            // Handle array indices if present
             List<Integer> indices = new ArrayList<>();
             if (ctx.expression() != null && !ctx.expression().isEmpty()) {
                 for (vg_langParser.ExpressionContext exprCtx : ctx.expression()) {
@@ -947,7 +1022,6 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
             }
 
-            // Find the variable in the symbol tables
             SymbolTable targetTable = null;
             for (SymbolTable table : symbolTableStack) {
                 if (table.contains(varName)) {
@@ -962,15 +1036,14 @@ public class Interpreter extends vg_langBaseVisitor {
 
             return new VariableReference(targetTable, varName, indices);
         } else if (ctx.IDENTIFIER().size() == 2) {
-
             String objName = ctx.IDENTIFIER(0).getText();
             String fieldName = ctx.IDENTIFIER(1).getText();
-            
+
             Object obj = getVariable(objName);
             if (!(obj instanceof Struct)) {
                 throw new RuntimeException("Cannot access field '" + fieldName + "' on non-struct object '" + objName + "'");
             }
-            
+
             Struct struct = (Struct) obj;
             return new VariableReference(struct, fieldName);
         } else {
@@ -991,8 +1064,6 @@ public class Interpreter extends vg_langBaseVisitor {
 
     @Override
     public Object visitIfStatement(vg_langParser.IfStatementContext ctx) {
-
-
         if (toBoolean(visit(ctx.expression()))) {
             visit(ctx.ifBlock);
         } else {
@@ -1225,13 +1296,25 @@ public class Interpreter extends vg_langBaseVisitor {
         if (ctx.literal() != null) {
             return visit(ctx.literal());
         } else if (ctx.IDENTIFIER() != null) {
-            String name = ctx.IDENTIFIER().getText();
-            Object value = getVariable(name);
-
-            if (value instanceof StructDefinition) {
-                return ((StructDefinition) value).createInstance();
+            String varName = ctx.IDENTIFIER().getText();
+            
+            if (varName.equals("true")) {
+                return true;
+            } else if (varName.equals("false")) {
+                return false;
             }
-
+            
+            Object value = null;
+            for (SymbolTable table : symbolTableStack) {
+                if (table.contains(varName)) {
+                    value = table.get(varName);
+                    break;
+                }
+            }
+            
+            if (value == null) {
+                throw new RuntimeException("Variable '" + varName + "' is not defined.");
+            }
             return value;
         } else if (ctx.expression() != null) {
             return visit(ctx.expression());
@@ -1242,56 +1325,40 @@ public class Interpreter extends vg_langBaseVisitor {
     }
 
     private String unescapeString(String str) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder result = new StringBuilder();
+        boolean inEscape = false;
+        
         for (int i = 0; i < str.length(); i++) {
             char c = str.charAt(i);
-            if (c == '\\') {
-                if (i + 1 >= str.length()) {
-                    throw new RuntimeException("Invalid escape sequence at end of string");
-                }
-                char nextChar = str.charAt(++i);
-                switch (nextChar) {
-                    case 'b':
-                        sb.append('\b');
-                        break;
-                    case 't':
-                        sb.append('\t');
-                        break;
-                    case 'n':
-                        sb.append('\n');
-                        break;
-                    case 'f':
-                        sb.append('\f');
-                        break;
-                    case 'r':
-                        sb.append('\r');
-                        break;
-                    case '"':
-                        sb.append('\"');
-                        break;
-                    case '\\':
-                        sb.append('\\');
-                        break;
-                    case 'u':
-                        if (i + 4 >= str.length()) {
-                            throw new RuntimeException("Invalid Unicode escape sequence");
-                        }
-                        String hex = str.substring(i + 1, i + 5);
-                        i += 4;
-                        try {
-                            sb.append((char) Integer.parseInt(hex, 16));
-                        } catch (NumberFormatException e) {
-                            throw new RuntimeException("Invalid Unicode escape sequence: \\u" + hex);
-                        }
-                        break;
+            
+            if (inEscape) {
+                switch (c) {
+                    case 'n': result.append('\n'); break;
+                    case 'r': result.append('\r'); break;
+                    case 't': result.append('\t'); break;
+                    case '\\': result.append('\\'); break;
+                    case '"': result.append('"'); break;
+                    case '\'': result.append('\''); break;
                     default:
-                        throw new RuntimeException("Unknown escape sequence: \\" + nextChar);
+                        throw new ErrorHandler.VGSyntaxException(
+                            "Invalid escape sequence in string: \\" + c, 
+                            currentLine, currentColumn);
                 }
+                inEscape = false;
+            } else if (c == '\\') {
+                inEscape = true;
             } else {
-                sb.append(c);
+                result.append(c);
             }
         }
-        return sb.toString();
+        
+        if (inEscape) {
+            throw new ErrorHandler.VGSyntaxException(
+                "String ends with incomplete escape sequence", 
+                currentLine, currentColumn);
+        }
+        
+        return result.toString();
     }
 
     @Override
@@ -1302,9 +1369,18 @@ public class Interpreter extends vg_langBaseVisitor {
             return Double.parseDouble(ctx.DOUBLE().getText());
         } else if (ctx.STRING_LITERAL() != null) {
             String rawString = ctx.STRING_LITERAL().getText();
-            String unescapedString = unescapeString(rawString.substring(1, rawString.length() - 1));
-            return unescapedString;
-
+            try {
+                String unescapedString = unescapeString(rawString.substring(1, rawString.length() - 1));
+                return unescapedString;
+            } catch (StringIndexOutOfBoundsException e) {
+                throw ErrorHandler.createMissingQuoteError(ctx.STRING_LITERAL().getSymbol());
+            } catch (RuntimeException e) {
+                throw new ErrorHandler.VGSyntaxException(
+                    "Invalid string literal: " + e.getMessage(),
+                    ctx.STRING_LITERAL().getSymbol().getLine(),
+                    ctx.STRING_LITERAL().getSymbol().getCharPositionInLine()
+                );
+            }
         } else if (ctx.TRUE() != null) {
             return true;
         } else if (ctx.FALSE() != null) {
@@ -1319,12 +1395,23 @@ public class Interpreter extends vg_langBaseVisitor {
     public Object visitPostfixExpression(vg_langParser.PostfixExpressionContext ctx) {
         Object value = visit(ctx.primary());
 
-
         for (vg_langParser.PostfixOpContext opCtx : ctx.postfixOp()) {
             String opText = opCtx.getChild(0).getText();
             if (".".equals(opText)) {
-
                 String memberName = opCtx.IDENTIFIER().getText();
+                
+                if (value instanceof Integer || value instanceof Double || 
+                    value instanceof Boolean || value instanceof String) {
+                    
+                    String typeName = getVGTypeName(value);
+                    
+                    updatePosition(opCtx.start);
+                    throw new ErrorHandler.VGTypeException(
+                        "Dot operator not supported on primitive type: " + typeName,
+                        currentLine, currentColumn
+                    );
+                }
+                
                 if (value instanceof Namespace) {
                     Namespace ns = (Namespace) value;
                     Object member = ns.getSymbol(memberName);
@@ -1337,29 +1424,25 @@ public class Interpreter extends vg_langBaseVisitor {
                     }
                     value = member;
                 } else if (value instanceof Struct) {
-
                     Struct struct = (Struct) value;
                     if (!struct.hasField(memberName)) {
                         throw new RuntimeException("Field '" + memberName + "' not found in struct '" + struct.getName() + "'");
                     }
                     value = struct.getField(memberName);
                 } else if (value instanceof Enum) {
-
                     Enum enumObj = (Enum) value;
                     if (!enumObj.hasValue(memberName)) {
                         throw new RuntimeException("Value '" + memberName + "' not found in enum '" + enumObj.getName() + "'");
                     }
                     value = enumObj.getValue(memberName);
-                }
-                else {
+                } else {
                     updatePosition(opCtx.start);
                     throw new ErrorHandler.VGTypeException(
-                            "Dot operator not supported on type: " + (value != null ? value.getClass().getName() : "null"),
+                            "Dot operator not supported on type: " + getVGTypeName(value),
                             currentLine, currentColumn
                     );
                 }
             } else if ("(".equals(opText)) {
-
                 List<Object> argValues = new ArrayList<>();
                 vg_langParser.ArgumentListContext argsCtx = opCtx.argumentList();
                 if (argsCtx != null) {
@@ -1369,10 +1452,9 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
 
                 if (value instanceof Function) {
-                    try{
+                    try {
                         value = ((Function) value).call(argValues);
-                    }
-                    catch (IndexOutOfBoundsException e) {
+                    } catch (IndexOutOfBoundsException e) {
                         updatePosition(opCtx.start);
                         throw new ErrorHandler.VGTypeException(
                                 "Incorrect number of arguments for function call. Check the function signature.",
@@ -1389,17 +1471,16 @@ public class Interpreter extends vg_langBaseVisitor {
                 } else {
                     updatePosition(opCtx.start);
                     throw new ErrorHandler.VGTypeException(
-                            "Cannot call a non-function value: " + (value != null ? value.getClass().getSimpleName() : "null"),
+                            "Cannot call a non-function value: " + getVGTypeName(value),
                             currentLine, currentColumn
                     );
                 }
             } else if ("[".equals(opText)) {
-
                 Object indexObj = visit(opCtx.expression());
                 if (!(indexObj instanceof Number)) {
                     updatePosition(opCtx.start);
                     throw new ErrorHandler.VGTypeException(
-                            "Array index must be a number, got: " + (indexObj != null ? indexObj.getClass().getSimpleName() : "null"),
+                            "Array index must be a number, got: " + getVGTypeName(indexObj),
                             currentLine, currentColumn
                     );
                 }
@@ -1407,7 +1488,7 @@ public class Interpreter extends vg_langBaseVisitor {
                 if (!(value instanceof List)) {
                     updatePosition(opCtx.start);
                     throw new ErrorHandler.VGTypeException(
-                            "Cannot use [] operator on non-array value: " + (value != null ? value.getClass().getSimpleName() : "null"),
+                            "Cannot use [] operator on non-array value: " + getVGTypeName(value),
                             currentLine, currentColumn
                     );
                 }
@@ -1437,17 +1518,13 @@ public class Interpreter extends vg_langBaseVisitor {
 
     @Override
     public Object visitForStatement(vg_langParser.ForStatementContext ctx) {
-
         symbolTableStack.push(new SymbolTable());
-
 
         if (ctx.forInit() != null) {
             visit(ctx.forInit());
         }
 
-
         while (true) {
-
             if (ctx.forCondition() != null) {
                 Object conditionValue = visit(ctx.forCondition());
                 if (!toBoolean(conditionValue)) {
@@ -1455,13 +1532,11 @@ public class Interpreter extends vg_langBaseVisitor {
                 }
             }
 
-
             visit(ctx.block());
             if (ctx.forUpdate() != null) {
                 visit(ctx.forUpdate());
             }
         }
-
 
         symbolTableStack.pop();
         return null;
@@ -1469,9 +1544,7 @@ public class Interpreter extends vg_langBaseVisitor {
 
     @Override
     public Object visitWhileStatement(vg_langParser.WhileStatementContext ctx) {
-
         while (toBoolean(visit(ctx.expression()))) {
-
             visit(ctx.block());
         }
         return null;
@@ -1480,9 +1553,8 @@ public class Interpreter extends vg_langBaseVisitor {
     @Override
     public Object visitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx) {
         do {
-
             visit(ctx.block());
-        } while (toBoolean(visit(ctx.expression()))); // Re-check condition at the end
+        } while (toBoolean(visit(ctx.expression())));
         return null;
     }
 
@@ -1506,11 +1578,9 @@ public class Interpreter extends vg_langBaseVisitor {
 
                 String exceptionMessage = e.getMessage() != null ? e.getMessage() : "An error occurred";
 
-
                 String exceptionOutput = exceptionMessage;
                 catchSymbolTable.set(exceptionVar, exceptionOutput);
                 try {
-
                     visit(catchCtx.block());
                     handled = true;
                     break;
@@ -1522,35 +1592,31 @@ public class Interpreter extends vg_langBaseVisitor {
                 throw e;
             }
         } finally {
-
             if (ctx.finallyStatement() != null) {
                 visit(ctx.finallyStatement().block());
             }
         }
         return null;
     }
+
     @Override
     public Object visitLibraryDeclaration(vg_langParser.LibraryDeclarationContext ctx) {
-
         String libName = ctx.IDENTIFIER().getText();
         Library library = new Library(libName);
-
 
         for (vg_langParser.NamespaceDeclarationContext nsCtx : ctx.namespaceDeclaration()) {
             Namespace ns = (Namespace) visit(nsCtx);
             library.addNamespace(ns);
         }
 
-
         this.moduleRegistry.addLibrary(library);
         return library;
     }
+
     @Override
     public Object visitNamespaceDeclaration(vg_langParser.NamespaceDeclarationContext ctx) {
-
         String nsName = ctx.IDENTIFIER().getText();
         Namespace namespace = new Namespace(nsName);
-
 
         for (vg_langParser.FunctionDeclarationContext funcCtx : ctx.functionDeclaration()) {
             String functionName = funcCtx.IDENTIFIER().getText();
@@ -1562,13 +1628,11 @@ public class Interpreter extends vg_langBaseVisitor {
             namespace.addSymbol(functionName, function);
         }
 
-
         for (vg_langParser.VariableDeclarationContext varCtx : ctx.variableDeclaration()) {
             String varName = varCtx.IDENTIFIER().getText();
             Object value = visit(varCtx.expression());
             namespace.addSymbol(varName, value);
         }
-
 
         for (vg_langParser.ConstDeclarationContext constCtx : ctx.constDeclaration()) {
             String constName = constCtx.IDENTIFIER().getText();
@@ -1577,8 +1641,11 @@ public class Interpreter extends vg_langBaseVisitor {
         }
         return namespace;
     }
+
     @Override
     public Object visitImportStatement(vg_langParser.ImportStatementContext ctx) {
+        updatePosition(ctx.start);
+        
         String importPath = ctx.importPath().getText();
         this.processImport(importPath);
         return null;
@@ -1588,14 +1655,12 @@ public class Interpreter extends vg_langBaseVisitor {
     public Object visitFunctionReference(vg_langParser.FunctionReferenceContext ctx) {
         String functionPath = ctx.qualifiedIdentifier().getText();
 
-        // Retrieve the function (handle namespaces and libraries)
         Function function = resolveFunctionFromNamespace(functionPath);
 
         if (function == null) {
             throw new RuntimeException("Function '" + functionPath + "' is not defined.");
         }
 
-        // Capture optional arguments
         List<Object> capturedArgs = new ArrayList<>();
         if (ctx.argumentList() != null) {
             for (vg_langParser.ExpressionContext exprCtx : ctx.argumentList().expression()) {
@@ -1606,20 +1671,17 @@ public class Interpreter extends vg_langBaseVisitor {
         return new FunctionReference(function, capturedArgs);
     }
 
-
     @Override
     public Object visitStructDeclaration(vg_langParser.StructDeclarationContext ctx) {
         try {
             String structName = ctx.IDENTIFIER().getText();
 
-            // Create a new struct type definition
             Map<String, Object> fieldDefaults = new HashMap<>();
             for (vg_langParser.StructFieldContext fieldCtx : ctx.structField()) {
                 String fieldName = fieldCtx.IDENTIFIER().getText();
                 fieldDefaults.put(fieldName, null);
             }
 
-            // Store the struct definition in the symbol table
             StructDefinition structDef = new StructDefinition(structName, fieldDefaults);
             currentSymbolTable().set(structName, structDef);
 
@@ -1635,27 +1697,23 @@ public class Interpreter extends vg_langBaseVisitor {
             String enumName = ctx.IDENTIFIER().getText();
             Enum enumObj = new Enum(enumName);
 
-            // Process enum values
             int autoValue = 0;
             for (vg_langParser.EnumValueContext valueCtx : ctx.enumValue()) {
                 String valueName = valueCtx.IDENTIFIER().getText();
                 Object value;
 
                 if (valueCtx.expression() != null) {
-                    // Explicit value provided
                     value = visit(valueCtx.expression());
                     if (value instanceof Number) {
                         autoValue = ((Number) value).intValue() + 1;
                     }
                 } else {
-                    // Auto-increment value
                     value = autoValue++;
                 }
 
                 enumObj.addValue(valueName, value);
             }
 
-            // Store the enum in the symbol table
             currentSymbolTable().set(enumName, enumObj);
 
             return null;
@@ -1664,11 +1722,83 @@ public class Interpreter extends vg_langBaseVisitor {
         }
     }
 
-    private void handleSyntaxError(String message, vg_langParser.StructDeclarationContext ctx) {
+    private void handleSyntaxError(String message, org.antlr.v4.runtime.ParserRuleContext ctx) {
         int line = ctx.start.getLine();
         int column = ctx.start.getCharPositionInLine();
-        throw new RuntimeException("Syntax error at line " + line + ", column " + column + ": " + message);
+        throw new ErrorHandler.VGSyntaxException(message, line, column);
     }
 
+    private void checkForUnexpectedSemicolon(Token token, String context) {
+        if (token.getText().equals(";")) {
+            throw ErrorHandler.createUnexpectedSemicolonError(token);
+        }
+    }
 
+    private void validateFunctionArguments(String functionName, List<String> parameters, 
+                                         List<Object> arguments, Token token) {
+        if (arguments.size() != parameters.size()) {
+            throw ErrorHandler.createArgumentCountError(
+                functionName, parameters.size(), arguments.size(), token);
+        }
+    }
+
+    private void validateArrayIndex(Object indexObj, List<?> array, Token token) {
+        if (!(indexObj instanceof Number)) {
+            throw new ErrorHandler.VGTypeException(
+                "Array index must be a number, got: " + getVGTypeName(indexObj),
+                token.getLine(), token.getCharPositionInLine()
+            );
+        }
+        
+        int index = ((Number) indexObj).intValue();
+        if (index < 0 || index >= array.size()) {
+            throw new ErrorHandler.VGException(
+                "Array index out of bounds: index " + index + " exceeds array length " + array.size(),
+                token.getLine(), token.getCharPositionInLine()
+            );
+        }
+    }
+
+    public Object interpret(String code) {
+        try {
+            CharStream input = CharStreams.fromString(code);
+            vg_langLexer lexer = new vg_langLexer(input);
+            
+            lexer.removeErrorListeners();
+            lexer.addErrorListener(new VGErrorListener());
+            
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+            vg_langParser parser = new vg_langParser(tokens);
+            
+            parser.removeErrorListeners();
+            parser.addErrorListener(new VGErrorListener());
+            
+            vg_langParser.ProgramContext programCtx = parser.program();
+            return visit(programCtx);
+        } catch (ErrorHandler.VGException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ErrorHandler.VGException("Error interpreting code: " + e.getMessage(), currentLine, currentColumn);
+        }
+    }
+
+    private String getVGTypeName(Object value) {
+        if (value == null) return "null";
+        if (value instanceof Integer) return "int";
+        if (value instanceof Double) return "double";
+        if (value instanceof Boolean) return "boolean";
+        if (value instanceof String) return "string";
+        if (value instanceof List) return "array";
+        if (value instanceof Map) return "struct";
+        if (value instanceof Function) return "function";
+        if (value instanceof Namespace) return "namespace";
+        if (value instanceof Library) return "library";
+        if (value instanceof Enum) return "enum";
+        
+        String className = value.getClass().getName();
+        if (className.startsWith("java.")) {
+            return className.substring(className.lastIndexOf('.') + 1).toLowerCase();
+        }
+        return value.getClass().getSimpleName().toLowerCase();
+    }
 }

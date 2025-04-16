@@ -1,0 +1,46 @@
+/* Custom styles */
+.md-logo img {
+  width: 48px !important;  /* Increase from the default size */
+  height: auto !important;
+  filter: brightness(1.2) drop-shadow(0 0 3px rgba(255, 255, 255, 0.8)); /* Make logo brighter with glow */
+}
+
+/* Add a subtle background to the logo to make it stand out */
+.md-header__button.md-logo {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  padding: 4px;
+  margin-right: 8px;
+}
+
+/* Ensure navbar is dark in light mode */
+[data-md-color-scheme="default"] .md-header {
+  background-color: #212121;
+  color: white;
+}
+
+/* Ensure navbar is very dark in dark mode */
+[data-md-color-scheme="slate"] .md-header {
+  background-color: #121212;
+  color: white;
+}
+
+/* Make navigation tabs match the top navbar color in light mode */
+[data-md-color-scheme="default"] .md-tabs {
+  background-color: #212121; /* Same as the top navbar in light mode */
+}
+
+/* Make navigation tabs match the top navbar color in dark mode */
+[data-md-color-scheme="slate"] .md-tabs {
+  background-color: #121212; /* Same as the top navbar in dark mode */
+}
+
+/* Style for active tab */
+.md-tabs__item--active {
+  font-weight: bold;
+}
+
+/* Hover effect for tabs */
+.md-tabs__link:hover {
+  color: #ffca28; /* Amber color for hover */
+} 

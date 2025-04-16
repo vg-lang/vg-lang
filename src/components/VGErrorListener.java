@@ -14,13 +14,31 @@ public class VGErrorListener extends BaseErrorListener {
                             int line, int charPositionInLine,
                             String msg,
                             RecognitionException e) {
+        
+        if (msg.contains("token recognition error") && msg.contains("\"")) {
+            if (msg.contains("\\")) {
+                String invalidEscape = extractInvalidEscape(msg);
+                throw new ErrorHandler.VGSyntaxException(
+                    "Invalid escape sequence in string: \\" + invalidEscape, 
+                    line, charPositionInLine);
+            } else {
+                throw new ErrorHandler.VGSyntaxException(
+                    "String literal is missing closing quote", line, charPositionInLine);
+            }
+        }
+        
+        if (msg.contains("extraneous input ';'")) {
+            throw new ErrorHandler.VGSyntaxException(
+                "Unexpected semicolon", line, charPositionInLine);
+        }
+        
+        if (msg.contains("missing ';'")) {
+            throw new ErrorHandler.VGSyntaxException(
+                "Missing semicolon at end of statement", line, charPositionInLine);
+        }
+        
 
-        Token token = (Token) offendingSymbol;
-        String errorMessage = formatSyntaxErrorMessage(recognizer, token, msg);
-
-        ErrorHandler.reportSyntaxError(token, errorMessage);
-
-        throw new ParseCancellationException("Syntax error");
+        throw new ErrorHandler.VGSyntaxException(msg, line, charPositionInLine);
     }
 
     private String formatSyntaxErrorMessage(Recognizer<?, ?> recognizer,
@@ -64,5 +82,26 @@ public class VGErrorListener extends BaseErrorListener {
         }
 
         return errorMsg;
+    }
+    
+    /**
+     * Handles AWT event exceptions by converting them to VGExceptions
+     */
+    public static void handleAWTException(Throwable t) {
+
+        String message = t.getMessage();
+        if (message == null) {
+            message = t.getClass().getName();
+        }
+        
+        throw new ErrorHandler.VGException("AWT Event Error: " + message, -1, -1);
+    }
+
+    private String extractInvalidEscape(String errorMsg) {
+        int backslashPos = errorMsg.indexOf('\\');
+        if (backslashPos >= 0 && backslashPos + 1 < errorMsg.length()) {
+            return errorMsg.substring(backslashPos + 1, backslashPos + 2);
+        }
+        return "?";
     }
 }

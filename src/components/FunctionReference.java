@@ -14,7 +14,7 @@ public class FunctionReference {
 
     public Object call(List<Object> args) {
         List<Object> finalArgs = new ArrayList<>(capturedArgs);
-        finalArgs.addAll(args);  // Append additional arguments
+        finalArgs.addAll(args);
         return function.call(finalArgs);
     }
     public Function getFunction() {

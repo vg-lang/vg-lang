@@ -2,6 +2,9 @@ package components;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
+import java.awt.EventQueue;
+import java.awt.AWTEvent;
+import java.awt.Toolkit;
 
 public class ErrorHandler {
     private static final String ANSI_RED = "\u001B[31m";
@@ -12,6 +15,61 @@ public class ErrorHandler {
     private static boolean useColorOutput = true;
     private static String currentFilePath = "";
 
+    static {
+        installAWTExceptionHandler();
+    }
+
+    /**
+     * Installs a custom exception handler for AWT event dispatch thread
+     */
+    private static void installAWTExceptionHandler() {
+        EventQueue.invokeLater(() -> {
+            EventQueue newQueue = new EventQueue() {
+                @Override
+                protected void dispatchEvent(AWTEvent event) {
+                    try {
+                        super.dispatchEvent(event);
+                    } catch (Throwable t) {
+                        handleAWTException(t);
+                    }
+                }
+            };
+            
+            Toolkit.getDefaultToolkit().getSystemEventQueue().push(newQueue);
+        });
+    }
+    
+    /**
+     * Handles exceptions thrown in the AWT event dispatch thread
+     */
+    private static void handleAWTException(Throwable t) {
+        if (t instanceof VGException) {
+            throw (VGException) t;
+        }
+        
+        String message = t.getMessage();
+        if (message == null) {
+            message = t.getClass().getName();
+        }
+        
+        if (t.toString().contains("Method") && t.toString().contains("not found")) {
+            message = "Method not allowed: " + extractMethodName(t.toString());
+        }
+        
+        throw new VGException("AWT Event Error: " + message, -1, -1);
+    }
+    
+    /**
+     * Extracts the method name from an error message
+     */
+    private static String extractMethodName(String errorMessage) {
+        int startIndex = errorMessage.indexOf("'") + 1;
+        int endIndex = errorMessage.indexOf("'", startIndex);
+        if (startIndex > 0 && endIndex > startIndex) {
+            return errorMessage.substring(startIndex, endIndex);
+        }
+        return "unknown method";
+    }
 
     public static void setUseColorOutput(boolean useColor) {
         useColorOutput = useColor;
@@ -95,6 +153,12 @@ public class ErrorHandler {
             this.line = line;
             this.column = column;
         }
+        
+        public VGException(String message, Throwable cause) {
+            super(message, cause);
+            this.line = -1;
+            this.column = -1;
+        }
 
         public int getLine() { return line; }
         public int getColumn() { return column; }
@@ -115,6 +179,24 @@ public class ErrorHandler {
     public static class VGImportException extends VGException {
         public VGImportException(String message, int line, int column) {
             super(message, line, column);
+        }
+    }
+
+    public static class VGSyntaxException extends VGException {
+        public VGSyntaxException(String message, int line, int column) {
+            super("Syntax error: " + message, line, column);
+        }
+    }
+    
+    public static class VGFileException extends VGException {
+        public VGFileException(String message, int line, int column) {
+            super("File error: " + message, line, column);
+        }
+    }
+    
+    public static class VGArgumentException extends VGException {
+        public VGArgumentException(String message, int line, int column) {
+            super("Argument error: " + message, line, column);
         }
     }
 
@@ -143,5 +225,33 @@ public class ErrorHandler {
 
         }
         return createSyntaxError(ctx, "Unexpected error: " + e.getMessage());
+    }
+    public static InterruptedException interrupted(Exception e, ParserRuleContext ctx) {
+        return new InterruptedException("Interrupted: " + e.getMessage());
+    }
+
+    public static VGSyntaxException createSyntaxError(String message, Token token) {
+        return new VGSyntaxException(message, token.getLine(), token.getCharPositionInLine());
+    }
+    
+    public static VGSyntaxException createMissingQuoteError(Token token) {
+        return new VGSyntaxException("String literal is missing closing quote", 
+                                    token.getLine(), token.getCharPositionInLine());
+    }
+    
+    public static VGArgumentException createArgumentCountError(String functionName, int expected, int actual, Token token) {
+        return new VGArgumentException(
+            "Function '" + functionName + "' expects " + expected + " arguments but got " + actual,
+            token.getLine(), token.getCharPositionInLine());
+    }
+    
+    public static VGSyntaxException createUnexpectedSemicolonError(Token token) {
+        return new VGSyntaxException("Unexpected semicolon", token.getLine(), token.getCharPositionInLine());
+    }
+    
+    public static VGImportException createImportError(String importPath, String reason, Token token) {
+        return new VGImportException(
+            "Invalid import '" + importPath + "': " + reason,
+            token.getLine(), token.getCharPositionInLine());
     }
 }

@@ -90,7 +90,8 @@ public class MyGUI extends JFrame {
     }
 
     private Icon getCustomIcon(String iconName) {
-        String assetsPath = System.getProperty("user.dir") + "\\assets\\" + iconName;
+        String assetsDir = System.getenv().getOrDefault("VG_ASSETS_PATH", System.getProperty("user.dir") + "/assets");
+        String assetsPath = assetsDir + "/" + iconName;
         try {
             ImageIcon imgIcon = new ImageIcon(assetsPath);
             if (imgIcon.getImageLoadStatus() == MediaTracker.COMPLETE) {
@@ -143,7 +144,53 @@ public class MyGUI extends JFrame {
         }
 
     }
+    public void setOnMousePress(FunctionReference callbackFunction) {
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                //  button type: 1 = Left, 2 = Middle, 3 = Right
+                int button = e.getButton();
+                List<Object> args = List.of(e.getX(), e.getY(), button);
+                callbackFunction.getFunction().call(args);
+            }
+        });
+    }
 
+    public void setOnMouseRelease(FunctionReference callbackFunction) {
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                int button = e.getButton();
+                List<Object> args = List.of(e.getX(), e.getY(), button);
+                callbackFunction.getFunction().call(args);
+            }
+        });
+    }
+
+    public void setOnMouseDrag(FunctionReference callbackFunction) {
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+
+                int button = e.getModifiersEx();
+                int mouseButton;
+                if ((button & MouseEvent.BUTTON1_DOWN_MASK) != 0) {
+                    mouseButton = 1;
+                } else if ((button & MouseEvent.BUTTON3_DOWN_MASK) != 0) {
+                    mouseButton = 3;
+                } else {
+                    mouseButton = -1;
+                }
+
+
+                List<Object> argValues = new ArrayList<>();
+                argValues.add(e.getX());
+                argValues.add(e.getY());
+                argValues.add(mouseButton);
+                callbackFunction.getFunction().call(argValues);
+            }
+        });
+    }
     public void launch() {
         SwingUtilities.invokeLater(() -> setVisible(true));
     }
@@ -162,8 +209,9 @@ public class MyGUI extends JFrame {
         w.dispose();
     }
     public void setWindowIcon(String iconName) {
-        String appPath = System.getProperty("user.dir");
-        String assetsPath = appPath + "/assets/"+iconName;
+        String assetsDir = System.getenv().getOrDefault("VG_ASSETS_PATH", System.getProperty("user.dir") + "/assets");
+        String assetsPath = assetsDir + "/" + iconName;
+
 
         try {
             ImageIcon icon = new ImageIcon(assetsPath);
@@ -311,7 +359,8 @@ public class MyGUI extends JFrame {
 
             try {
 
-                File fontFile = new File("C:\\Users\\hodif\\Desktop\\Interpreter\\projects\\folderfortest\\" + fontFamily + ".ttf");
+                String assetsDir = System.getenv().getOrDefault("VG_ASSETS_PATH", System.getProperty("user.dir") + "/assets");
+                File fontFile = new File(assetsDir + "/" + fontFamily + ".ttf");
                 if (fontFile.exists()) {
 
                     newFont = Font.createFont(Font.TRUETYPE_FONT, fontFile);
@@ -701,11 +750,11 @@ public class MyGUI extends JFrame {
             setFont(new Font(getFont().getName(), style, getFont().getSize()));
         }
 
-        public class mySoundManager{
+        public static class MySoundManager {
             private static List<Clip> soundclips = new ArrayList<>();
-            private static FloatControl  volumadjuster;
+            private static FloatControl volumadjuster;
 
-            private static void  playSound(String filepath){
+            public static void playSound(String filepath){
                 try{
                     File soundfile  = new File(filepath);
                     if(!soundfile.exists()){

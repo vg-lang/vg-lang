@@ -17,23 +17,34 @@ public class Function {
 
     public vg_langParser.BlockContext getBlock() {return block;}
 
-    public Object call(List<Object> argValues){
-        SymbolTable functionSymbolTable = new SymbolTable();
-
-        interpreter.symbolTableStack.push(functionSymbolTable);
-
-        for (int i = 0; i < parameters.size(); i++) {
-            functionSymbolTable.set(parameters.get(i), argValues.get(i));
+    public Object call(List<Object> args) {
+        if (args.size() != parameters.size()) {
+            int line = block != null && block.start != null ? block.start.getLine() : 0;
+            int column = block != null && block.start != null ? block.start.getCharPositionInLine() : 0;
+            
+            throw new ErrorHandler.VGArgumentException(
+                "Function expects " + parameters.size() + " arguments but got " + args.size(),
+                line, column
+            );
         }
-        Object returnValue = null;
-        try{
+        
+        SymbolTable functionScope = new SymbolTable();
+        
+        for (int i = 0; i < parameters.size(); i++) {
+            functionScope.set(parameters.get(i), args.get(i));
+        }
+        
+        interpreter.symbolTableStack.push(functionScope);
+        
+        Object result = null;
+        try {
             interpreter.visit(block);
         } catch (ReturnException e) {
-            returnValue = e.getValue();
-        }
-         finally {
+            result = e.getValue();
+        } finally {
             interpreter.symbolTableStack.pop();
         }
-        return returnValue;
+        
+        return result;
     }
 }

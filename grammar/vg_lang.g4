@@ -1,3 +1,5 @@
+// Grammar created by: Hussein Abdul-Ameer
+
 grammar vg_lang;
 program
     : statement* EOF
@@ -231,7 +233,7 @@ comments
     | DOC_COMMENT
     ;
 
-// Define a fragment for the doc comment start
+
 fragment DOC_START : '/##';
 fragment DOC_END : '##/';
 

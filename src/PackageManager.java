@@ -54,7 +54,10 @@ public class  PackageManager {
     }
 
     public static void installPackage(String packageName) throws Exception {
-
+        File packageDir = new File(PACKAGES_PATH);
+        if (!packageDir.exists()) {
+            packageDir.mkdirs();
+        }
         String jsonStr = readFromURL(REPO_URL);
         JSONObject json = new JSONObject(jsonStr);
         JSONArray pkgArray = json.getJSONArray("packages");

@@ -1,53 +1,204 @@
-/##
-# @param a testparameter
-# @param b test2
-##/
-function add(a,b){return a+b;}
+## -------------------------------------------------------
+## PongGame.vg
+## A simple Pong implementation in vg_lang with margins and a faster paddle speed
+## -------------------------------------------------------
 
-/##
-# @field id the id of the person
-# @field name the name of the person
-# @field age the age of the person
-# @field gender the gender of the person
-##/
-struct person{
-id;
-name;
-age;
-gender;
-}
-/##
-# @field workid the id of the person
-# @field firstname the firstname of the person
-# @field lastname the lastname of the person
-# @field age the age of the person
-# @field role the role of the person
-##/
-struct worker{
-workid;
-firstname;
-lastname;
-age;
-role;
-}
-/## This is an enum description
-# @value MONDAY the first day of the week
-# @value SUNDAY the last day of the week
-##/
-enum WEEKDAY {
-MONDAY = 1,
-TUESDAY = 2,
-WEDNESDAY = 3,
-THURSDAY = 4,
-FRIDAY = 5,
-SATURDAY = 6,
-SUNDAY = 7
+## Import the relevant libraries from your system
+import Guilibrary.window;
+import Guilibrary.Pane;
+import Guilibrary.Label;
+import Guilibrary.IOEvents;
+import Guilibrary.Timer;
+
+
+## Window dimensions
+var GAME_WIDTH = 800;
+var GAME_HEIGHT = 600;
+
+## Paddle dimensions
+var PADDLE_WIDTH = 10;
+var PADDLE_HEIGHT = 80;
+
+## Ball dimension
+var BALL_SIZE = 10;
+
+## Movement speeds
+var PADDLE_SPEED = 10;   ## <--- Increased from 5 to 10
+var BALL_SPEED_X = 4;
+var BALL_SPEED_Y = 3;    ## slightly different so it’s not purely diagonal
+
+## Margin from window edges for paddles
+var PADDLE_MARGIN = 20;
+
+## Global variables to track positions
+var leftPaddleY = 0;   ## left paddle's top Y
+var rightPaddleY = 0;  ## right paddle's top Y
+var ballX = 0;
+var ballY = 0;
+
+## Ball velocity
+var ballVelX = BALL_SPEED_X;
+var ballVelY = BALL_SPEED_Y;
+
+## Scoring
+var scoreLeft = 0;
+var scoreRight = 0;
+
+## We'll store references to window components so we can move them
+var gameWindow = 0;     ## The main window
+var leftPaddle = 0;     ## Pane for left paddle
+var rightPaddle = 0;    ## Pane for right paddle
+var ballPane = 0;       ## Pane for the ball
+var scoreLabel = 0;     ## Label to show the score
+
+## -------------------------------------------------------
+## Initialize the game
+## -------------------------------------------------------
+function initGame() {
+    ## Create window with dark green background
+    gameWindow = window.create("Pong in vg_lang", GAME_WIDTH, GAME_HEIGHT);
+    window.setBackgroundColor(gameWindow, "#006400");  ## DarkGreen
+
+    ## Reset positions
+    leftPaddleY = (GAME_HEIGHT / 2) - (PADDLE_HEIGHT / 2);
+    rightPaddleY = (GAME_HEIGHT / 2) - (PADDLE_HEIGHT / 2);
+
+    ballX = (GAME_WIDTH / 2) - (BALL_SIZE / 2);
+    ballY = (GAME_HEIGHT / 2) - (BALL_SIZE / 2);
+
+    ## Create left paddle (with a margin from the left edge)
+    leftPaddle = Pane.createPane(PADDLE_MARGIN, leftPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+    Pane.setPaneColor(leftPaddle, "#FFFFFF");   ## white color
+    window.addComponentToWindow(gameWindow, leftPaddle);
+
+    ## Create right paddle (margin from the right edge)
+    rightPaddle = Pane.createPane(GAME_WIDTH - PADDLE_MARGIN - PADDLE_WIDTH, rightPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+    Pane.setPaneColor(rightPaddle, "#FFFFFF");  ## white color
+    window.addComponentToWindow(gameWindow, rightPaddle);
+
+    ## Create ball
+    ballPane = Pane.createPane(ballX, ballY, BALL_SIZE, BALL_SIZE);
+    Pane.setPaneColor(ballPane, "#FFFFFF");    ## white color
+    window.addComponentToWindow(gameWindow, ballPane);
+
+    ## Create score label
+    scoreLabel = Label.createLabel("0 : 0", (GAME_WIDTH / 2) - 30, 20, 100, 30);
+    Label.setLabelTextColor(scoreLabel, "#FFFFFF");  ## white
+    window.addComponentToWindow(gameWindow, scoreLabel);
+
+    ## Setup keyboard input
+    IOEvents.setOnKeyPress(gameWindow, &onKeyPress());
+
+    ## Finally, start the game loop timer (about 60 fps)
+    var frameDelay = 16;  ## ~16ms -> ~60 fps
+    var gameTimer = Timer.createTimer(frameDelay, &updateGame());
+    Timer.startTimer(gameTimer);
+
+    ## Launch the window after everything is set
+    window.launch(gameWindow);
 }
 
-## Create a new struct instance
-var minp = person;
-minp.id = 1;
-minp.name = "hussein";
-minp.age = 24;
-minp.gender = "Male";
-print(minp.age);
+## -------------------------------------------------------
+## Handle Keyboard Input
+## -------------------------------------------------------
+function onKeyPress(keyCode) {
+    ## Move left paddle (W / S)
+    if (keyCode == 87) {           ## W
+        leftPaddleY = leftPaddleY - PADDLE_SPEED;
+        if (leftPaddleY < 0) {
+            leftPaddleY = 0;
+        }
+        Pane.setPaneBounds(leftPaddle, PADDLE_MARGIN, leftPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+    } else if (keyCode == 83) {    ## S
+        leftPaddleY = leftPaddleY + PADDLE_SPEED;
+        if (leftPaddleY > GAME_HEIGHT - PADDLE_HEIGHT) {
+            leftPaddleY = GAME_HEIGHT - PADDLE_HEIGHT;
+        }
+        Pane.setPaneBounds(leftPaddle, PADDLE_MARGIN, leftPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+    }
+
+    ## Move right paddle (Up/Down arrows)
+    if (keyCode == 38) {          ## Up arrow
+        rightPaddleY = rightPaddleY - PADDLE_SPEED;
+        if (rightPaddleY < 0) {
+            rightPaddleY = 0;
+        }
+        Pane.setPaneBounds(rightPaddle, GAME_WIDTH - PADDLE_MARGIN - PADDLE_WIDTH, rightPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+    } else if (keyCode == 40) {   ## Down arrow
+        rightPaddleY = rightPaddleY + PADDLE_SPEED;
+        if (rightPaddleY > GAME_HEIGHT - PADDLE_HEIGHT) {
+            rightPaddleY = GAME_HEIGHT - PADDLE_HEIGHT;
+        }
+        Pane.setPaneBounds(rightPaddle, GAME_WIDTH - PADDLE_MARGIN - PADDLE_WIDTH, rightPaddleY, PADDLE_WIDTH, PADDLE_HEIGHT);
+    }
+}
+
+## -------------------------------------------------------
+## The main update function (called by the Timer)
+## -------------------------------------------------------
+function updateGame() {
+    ## 1) Move the ball
+    ballX = ballX + ballVelX;
+    ballY = ballY + ballVelY;
+
+    ## 2) Check collision with top/bottom walls
+    if (ballY < 0) {
+        ballY = 0;
+        ballVelY = -ballVelY;
+    }
+    if (ballY + BALL_SIZE > GAME_HEIGHT) {
+        ballY = GAME_HEIGHT - BALL_SIZE;
+        ballVelY = -ballVelY;
+    }
+
+    ## 3) Check collision with left paddle
+    ##    The left paddle is at X = PADDLE_MARGIN
+    if (ballX < PADDLE_MARGIN + PADDLE_WIDTH) {
+        if ((ballY + BALL_SIZE) >= leftPaddleY && ballY <= (leftPaddleY + PADDLE_HEIGHT)) {
+            ## Ball hits the left paddle
+            ballX = PADDLE_MARGIN + PADDLE_WIDTH;
+            ballVelX = -ballVelX;
+        } else if (ballX < PADDLE_MARGIN) {
+            ## Missed the paddle => right player scores
+            scoreRight = scoreRight + 1;
+            resetBall();
+        }
+    }
+
+    ## 4) Check collision with right paddle
+    ##    The right paddle is at X = GAME_WIDTH - PADDLE_MARGIN - PADDLE_WIDTH
+    if ((ballX + BALL_SIZE) > (GAME_WIDTH - PADDLE_MARGIN - PADDLE_WIDTH)) {
+        if ((ballY + BALL_SIZE) >= rightPaddleY && ballY <= (rightPaddleY + PADDLE_HEIGHT)) {
+            ## Ball hits the right paddle
+            ballX = GAME_WIDTH - PADDLE_MARGIN - PADDLE_WIDTH - BALL_SIZE;
+            ballVelX = -ballVelX;
+        } else if ((ballX + BALL_SIZE) > (GAME_WIDTH - PADDLE_MARGIN)) {
+            ## Missed the paddle => left player scores
+            scoreLeft = scoreLeft + 1;
+            resetBall();
+        }
+    }
+
+    ## 5) Update ball position
+    Pane.setPaneBounds(ballPane, ballX, ballY, BALL_SIZE, BALL_SIZE);
+
+    ## 6) Update score label
+    var scoreText = scoreLeft + " : " + scoreRight;
+    Label.setLabelText(scoreLabel, scoreText);
+}
+
+## -------------------------------------------------------
+## Reset the ball after a point
+## -------------------------------------------------------
+function resetBall() {
+    ballX = (GAME_WIDTH / 2) - (BALL_SIZE / 2);
+    ballY = (GAME_HEIGHT / 2) - (BALL_SIZE / 2);
+    ballVelX = -ballVelX;  ## reverse direction so it heads to scorer's side
+    ballVelY = BALL_SPEED_Y;
+    Pane.setPaneBounds(ballPane, ballX, ballY, BALL_SIZE, BALL_SIZE);
+}
+
+## -------------------------------------------------------
+## Start the game
+## -------------------------------------------------------
+initGame();

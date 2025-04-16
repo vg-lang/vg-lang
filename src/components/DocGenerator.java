@@ -24,6 +24,8 @@ public class DocGenerator {
     private static final Pattern ENUM_VALUE_PATTERN = Pattern.compile("\\s*(\\w+)(?:\\s*=\\s*([^,}]+))?");
     private static final Pattern DOC_FIELD_PATTERN = Pattern.compile("#\\s*@field\\s+(\\w+)\\s+(.+)");
     private static final Pattern DOC_VALUE_PATTERN = Pattern.compile("#\\s*@value\\s+(\\w+)\\s+(.+)");
+    private static final Pattern DOC_RETURN_PATTERN = Pattern.compile("#\\s*@return\\s+(.+)");
+    private static final Pattern DOC_AUTHOR_PATTERN = Pattern.compile("#\\s*@author\\s+(.+)");
 
     private String outputDir;
     private Map<String, LibraryDoc> libraries = new HashMap<>();
@@ -36,6 +38,9 @@ public class DocGenerator {
 
     public void generateProjectDocs(String projectDir) throws IOException {
 
+        new File(outputDir + "/libraries").mkdirs();
+        new File(outputDir + "/programs").mkdirs();
+        
         processDirectory(projectDir, ".vglib");
         processDirectory(projectDir, ".vg");
         
@@ -69,11 +74,9 @@ public class DocGenerator {
             }
         }
         
-
         File[] subdirs = dir.listFiles(File::isDirectory);
         if (subdirs != null) {
             for (File subdir : subdirs) {
-
                 if (!subdir.getAbsolutePath().equals(new File(outputDir).getAbsolutePath())) {
                     processDirectory(subdir.getAbsolutePath(), extension);
                 }
@@ -207,6 +210,15 @@ public class DocGenerator {
                     String docBlock = content.substring(docStart, docEnd + 3);
                     functionDoc.description = extractDocumentation(docBlock);
                     
+                    Matcher returnMatcher = DOC_RETURN_PATTERN.matcher(docBlock);
+                    if (returnMatcher.find()) {
+                        functionDoc.returnValue = returnMatcher.group(1).trim();
+                    }
+                    
+                    Matcher authorMatcher = DOC_AUTHOR_PATTERN.matcher(docBlock);
+                    while (authorMatcher.find()) {
+                        functionDoc.authors.add(authorMatcher.group(1).trim());
+                    }
 
                     functionDoc.parameters = parseParameters(paramList, docBlock);
                     
@@ -214,7 +226,6 @@ public class DocGenerator {
                 }
             }
             
-
             functionDoc.parameters = parseParameters(paramList, "");
         }
         
@@ -239,23 +250,20 @@ public class DocGenerator {
     private String extractDocumentation(String docBlock) {
         StringBuilder sb = new StringBuilder();
         
-        // Remove the opening /## and closing ##/ tags
         docBlock = docBlock.replaceAll("/##\\s*", "").replaceAll("##/", "");
         
-        // Process each line
         for (String line : docBlock.split("\n")) {
-            // Remove the # prefix from each line and trim
             Matcher m = DOC_COMMENT_LINE_PATTERN.matcher(line);
             if (m.find()) {
                 String content = m.group(1).trim();
-                // Skip @param, @field, and @value lines
-                if (!content.startsWith("@param") && 
+                if (!content.startsWith("@param") &&
                     !content.startsWith("@field") && 
-                    !content.startsWith("@value")) {
+                    !content.startsWith("@value") &&
+                    !content.startsWith("@return") &&
+                    !content.startsWith("@author")) {
                     sb.append(content).append("\n");
                 }
             } else {
-                // If no # prefix, just add the trimmed line
                 String trimmed = line.trim();
                 if (!trimmed.isEmpty()) {
                     sb.append(trimmed).append("\n");
@@ -275,8 +283,7 @@ public class DocGenerator {
         
         Map<String, String> paramDocs = new HashMap<>();
         if (!docBlock.isEmpty()) {
-            Pattern paramDocPattern = Pattern.compile("#\\s*@param\\s+(\\w+)\\s+(.+)");
-            Matcher paramDocMatcher = paramDocPattern.matcher(docBlock);
+            Matcher paramDocMatcher = DOC_PARAM_PATTERN.matcher(docBlock);
             while (paramDocMatcher.find()) {
                 String paramName = paramDocMatcher.group(1);
                 String paramDesc = paramDocMatcher.group(2);
@@ -307,16 +314,16 @@ public class DocGenerator {
         programDoc.filename = filename;
         programDoc.name = filename.replace(".vg", "");
 
-        // Variables to track doc comments
         StringBuilder currentDocComment = new StringBuilder();
         Map<String, String> paramDescriptions = new HashMap<>();
+        String currentReturnValue = "";
+        List<String> currentAuthors = new ArrayList<>();
         boolean inDocComment = false;
 
         String[] lines = content.split("\n");
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
             
-            // Check for doc comment start
             Matcher docStartMatcher = DOC_COMMENT_START_PATTERN.matcher(line);
             if (docStartMatcher.find()) {
                 inDocComment = true;
@@ -324,16 +331,16 @@ public class DocGenerator {
                 continue;
             }
             
-            // Check for doc comment line
             if (inDocComment) {
                 Matcher docLineMatcher = DOC_COMMENT_LINE_PATTERN.matcher(line);
                 if (docLineMatcher.find()) {
                     String commentText = docLineMatcher.group(1);
                     
-                    // Check if it's a param, field, or value description
                     Matcher paramMatcher = DOC_PARAM_PATTERN.matcher(line);
                     Matcher fieldMatcher = DOC_FIELD_PATTERN.matcher(line);
                     Matcher valueMatcher = DOC_VALUE_PATTERN.matcher(line);
+                    Matcher returnMatcher = DOC_RETURN_PATTERN.matcher(line);
+                    Matcher authorMatcher = DOC_AUTHOR_PATTERN.matcher(line);
                     
                     if (paramMatcher.find()) {
                         String paramName = paramMatcher.group(1);
@@ -347,14 +354,16 @@ public class DocGenerator {
                         String valueName = valueMatcher.group(1);
                         String valueDesc = valueMatcher.group(2);
                         paramDescriptions.put(valueName, valueDesc);
+                    } else if (returnMatcher.find()) {
+                        currentReturnValue = returnMatcher.group(1).trim();
+                    } else if (authorMatcher.find()) {
+                        currentAuthors.add(authorMatcher.group(1).trim());
                     } else {
-                        // Regular comment line
                         currentDocComment.append(commentText).append("\n");
                     }
                     continue;
                 }
                 
-                // Check for doc comment end
                 Matcher docEndMatcher = DOC_COMMENT_END_PATTERN.matcher(line);
                 if (docEndMatcher.find()) {
                     inDocComment = false;
@@ -362,19 +371,21 @@ public class DocGenerator {
                 }
             }
             
-            // Process function declarations and attach doc comments
             Matcher funcMatcher = FUNCTION_PATTERN.matcher(line);
             if (funcMatcher.find()) {
                 FunctionDoc functionDoc = new FunctionDoc();
                 functionDoc.name = funcMatcher.group(1);
                 
-                // Set description from doc comment if available
                 if (currentDocComment.length() > 0) {
                     functionDoc.description = currentDocComment.toString().trim();
-                    currentDocComment = new StringBuilder(); // Clear for next use
+                    currentDocComment = new StringBuilder();
                 }
                 
-                // Parse parameters
+                functionDoc.returnValue = currentReturnValue;
+                functionDoc.authors.addAll(currentAuthors);
+                currentReturnValue = "";
+                currentAuthors.clear();
+                
                 String paramsStr = funcMatcher.group(2);
                 if (!paramsStr.trim().isEmpty()) {
                     String[] params = paramsStr.split(",");
@@ -382,7 +393,6 @@ public class DocGenerator {
                         ParameterDoc paramDoc = new ParameterDoc();
                         paramDoc.name = param.trim();
                         
-                        // Set parameter description if available
                         if (paramDescriptions.containsKey(paramDoc.name)) {
                             paramDoc.description = paramDescriptions.get(paramDoc.name);
                         }
@@ -392,28 +402,24 @@ public class DocGenerator {
                 }
                 
                 programDoc.functions.add(functionDoc);
-                paramDescriptions.clear(); // Clear for next function
+                paramDescriptions.clear();
             }
             
-            // Process imports
             Matcher importMatcher = IMPORT_PATTERN.matcher(line);
             if (importMatcher.find()) {
                 programDoc.imports.add(importMatcher.group(1));
             }
             
-            // Process struct declarations and attach doc comments
             Matcher structMatcher = STRUCT_PATTERN.matcher(line);
             if (structMatcher.find()) {
                 StructDoc structDoc = new StructDoc();
                 structDoc.name = structMatcher.group(1);
                 
-                // Set description from doc comment if available
                 if (currentDocComment.length() > 0) {
                     structDoc.description = currentDocComment.toString().trim();
-                    currentDocComment = new StringBuilder(); // Clear for next use
+                    currentDocComment = new StringBuilder();
                 }
                 
-                // Parse fields from the next few lines
                 StringBuilder structBody = new StringBuilder();
                 int j = i + 1;
                 int braceCount = 1;
@@ -425,7 +431,6 @@ public class DocGenerator {
                     j++;
                 }
                 
-                // Extract field documentation from comments
                 for (Map.Entry<String, String> entry : paramDescriptions.entrySet()) {
                     FieldDoc fieldDoc = new FieldDoc();
                     fieldDoc.name = entry.getKey();
@@ -434,22 +439,19 @@ public class DocGenerator {
                 }
                 
                 programDoc.structs.add(structDoc);
-                paramDescriptions.clear(); // Clear for next struct
+                paramDescriptions.clear();
             }
             
-            // Process enum declarations and attach doc comments
             Matcher enumMatcher = ENUM_PATTERN.matcher(line);
             if (enumMatcher.find()) {
                 EnumDoc enumDoc = new EnumDoc();
                 enumDoc.name = enumMatcher.group(1);
                 
-                // Set description from doc comment if available
                 if (currentDocComment.length() > 0) {
                     enumDoc.description = currentDocComment.toString().trim();
-                    currentDocComment = new StringBuilder(); // Clear for next use
+                    currentDocComment = new StringBuilder();
                 }
                 
-                // Parse enum values from the next few lines
                 StringBuilder enumBody = new StringBuilder();
                 int j = i + 1;
                 int braceCount = 1;
@@ -461,7 +463,6 @@ public class DocGenerator {
                     j++;
                 }
                 
-                // Extract enum value documentation from comments
                 for (Map.Entry<String, String> entry : paramDescriptions.entrySet()) {
                     EnumValueDoc valueDoc = new EnumValueDoc();
                     valueDoc.name = entry.getKey();
@@ -470,7 +471,7 @@ public class DocGenerator {
                 }
                 
                 programDoc.enums.add(enumDoc);
-                paramDescriptions.clear(); // Clear for next enum
+                paramDescriptions.clear();
             }
         }
         
@@ -642,10 +643,17 @@ public class DocGenerator {
         sb.append("        <section>\n");
         sb.append("            <h2>Programs</h2>\n");
         sb.append("            <ul class=\"doc-list\">\n");
-        for (ProgramDoc program : programs) {
-            sb.append("                <li><a href=\"programs/").append(program.name).append(".html\">")
-                    .append(program.name).append("</a></li>\n");
+        
+        if (programs.isEmpty()) {
+            sb.append("                <li>No programs found</li>\n");
+        } else {
+            for (ProgramDoc program : programs) {
+                System.out.println("Adding program to index: " + program.name);
+                sb.append("                <li><a href=\"programs/").append(program.name).append(".html\">")
+                        .append(program.name).append("</a></li>\n");
+            }
         }
+        
         sb.append("            </ul>\n");
         sb.append("        </section>\n");
 
@@ -656,6 +664,8 @@ public class DocGenerator {
         sb.append("            <pre><code>/## This is a function description\n");
         sb.append("# This is a continuation of the description\n");
         sb.append("# @param paramName Description of the parameter\n");
+        sb.append("# @return Description of the return value\n");
+        sb.append("# @author Name of the author\n");
         sb.append("##/\n");
         sb.append("function myFunction(paramName) {\n");
         sb.append("    \n");
@@ -810,6 +820,19 @@ public class DocGenerator {
         css.append("    font-family: 'Courier New', Courier, monospace;\n");
         css.append("}\n");
 
+        css.append(".return-value {\n");
+        css.append("    background-color: #f0f8ff;\n");
+        css.append("    padding: 0.5rem 1rem;\n");
+        css.append("    border-left: 4px solid #3498db;\n");
+        css.append("    margin-bottom: 1rem;\n");
+        css.append("}\n\n");
+        
+        css.append(".author {\n");
+        css.append("    color: #666;\n");
+        css.append("    font-style: italic;\n");
+        css.append("    margin-bottom: 1rem;\n");
+        css.append("}\n\n");
+
         writeToFile("styles.css", css.toString());
     }
 
@@ -866,6 +889,14 @@ public class DocGenerator {
                 if (!function.description.isEmpty()) {
                     sb.append("                <p>").append(function.description.replace("\n", "<br>")).append("</p>\n");
                 }
+                
+                if (!function.authors.isEmpty()) {
+                    sb.append("<p class=\"author\"><strong>Author");
+                    if (function.authors.size() > 1) {
+                        sb.append("s");
+                    }
+                    sb.append(":</strong> ").append(String.join(", ", function.authors)).append("</p>\n");
+                }
 
                 if (!function.parameters.isEmpty()) {
                     sb.append("<h4>Parameters</h4>\n");
@@ -887,6 +918,11 @@ public class DocGenerator {
 
                     sb.append("</tbody>\n");
                     sb.append("</table>\n");
+                }
+
+                if (!function.returnValue.isEmpty()) {
+                    sb.append("<h4>Returns</h4>\n");
+                    sb.append("<p class=\"return-value\">").append(function.returnValue).append("</p>\n");
                 }
 
                 sb.append("</div>\n");
@@ -919,6 +955,14 @@ public class DocGenerator {
                     sb.append("<p>").append(function.description.replace("\n", "<br>")).append("</p>\n");
                 }
 
+                if (!function.authors.isEmpty()) {
+                    sb.append("<p class=\"author\"><strong>Author");
+                    if (function.authors.size() > 1) {
+                        sb.append("s");
+                    }
+                    sb.append(":</strong> ").append(String.join(", ", function.authors)).append("</p>\n");
+                }
+
                 if (!function.parameters.isEmpty()) {
                     sb.append("<h4>Parameters</h4>\n");
                     sb.append("<table>\n");
@@ -939,6 +983,11 @@ public class DocGenerator {
 
                     sb.append("</tbody>\n");
                     sb.append("</table>\n");
+                }
+
+                if (!function.returnValue.isEmpty()) {
+                    sb.append("<h4>Returns</h4>\n");
+                    sb.append("<p class=\"return-value\">").append(function.returnValue).append("</p>\n");
                 }
 
                 sb.append("</div>\n");
@@ -982,13 +1031,11 @@ public class DocGenerator {
                 sb.append("<div class=\"struct\">\n")
                   .append("<h3 id=\"").append(struct.name).append("\">").append(struct.name).append("</h3>\n");
                 
-                // Add struct description
                 if (struct.description != null && !struct.description.isEmpty()) {
                     String cleanDesc = cleanDocText(struct.description);
                     sb.append("<p>").append(cleanDesc).append("</p>\n");
                 }
                 
-                // Add fields table
                 if (!struct.fields.isEmpty()) {
                     sb.append("<h4>Fields</h4>\n")
                       .append("<table class=\"fields\">\n")
@@ -1020,13 +1067,11 @@ public class DocGenerator {
                 sb.append("<div class=\"enum\">\n")
                   .append("<h3 id=\"").append(enum_.name).append("\">").append(enum_.name).append("</h3>\n");
                 
-                // Add enum description
                 if (enum_.description != null && !enum_.description.isEmpty()) {
                     String cleanDesc = cleanDocText(enum_.description);
                     sb.append("<p>").append(cleanDesc).append("</p>\n");
                 }
                 
-                // Add values table
                 if (!enum_.values.isEmpty()) {
                     sb.append("<h4>Values</h4>\n")
                       .append("<table class=\"values\">\n")
@@ -1086,6 +1131,17 @@ public class DocGenerator {
                     }
                     sb.append("</tbody>\n</table>\n");
                 }
+                if (!function.returnValue.isEmpty()) {
+                    sb.append("<h4>Returns</h4>\n");
+                    sb.append("<p class=\"return-value\">").append(function.returnValue).append("</p>\n");
+                }
+                if (!function.authors.isEmpty()) {
+                    sb.append("<p class=\"author\"><strong>Author");
+                    if (function.authors.size() > 1) {
+                        sb.append("s");
+                    }
+                    sb.append(":</strong> ").append(String.join(", ", function.authors)).append("</p>\n");
+                }
                 sb.append("</div>\n");
             }
             sb.append("</section>\n");
@@ -1098,9 +1154,19 @@ public class DocGenerator {
         writeToFile("programs/" + program.name + ".html", sb.toString());
     }
 
-    private void writeToFile(String filename, String content) throws IOException {
-        try (FileWriter writer = new FileWriter(outputDir + "/" + filename)) {
+    private void writeToFile(String filePath, String content) {
+        try {
+            File file = new File(outputDir, filePath);
+            File parentDir = file.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+            
+            FileWriter writer = new FileWriter(file);
             writer.write(content);
+            writer.close();
+        } catch (IOException e) {
+            ErrorHandler.reportError("file not found","file not found");
         }
     }
 
@@ -1131,6 +1197,8 @@ public class DocGenerator {
         String name;
         String description = "";
         List<ParameterDoc> parameters = new ArrayList<>();
+        String returnValue = "";
+        List<String> authors = new ArrayList<>();
     }
 
     static class ParameterDoc {
@@ -1332,37 +1400,38 @@ public class DocGenerator {
                 .append("<h2>How to Document Your Code</h2>\n")
                 .append("<p>Use documentation comments to add documentation to your code:</p>\n")
                 .append("<h3>Function Documentation</h3>\n")
-                .append("<pre><code>/## This is a function description\n")
-                .append("# This is a continuation of the description\n")
-                .append("# @param paramName Description of the parameter\n")
-                .append("##/\n")
-                .append("function myFunction(paramName) {\n")
-                .append("\n")
-                .append("}</code></pre>\n")
-                .append("<h3>Struct Documentation</h3>\n")
-                .append("<pre><code>/## This is a struct description\n")
-                .append("# @field fieldName Description of the field\n")
-                .append("##/\n")
-                .append("struct MyStruct {\n")
-                .append("fieldName;\n")
-                .append("}</code></pre>\n")
-                .append("<h3>Enum Documentation</h3>\n")
-                .append("<pre><code>/## This is an enum description\n")
-                .append("# @value VALUE_NAME Description of the enum value\n")
-                .append("##/\n")
-                .append("enum MyEnum {\n")
-                .append("VALUE_NAME,\n")
-                .append("ANOTHER_VALUE = 10\n")
-                .append("}</code></pre>\n")
-                .append("</section>\n")
-                .append("</main>\n")
-                .append("<footer>\n")
-                .append("<p>Generated on ")
-                .append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()))
-                .append("</p>\n")
-                .append("</footer>\n")
-                .append("</body>\n")
-                .append("</html>");
+                .append("<pre><code>/## This is a function description\n");
+        sb.append("# This is a continuation of the description\n");
+        sb.append("# @param paramName Description of the parameter\n");
+        sb.append("# @return Description of the return value\n");
+        sb.append("# @author Name of the author\n");
+        sb.append("##/\n");
+        sb.append("function myFunction(paramName) {\n");
+        sb.append("    \n");
+        sb.append("}</code></pre>\n");
+        sb.append("            <h3>Struct Documentation</h3>\n");
+        sb.append("            <pre><code>/## This is a struct description\n");
+        sb.append("# @field fieldName Description of the field\n");
+        sb.append("##/\n");
+        sb.append("struct MyStruct {\n");
+        sb.append("    fieldName;\n");
+        sb.append("}</code></pre>\n");
+        sb.append("            <h3>Enum Documentation</h3>\n");
+        sb.append("            <pre><code>/## This is an enum description\n");
+        sb.append("# @value VALUE_NAME Description of the enum value\n");
+        sb.append("##/\n");
+        sb.append("enum MyEnum {\n");
+        sb.append("    VALUE_NAME,\n");
+        sb.append("    ANOTHER_VALUE = 10\n");
+        sb.append("}</code></pre>\n");
+        sb.append("        </section>\n");
+
+        sb.append("    </main>\n");
+        sb.append("    <footer>\n");
+        sb.append("        <p>Generated on ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())).append("</p>\n");
+        sb.append("    </footer>\n");
+        sb.append("</body>\n");
+        sb.append("</html>");
 
         writeToFile("index.html", sb.toString());
 
@@ -1373,12 +1442,10 @@ public class DocGenerator {
         }
     }
 
-    // Add this helper method to clean up documentation text
     private String cleanDocText(String text) {
         if (text == null || text.isEmpty()) {
             return "";
         }
-        // Remove any remaining markup tags and trim
         return text.replaceAll("/#|#/|@\\w+", "").trim();
     }
 }

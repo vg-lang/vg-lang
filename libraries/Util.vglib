@@ -1,0 +1,45 @@
+library Util{
+    namespace Type{
+    function getType(type){
+        return VgSystemCall("components.Util", "getType", type);
+     }
+    }
+    namespace Integer{
+    function toInt(value) {
+             return VgSystemCall("components.Util", "toInt", value);
+       }
+    }
+    namespace Double {
+    function toDouble(value) {
+             return VgSystemCall("components.Util", "toDouble", value);
+       }
+    }
+    namespace String{
+    function toString(value) {
+             return VgSystemCall("components.Util", "toString", value);
+       }
+        function indexOf(s, sub) {
+            return VgSystemCall("components.Util", "indexOfString", s, sub);
+        }
+        function substring(s, start, end) {
+            return VgSystemCall("components.Util", "substringString", s, start, end);
+        }
+        function stringLength(s) {
+            return VgSystemCall("components.Util", "stringLength", s);
+        }
+       function toUpper(s) {
+           return VgSystemCall("java.lang.String", "toUpperCase", s);
+       }
+       function toUpper(s) {
+           return VgSystemCall("components.Util", "upperCase", s);
+       }
+       function fromCharCode (code) {
+           return VgSystemCall("components.Util", "charToString", code);
+       }
+    }
+    namespace Boolean {
+       function toBoolean(value) {
+             return VgSystemCall("components.Util", "toBoolean", value);
+       }
+    }
+}

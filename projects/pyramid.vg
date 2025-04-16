@@ -1,0 +1,44 @@
+import Util.Type.getType;
+## -------------------------------------------------------
+## PyramidProgram.vg
+## -------------------------------------------------------
+
+## A simple console program that prints a pyramid of *
+## for a given integer.
+
+var size = 5;
+
+/## This function calculates the sum of two numbers
+# @param n The the size of the pyramid
+# @return n
+# @author Hussein Khudhaer Abdul-Ameer
+
+
+##/
+function printPyramid(n) {
+    ## Outer loop: rows 1 through n
+    for ( var i = 1; i <= n; i = i + 1 ) {
+        var line = "";
+        var numSpaces = n - i;
+
+        ## Add leading spaces to center the stars
+        for ( var j = 0; j < numSpaces; j = j + 1 ) {
+            line = line + " ";
+        }
+
+        ## Number of stars = 2*i - 1
+        var numStars = (2 * i) - 1;
+        for ( var k = 0; k < numStars; k = k + 1 ) {
+            line = line + "*";
+        }
+
+        ## Print the constructed line
+        print(line);
+    }
+}
+
+## Call our function with size = 5
+printPyramid(size);
+
+
+

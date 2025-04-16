@@ -18,16 +18,18 @@ theme:
       toggle:
         icon: material/toggle-switch-off-outline 
         name: Switch to dark mode
-      primary: teal
-      accent: purple 
+      primary: "#212121"  # Very dark grey
+      accent: amber
     - scheme: slate 
       toggle:
         icon: material/toggle-switch
         name: Switch to light mode    
-      primary: teal
-      accent: lime
+      primary: "#121212"  # Almost black
+      accent: amber
   logo: assets/logo.png
   favicon: favicon.ico
+extra_css:
+  - assets/stylesheets/custom.css
 plugins:
   - search
 
@@ -51,6 +53,16 @@ nav:
           - Constants: Constants.md
       - Arrays: Arrays.md
       - Comments: Comments.md
+  - Libraries:
+      - Overview: Libraries.md
+      - Package Manager: PackageManager.md
+  - Tools:
+      - Documentation Generator: DocumentationGenerator.md
+  - Advanced:
+      - Functions: Functions.md
+      - Error Handling: ErrorHandling.md
+      - Structs and Enums: StructsAndEnums.md
+      - System Calls: SystemCalls.md
 
 
 markdown_extensions:

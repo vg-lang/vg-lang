@@ -1,1 +1,15 @@
+import IO.Prompt;
+import Util.Integer.toInt;
+import Util.Double.toDouble;
 
+/##
+# @param temp the tempratur in celcius to convert to fahrenheit
+# @return fahrenheit tempratur in fahrenheit after the conversion
+# @author Hussein Khudhaer Abdul-Ameer
+##/
+function converter(temp){
+return toInt((temp*(9.0/5.0))+32);
+}
+
+var temp = toInt(Prompt.input("skriv tempratur i celcius"));
+print("tempratur i celcius: ",temp, " tempratur i fahrenheit: ", converter(temp));

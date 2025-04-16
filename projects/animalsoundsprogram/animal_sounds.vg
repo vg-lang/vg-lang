@@ -1,0 +1,147 @@
+
+import Guilibrary.window;
+import Guilibrary.Pane;
+import Guilibrary.Image;
+import Guilibrary.IOEvents;
+import Guilibrary.Sound;
+import Random.number;
+
+var windowWidth = 800;
+var windowHeight = 600;
+var gameWindow = window.create("Animal Sounds Interactive", windowWidth, windowHeight);
+window.setBackgroundColor(gameWindow, "#87CEEB");
+
+var animalImages = [
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/cat.jpg",
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/dog.jpg",
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/cow.jpg",
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/lion.jpg",
+   "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/elephant.jpg",
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/bird.jpg"
+];
+
+var animalSounds = [
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/cat.wav",
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/dog.wav",
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/cow.wav",
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/lion.wav",
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/elephant.wav",
+    "C:/Users/hodif/Desktop/usn2024/vg lang/projects/animalsoundsprogram/examplefiles/bird.wav"
+];
+
+
+var backgroundColors = [
+    "#87CEEB",
+    "#98FB98",
+    "#FFA07A",
+    "#DDA0DD",
+    "#FFDAB9",
+    "#B0E0E6"
+];
+
+
+var currentAnimalIndex = 0;
+var imageSize = 200;
+var imageX = windowWidth / 2 - imageSize / 2;
+var imageY = windowHeight / 2 - imageSize / 2;
+
+
+var animalImage = Image.createImage(animalImages[currentAnimalIndex], imageX, imageY, imageSize, imageSize);
+window.addComponentToWindow(gameWindow, animalImage);
+
+
+var isDragging = 0;
+var dragOffsetX = 0;
+var dragOffsetY = 0;
+
+
+
+/## Handles mouse press events on the animal image.
+# This function detects clicks on the animal image and performs different actions based on which mouse button was pressed:
+# - Left click (button 1): Plays the sound of the current animal
+# - Right click (button 3): Changes to the next animal and updates the background color
+# - Any click within the image bounds: Prepares for dragging the image
+#
+# @param x The x-coordinate of the mouse cursor
+# @param y The y-coordinate of the mouse cursor
+# @param button The mouse button that was pressed (1 for left, 3 for right)
+# @author Hussein Abdul-Ameer
+##/
+function handleMousePress(x, y, button) {
+    ## Check if click is within the image bounds
+    if (x >= imageX && x <= imageX + imageSize && 
+        y >= imageY && y <= imageY + imageSize) {
+        
+        ## Left click (button 1) - Play animal sound
+        if (button == 1) {
+            Sound.playSound(animalSounds[currentAnimalIndex]);
+        }
+        ## Right click (button 3) - Change animal and background
+        else if (button == 3) {
+            ## Get array length using the proper method
+            var arrayLength = VgSystemCall("components.ArrayUtils", "length", animalImages);
+            
+            ## Move to next animal
+            currentAnimalIndex = (currentAnimalIndex + 1) % arrayLength;
+            
+            ## Update image
+            Image.setImage(animalImage, animalImages[currentAnimalIndex]);
+            
+            ## Change background color
+            window.setBackgroundColor(gameWindow, backgroundColors[currentAnimalIndex]);
+        }
+        
+        ## Set up for dragging (for any mouse button)
+        isDragging = 1;
+        dragOffsetX = x - imageX;
+        dragOffsetY = y - imageY;
+    }
+}
+
+/## Handles mouse release events.
+# This function stops the dragging operation when the mouse button is released.
+#
+# @param x The x-coordinate where the mouse was released
+# @param y The y-coordinate where the mouse was released
+# @param button The mouse button that was released
+# @author Hussein Abdul-Ameer
+##/
+function handleMouseRelease(x, y, button) {
+    ## Stop dragging
+    isDragging = 0;
+}
+
+/## Handles mouse drag events to move the animal image.
+# This function updates the position of the animal image when it's being dragged,
+# ensuring it stays within the window boundaries.
+#
+# @param x The current x-coordinate of the mouse cursor
+# @param y The current y-coordinate of the mouse cursor
+# @param button The mouse button that's being held down during dragging
+# @author Hussein Abdul-Ameer
+##/
+function handleMouseDrag(x, y, button) {
+    ## If we're dragging, move the image
+    if (isDragging) {
+        ## Calculate new position
+        imageX = x - dragOffsetX;
+        imageY = y - dragOffsetY;
+        
+        ## Keep image within window bounds
+        if (imageX < 0){ imageX = 0;}
+        if (imageY < 0){ imageY = 0;}
+        if (imageX > windowWidth - imageSize){ imageX = windowWidth - imageSize;}
+        if (imageY > windowHeight - imageSize){ imageY = windowHeight - imageSize;}
+        
+        ## Update image position
+        Image.moveImage(animalImage, imageX, imageY);
+    }
+}
+
+## Set up mouse event handlers
+IOEvents.setOnMousePress(gameWindow, &handleMousePress());
+IOEvents.setOnMouseRelease(gameWindow, &handleMouseRelease());
+IOEvents.setOnMouseDrag(gameWindow, &handleMouseDrag());
+
+## Launch the window
+window.launch(gameWindow);

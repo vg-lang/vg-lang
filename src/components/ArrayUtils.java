@@ -25,7 +25,7 @@ public class ArrayUtils {
 
     public static Object pop(List<Object> list) {
         if (list.size() == 0) {
-            return null;  // Return null if the list is empty
+            return null;
         }
         return list.remove(list.size() - 1);
     }
@@ -36,7 +36,7 @@ public class ArrayUtils {
 
     public static Object shift(List<Object> list) {
         if (list.size() == 0) {
-            return null;  // Return null if the list is empty
+            return null;
         }
         return list.remove(0);
     }
