@@ -1,6 +1,17 @@
 library Random {
+    /## The number namespace contains functions for generating random numbers.
+    # This namespace provides functionality for generating random integers,
+    # floating-point numbers, and boolean values.
+    ##/
     namespace number {
-        ## Generate a random integer between min (inclusive) and max (inclusive)
+        /## Generates a random integer within a specified range.
+        # This function returns a random integer between min (inclusive) and max (inclusive).
+        #
+        # @param min The minimum value (inclusive)
+        # @param max The maximum value (inclusive)
+        # @return A random integer between min and max
+        # @author Hussein Abdul-Ameer
+        ##/
         function integer(min, max) {
             var range = max - min + 1;
             var random = VgSystemCall("java.lang.Math", "random");
@@ -9,26 +20,53 @@ library Random {
             return result;
         }
         
-        ## Generate a random float between 0.0 (inclusive) and 1.0 (exclusive)
+        /## Generates a random floating-point number between 0 and 1.
+        # This function returns a random float between 0.0 (inclusive) and 1.0 (exclusive).
+        #
+        # @return A random float between 0.0 and 1.0
+        # @author Hussein Abdul-Ameer
+        ##/
         function float() {
             return VgSystemCall("java.lang.Math", "random");
         }
         
-        ## Generate a random float between min (inclusive) and max (exclusive)
+        /## Generates a random floating-point number within a specified range.
+        # This function returns a random float between min (inclusive) and max (exclusive).
+        #
+        # @param min The minimum value (inclusive)
+        # @param max The maximum value (exclusive)
+        # @return A random float between min and max
+        # @author Hussein Abdul-Ameer
+        ##/
         function floatRange(min, max) {
             var random = VgSystemCall("java.lang.Math", "random");
             return min + (random * (max - min));
         }
         
-        ## Generate a random boolean value
+        /## Generates a random boolean value.
+        # This function returns either true or false with equal probability.
+        #
+        # @return A random boolean value (true or false)
+        # @author Hussein Abdul-Ameer
+        ##/
         function boolean() {
             var random = VgSystemCall("java.lang.Math", "random");
             return random < 0.5;
         }
     }
     
+    /## The arrayTools namespace contains functions for random operations on arrays.
+    # This namespace provides functionality for selecting random elements from arrays
+    # and randomly shuffling arrays.
+    ##/
     namespace arrayTools {
-        ## Get a random element from an array
+        /## Gets a random element from an array.
+        # This function returns a randomly selected element from the specified array.
+        #
+        # @param arr The array to select from
+        # @return A randomly selected element from the array, or null if the array is empty
+        # @author Hussein Abdul-Ameer
+        ##/
         function element(arr) {
             var length = VgSystemCall("components.ArrayUtils", "length", arr);
             if (length == 0) {
@@ -39,7 +77,14 @@ library Random {
             return arr[index];
         }
         
-        ## Shuffle an array (Fisher-Yates algorithm)
+        /## Shuffles an array randomly.
+        # This function randomly reorders the elements in the specified array
+        # using the Fisher-Yates algorithm.
+        #
+        # @param arr The array to shuffle
+        # @return The shuffled array
+        # @author Hussein Abdul-Ameer
+        ##/
         function shuffle(arr) {
             var length = VgSystemCall("components.ArrayUtils", "length", arr);
             for (var i = length - 1; i > 0; i = i - 1) {

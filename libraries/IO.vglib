@@ -1,26 +1,60 @@
 library IO {
-namespace File {
- ## Read content from a file and return it as a string.
- function readFile(path) {
-     return VgSystemCall("components.IoUtils", "readFile", path);
- }
+    /## The File namespace contains functions for file input and output operations.
+    # This namespace provides functionality for reading from and writing to files,
+    # including reading entire files, writing content, and appending to files.
+    ##/
+    namespace File {
+        /## Reads content from a file and returns it as a string.
+        # This function opens a file, reads all its content, and returns it as a string.
+        #
+        # @param path The path to the file to read
+        # @return The content of the file as a string
+        # @author Hussein Abdul-Ameer
+        ##/
+        function readFile(path) {
+            return VgSystemCall("components.IoUtils", "readFile", path);
+        }
 
- ## Write content to a file, overwriting any existing content.
- function writeFile(path, content) {
-     VgSystemCall("components.IoUtils", "writeFile", path, content);
- }
+        /## Writes content to a file, overwriting any existing content.
+        # This function creates a new file or overwrites an existing file with the specified content.
+        #
+        # @param path The path to the file to write
+        # @param content The content to write to the file
+        # @author Hussein Abdul-Ameer
+        ##/
+        function writeFile(path, content) {
+            VgSystemCall("components.IoUtils", "writeFile", path, content);
+        }
 
- ## Append content to an existing file.
- function appendToFile(path, content) {
-     VgSystemCall("components.IoUtils", "appendToFile", path, content);
- }
-}
-namespace Prompt{
-function input(text) {
-print(text);
- var scanner = VgSystemCall("java.util.Scanner", "<init>", VgSystemCall("components.IoUtils", "getSystemIn"));
-    return VgSystemCall("java.util.Scanner", "nextLine", scanner);
+        /## Appends content to an existing file.
+        # This function adds the specified content to the end of an existing file.
+        # If the file doesn't exist, it will be created.
+        #
+        # @param path The path to the file to append to
+        # @param content The content to append to the file
+        # @author Hussein Abdul-Ameer
+        ##/
+        function appendToFile(path, content) {
+            VgSystemCall("components.IoUtils", "appendToFile", path, content);
+        }
     }
-}
 
+    /## The Prompt namespace contains functions for user input and output.
+    # This namespace provides functionality for getting input from the user
+    # through the console.
+    ##/
+    namespace Prompt {
+        /## Prompts the user for input and returns their response.
+        # This function displays a prompt message and waits for the user to enter text.
+        #
+        # @param text The prompt message to display to the user
+        # @return The text entered by the user
+        # @author Hussein Abdul-Ameer
+        ##/
+        function input(text) {
+            print(text);
+            var scanner = VgSystemCall("java.util.Scanner", "<init>", VgSystemCall("components.IoUtils", "getSystemIn"));
+            return VgSystemCall("java.util.Scanner", "nextLine", scanner);
+        }
+    }
 }
