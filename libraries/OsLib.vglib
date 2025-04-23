@@ -1,22 +1,47 @@
 library OSLib {
+    /## The sys namespace contains functions for interacting with the operating system.
+    # This namespace provides functionality for accessing environment variables,
+    # getting system information, and working with file paths.
+    ##/
     namespace sys {
-
-        ## Returns the value of an environment variable (or null if not set)
+        /## Gets the value of an environment variable.
+        # This function returns the value of the specified environment variable,
+        # or null if the variable is not set.
+        #
+        # @param key The name of the environment variable
+        # @return The value of the environment variable, or null if not set
+        # @author Hussein Abdul-Ameer
+        ##/
         function getEnv(key) {
             return VgSystemCall("components.SystemWrapper", "getEnv", key);
         }
 
-        ## Returns the operating system name (e.g., "Windows 10", "Linux")
+        /## Gets the operating system name.
+        # This function returns the name of the operating system running the application.
+        #
+        # @return The operating system name (e.g., "Windows 10", "Linux")
+        # @author Hussein Abdul-Ameer
+        ##/
         function getOSName() {
             return VgSystemCall("components.SystemWrapper", "getOSName");
         }
 
-        ## Returns the user's home directory path
+        /## Gets the user's home directory path.
+        # This function returns the path to the current user's home directory.
+        #
+        # @return The path to the user's home directory
+        # @author Hussein Abdul-Ameer
+        ##/
         function getUserHome() {
             return VgSystemCall("components.SystemWrapper", "getUserHome");
         }
 
-        ## Returns the current working directory
+        /## Gets the current working directory.
+        # This function returns the path to the current working directory.
+        #
+        # @return The path to the current working directory
+        # @author Hussein Abdul-Ameer
+        ##/
         function getUserDir() {
             return VgSystemCall("components.SystemWrapper", "getUserDir");
         }

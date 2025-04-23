@@ -1,45 +1,154 @@
 library Util{
+    /## The Type namespace contains functions for type checking and conversion.
+    # This namespace provides functionality for determining the type of a value.
+    ##/
     namespace Type{
-    function getType(type){
-        return VgSystemCall("components.Util", "getType", type);
-     }
+        /## Gets the type of a value.
+        # This function returns the type of the specified value as a string.
+        #
+        # @param type The value to get the type of
+        # @return A string representing the type of the value
+        # @author Hussein Abdul-Ameer
+        ##/
+        function getType(type){
+            return VgSystemCall("components.Util", "getType", type);
+        }
     }
+    
+    /## The Integer namespace contains functions for integer operations.
+    # This namespace provides functionality for converting values to integers.
+    ##/
     namespace Integer{
-    function toInt(value) {
-             return VgSystemCall("components.Util", "toInt", value);
-       }
+        /## Converts a value to an integer.
+        # This function attempts to convert the specified value to an integer.
+        #
+        # @param value The value to convert to an integer
+        # @return The integer representation of the value
+        # @author Hussein Abdul-Ameer
+        ##/
+        function toInt(value) {
+            return VgSystemCall("components.Util", "toInt", value);
+        }
     }
+    
+    /## The Double namespace contains functions for floating-point operations.
+    # This namespace provides functionality for converting values to double-precision
+    # floating-point numbers.
+    ##/
     namespace Double {
-    function toDouble(value) {
-             return VgSystemCall("components.Util", "toDouble", value);
-       }
+        /## Converts a value to a double.
+        # This function attempts to convert the specified value to a double-precision
+        # floating-point number.
+        #
+        # @param value The value to convert to a double
+        # @return The double representation of the value
+        # @author Hussein Abdul-Ameer
+        ##/
+        function toDouble(value) {
+            return VgSystemCall("components.Util", "toDouble", value);
+        }
     }
+    
+    /## The String namespace contains functions for string manipulation.
+    # This namespace provides functionality for converting values to strings and
+    # performing various string operations.
+    ##/
     namespace String{
-    function toString(value) {
-             return VgSystemCall("components.Util", "toString", value);
-       }
+        /## Converts a value to a string.
+        # This function converts the specified value to its string representation.
+        #
+        # @param value The value to convert to a string
+        # @return The string representation of the value
+        # @author Hussein Abdul-Ameer
+        ##/
+        function toString(value) {
+            return VgSystemCall("components.Util", "toString", value);
+        }
+        
+        /## Finds the position of a substring within a string.
+        # This function returns the index of the first occurrence of a substring
+        # within a string, or -1 if the substring is not found.
+        #
+        # @param s The string to search in
+        # @param sub The substring to search for
+        # @return The index of the first occurrence of the substring, or -1 if not found
+        # @author Hussein Abdul-Ameer
+        ##/
         function indexOf(s, sub) {
             return VgSystemCall("components.Util", "indexOfString", s, sub);
         }
+        
+        /## Extracts a portion of a string.
+        # This function returns a new string that is a substring of the specified string.
+        #
+        # @param s The string to extract from
+        # @param start The starting index (inclusive)
+        # @param end The ending index (exclusive)
+        # @return The extracted substring
+        # @author Hussein Abdul-Ameer
+        ##/
         function substring(s, start, end) {
             return VgSystemCall("components.Util", "substringString", s, start, end);
         }
+        
+        /## Gets the length of a string.
+        # This function returns the number of characters in a string.
+        #
+        # @param s The string to get the length of
+        # @return The number of characters in the string
+        # @author Hussein Abdul-Ameer
+        ##/
         function stringLength(s) {
             return VgSystemCall("components.Util", "stringLength", s);
         }
-       function toUpper(s) {
-           return VgSystemCall("java.lang.String", "toUpperCase", s);
-       }
-       function toUpper(s) {
-           return VgSystemCall("components.Util", "upperCase", s);
-       }
-       function fromCharCode (code) {
-           return VgSystemCall("components.Util", "charToString", code);
-       }
+        
+        /## Converts a string to uppercase.
+        # This function returns a new string with all characters converted to uppercase.
+        #
+        # @param s The string to convert
+        # @return The uppercase version of the string
+        # @author Hussein Abdul-Ameer
+        ##/
+        function toUpper(s) {
+            return VgSystemCall("java.lang.String", "toUpperCase", s);
+        }
+        
+        /## Converts a string to uppercase.
+        # This function returns a new string with all characters converted to uppercase.
+        #
+        # @param s The string to convert
+        # @return The uppercase version of the string
+        # @author Hussein Abdul-Ameer
+        ##/
+        function toUpper(s) {
+            return VgSystemCall("components.Util", "upperCase", s);
+        }
+        
+        /## Converts a character code to a string.
+        # This function returns a string representation of the specified character code.
+        #
+        # @param code The character code to convert
+        # @return A string containing the character
+        # @author Hussein Abdul-Ameer
+        ##/
+        function fromCharCode(code) {
+            return VgSystemCall("components.Util", "charToString", code);
+        }
     }
+    
+    /## The Boolean namespace contains functions for boolean operations.
+    # This namespace provides functionality for converting values to booleans.
+    ##/
     namespace Boolean {
-       function toBoolean(value) {
-             return VgSystemCall("components.Util", "toBoolean", value);
-       }
+        /## Converts a value to a boolean.
+        # This function attempts to convert the specified value to a boolean.
+        #
+        # @param value The value to convert to a boolean
+        # @return The boolean representation of the value
+        # @author Hussein Abdul-Ameer
+        ##/
+        function toBoolean(value) {
+            return VgSystemCall("components.Util", "toBoolean", value);
+        }
     }
 }

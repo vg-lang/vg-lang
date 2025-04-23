@@ -241,7 +241,7 @@ public class MyGUI extends JFrame {
         JComponent comp = (JComponent) component;
 
         frame.getContentPane().add(comp);
-        System.out.println("Component added to window: " + comp.getClass().getName());
+       // System.out.println("Component added to window: " + comp.getClass().getName());
 
 
         frame.revalidate();

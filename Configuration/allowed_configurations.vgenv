@@ -5,8 +5,8 @@
 java.lang.System: currentTimeMillis, getProperty, getenv, out.print, out.println, out.flush
 java.util.Scanner: <init>, nextLine
 java.lang.Integer: parseInt, valueOf
-java.lang.Double: intValue, parseDouble
-java.lang.String:  trim, substring
+java.lang.Double: intValue, parseDouble, valueOf, toString
+java.lang.String: trim, substring, length, toUpperCase, toLowerCase, charAt, indexOf, lastIndexOf, replace, contains
 components.MyGUI: <init>, launch, setWindowIcon, add, addComponentToWindow,setOnClick, setOnKeyPress, setOnKeyReleased, setWindowBackgroundColor, setOnMousePress, setOnMouseDrag, setOnMouseRelease, showErrorPopup, showInfoPopup, showWarningPopup, showConfirmPopup, setWindowTimer, setWindowBackgroundImage, dispose, removeComponent, killTimer, getWindowComponents, getWindowComponentsCount, getWindowComponentAt, setWindowResizable
 javax.swing.Timer: <init>, start, stop
 java.lang.Thread: <init>, start, join, sleep
@@ -15,22 +15,21 @@ components.MyGUI$MyTextField: <init>, setPlaceholder, getText, setFontFamily, se
 components.MyGUI$MyLabel: <init>, setTextColor, setLabelBorder, setBackgroundColor, setText, getText, setFontFamily, setFontSize
 components.MyGUI$MyPane: <init>, setPaneColor, setPaneBackgroundImage, setPaneBorder,add,setBounds
 components.MyGUI$MyAnimator: <init>, start, stop
-components.MyGUI$MyImage: <init>, setImage, resizeImage, moveImage, getTile, setTile
+components.MyGUI$MyImage: <init>, setImage, resizeImage, moveImage, getTile, setTile, loadImage, isGIF, getTitle
 components.MyGUI$MyTextArea: <init>, setFontFamily, setFontStyle
 components.MyGUI$LineNumberingTextArea: <init>, updateLineNumbers
 components.MyGUI$MyColorPicker: <init>
 components.MyGUI$MyProgressIndicator: <init>, setProgress
 components.MyGUI$MyDatePicker: <init>, getSelectedDate
-components.MyGUI$MyButton: <init>,setButtonColor
+components.MyGUI$MyButton: <init>,setButtonColor,setOnClick
 components.MyGUI$MySoundManager: playSound,stopAllSounds,setVolume,playSoundLoop
-components.MyGUI$MyImage: <init>,setImage,resizeImage,moveImage,loadImage,isGIF,getTitle
 components.ArrayUtils: length,push,pop,unshift,shift,split,joinArray
-java.lang.Math:floor,ceil,random,abs
-components.IoUtils:getSystemIn,writeFile,appendToFile,readFile
+java.lang.Math: floor,ceil,random,abs,min,max,pow,sqrt
+components.IoUtils: getSystemIn,writeFile,appendToFile,readFile
 components.SQLiteDB: <init>, executeUpdate, executeQuery, close
 java.util.Date: <init>, getHours, getMinutes, getSeconds, getDay, getMonth, getYear, getDate
 java.util.regex.Pattern: compile, matcher
 java.util.regex.Matcher: find, group, replaceAll, matches
 components.SystemWrapper: getEnv, getOSName, getUserHome, getUserDir
-components.Util: getType, toInt, toDouble, toString, toBoolean,indexOfString,substringString,stringLength,upperCase,charToString,charToInt
-javax.swing.JComponent:setBounds
+components.Util: getType, toInt, toDouble, toString, toBoolean,indexOfString,substringString,stringLength,upperCase,charToString,charToInt,sleep
+javax.swing.JComponent: setBounds

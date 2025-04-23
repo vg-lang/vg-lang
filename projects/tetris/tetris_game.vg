@@ -1,0 +1,1000 @@
+import Arrays.array;
+import DateTime.timestamp;
+import MathLib.arithmetic;
+import Random.number;
+import Guilibrary.window;
+import Guilibrary.Pane;
+import Guilibrary.Label;
+import Guilibrary.IOEvents;
+import Guilibrary.Timer;
+import Guilibrary.popup;
+import Guilibrary.Sound;
+import Guilibrary.Button;
+import Guilibrary.Image;
+
+
+/## 
+# Tetris game implementation using VG language
+# 
+# @field BOARD_WIDTH       Width of the game board in blocks
+# @field BOARD_HEIGHT      Height of the game board in blocks
+# @field BLOCK_SIZE        Pixel size of each block
+# @field GAME_SPEED_INITIAL Initial game speed in milliseconds
+# @field MIN_GAME_SPEED    Minimum possible game speed
+# @author Hussein Abdul-Ameer
+##/
+var BOARD_WIDTH = 10;
+var BOARD_HEIGHT = 20;
+var BLOCK_SIZE = 30;
+var GAME_SPEED_INITIAL = 800; ## milliseconds between automatic drops
+var GAME_SPEED_DECREMENT = 50; ## speed up by this amount per level
+var MIN_GAME_SPEED = 100; ## fastest speed
+
+/##
+# Game state variables
+# 
+# @field gameBoard        2D array representing the game board
+# @field currentPiece     Current active tetromino
+# @field nextPiece        Next upcoming tetromino
+# @field score           Current game score
+# @field level           Current game level
+# @field gameOver        Game over state flag
+##/
+var gameBoard = [];
+var currentPiece = [];
+var nextPiece = [];
+var gameWindow = 0;
+var gamePane = 0;
+var scoreLabel = 0;
+var levelLabel = 0;
+var nextPiecePane = 0;
+var gameTimer = 0;
+var score = 0;
+var level = 1;
+var gameSpeed = GAME_SPEED_INITIAL;
+var gameOver = false;
+var tetrominoBag = [];
+var soundEnabled = true;
+var gamePaused = false;
+var mainMenuWindow = 0;
+var musicMuted = false;
+
+/##
+# Tetromino types enumeration
+# 
+# @value I  I-shaped tetromino
+# @value J  J-shaped tetromino
+# @value L  L-shaped tetromino
+# @value O  O-shaped tetromino
+# @value S  S-shaped tetromino
+# @value T  T-shaped tetromino
+# @value Z  Z-shaped tetromino
+# @author Hussein Abdul-Ameer
+##/
+
+enum TetrominoType{
+    I,
+    J,
+    L,
+    O,
+    S,
+    T,
+    Z
+}
+
+
+## Colors for each tetromino type
+/## 
+# Tetris game implementation using VG language
+# 
+# @field Cyan       Cyan color hex code
+# @field Blue      Blue color hex code
+# @field Orange    Orange color hex code
+# @field Yellow Yellow color hex code
+# @field Green   Green color hex code
+# @field Purple Purple color hex code
+# @field Red Red color hex code
+# @author Hussein Abdul-Ameer
+##/
+var TetrominoColors = [
+    "#00FFFF", ## I - Cyan
+    "#0000FF", ## J - Blue
+    "#FF7F00", ## L - Orange
+    "#FFFF00", ## O - Yellow
+    "#00FF00", ## S - Green
+    "#800080", ## T - Purple
+    "#FF0000"  ## Z - Red
+];
+
+/##
+# Tetromino rotation states and shapes
+# 
+# 3D array structure:
+# [TetrominoType][RotationState][Row][Column]
+# 
+# @field I  I-shaped tetromino rotations
+# @field J  J-shaped tetromino rotations
+# @field L  L-shaped tetromino rotations
+# @field O  O-shaped tetromino rotations (identical rotations)
+# @field S  S-shaped tetromino rotations
+# @field T  T-shaped tetromino rotations
+# @field Z  Z-shaped tetromino rotations
+# @value 1 represents a filled block
+# @value 0 represents empty space
+# @author Hussein Abdul-Ameer
+##/
+var TetrominoShapes = [
+    ## I
+    [
+        [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],
+        [[0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0]],
+        [[0, 0, 0, 0], [0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0]],
+        [[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]]
+    ],
+    ## J
+    [
+        [[1, 0, 0], [1, 1, 1], [0, 0, 0]],
+        [[0, 1, 1], [0, 1, 0], [0, 1, 0]],
+        [[0, 0, 0], [1, 1, 1], [0, 0, 1]],
+        [[0, 1, 0], [0, 1, 0], [1, 1, 0]]
+    ],
+    ## L
+    [
+        [[0, 0, 1], [1, 1, 1], [0, 0, 0]],
+        [[0, 1, 0], [0, 1, 0], [0, 1, 1]],
+        [[0, 0, 0], [1, 1, 1], [1, 0, 0]],
+        [[1, 1, 0], [0, 1, 0], [0, 1, 0]]
+    ],
+    ## O
+    [
+        [[0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]],
+        [[0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]],
+        [[0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]],
+        [[0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]]
+    ],
+    ## S
+    [
+        [[0, 1, 1], [1, 1, 0], [0, 0, 0]],
+        [[0, 1, 0], [0, 1, 1], [0, 0, 1]],
+        [[0, 0, 0], [0, 1, 1], [1, 1, 0]],
+        [[1, 0, 0], [1, 1, 0], [0, 1, 0]]
+    ],
+    ## T
+    [
+        [[0, 1, 0], [1, 1, 1], [0, 0, 0]],
+        [[0, 1, 0], [0, 1, 1], [0, 1, 0]],
+        [[0, 0, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [1, 1, 0], [0, 1, 0]]
+    ],
+    ## Z
+    [
+        [[1, 1, 0], [0, 1, 1], [0, 0, 0]],
+        [[0, 0, 1], [0, 1, 1], [0, 1, 0]],
+        [[0, 0, 0], [1, 1, 0], [0, 1, 1]],
+        [[0, 1, 0], [1, 1, 0], [1, 0, 0]]
+    ]
+];
+
+/##
+# Shuffles the tetromino bag using Fisher-Yates algorithm
+# 
+# Modifies the tetrominoBag array in-place to create
+# a randomized order of tetromino pieces
+# 
+# @field tetrominoBag The array of available tetromino types
+# @author Hussein Abdul-Ameer
+##/
+function shuffleBag() {
+    var len = array.getLength(tetrominoBag);
+    var i = len - 1;
+    while (i > 0) {
+        var j = number.integer(0, i);
+        var temp = tetrominoBag[i];
+        tetrominoBag[i] = tetrominoBag[j];
+        tetrominoBag[j] = temp;
+        i = i - 1;
+    }
+}
+
+/##
+# Gets random tetromino type using 7-bag randomization system
+# 
+# Implements the classic Tetris "bag" system where all 7 pieces
+# are shuffled and dealt consecutively before refilling
+# 
+# @return number Index of TetrominoType (0-6)
+# @author Hussein Abdul-Ameer
+##/
+function getRandomTetrominoType() {
+    if (array.getLength(tetrominoBag) == 0) {
+        ## Refill the bag with all tetromino types
+        tetrominoBag = [0, 1, 2, 3, 4, 5, 6];
+        shuffleBag();
+    }
+    
+    ## Take the last piece from the bag
+    var index = array.getLength(tetrominoBag) - 1;
+    var type = tetrominoBag[index];
+    
+    ## Create a new array without the last element
+    var newBag = [];
+    for (var i = 0; i < index; i = i + 1) {
+        array.push(newBag, tetrominoBag[i]);
+    }
+    tetrominoBag = newBag;
+    
+    return type;
+}
+
+/##
+# Creates a new tetromino instance
+# 
+# @param type  The type of tetromino (TetrominoType)
+# @param x     Initial x position
+# @param y     Initial y position
+# @return      Array representing the tetromino with [type, color, shape, x, y, rotation]
+# @author Hussein Abdul-Ameer
+##/
+function createTetromino(type, x, y) {
+    var tetromino = [];
+    array.push(tetromino, type);        ## index 0: type
+    array.push(tetromino, TetrominoColors[type]); ## index 1: color
+    array.push(tetromino, TetrominoShapes[type]); ## index 2: shape
+    array.push(tetromino, x);           ## index 3: x
+    array.push(tetromino, y);           ## index 4: y
+    array.push(tetromino, 0);           ## index 5: rotation
+    return tetromino;
+}
+
+/##
+# Initializes the game board with empty cells
+# 
+# @author Hussein Abdul-Ameer
+##/
+function initializeBoard() {
+    gameBoard = [];
+    for (var y = 0; y < BOARD_HEIGHT; y = y + 1) {
+        var row = [];
+        for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+            array.push(row, 0);
+        }
+        array.push(gameBoard, row);
+    }
+}
+
+## Generate a random tetromino
+function generateRandomTetromino() {
+    var type = getRandomTetrominoType();
+    var x = arithmetic.floor(BOARD_WIDTH / 2) - 1;
+    var y = 0;
+    return createTetromino(type, x, y);
+}
+
+/##
+# Checks if the current piece position is valid
+# 
+# @param piece      The tetromino to check
+# @param offsetX    X-axis offset to test
+# @param offsetY    Y-axis offset to test
+# @param newRotation Rotation state to test
+# @return           True if position is valid, false otherwise
+# @author Hussein Abdul-Ameer
+##/
+function isValidPosition(piece, offsetX, offsetY, newRotation) {
+    ## First check if piece is valid
+    if (piece == 0 || array.getLength(piece) < 6) {
+        return false;
+    }
+    
+    var rotation = piece[5]; ## Default to the piece's current rotation
+    
+    ## Only override the rotation if newRotation is provided and not zero
+    if (newRotation != 0) {
+        rotation = newRotation;
+    }
+    
+    var shape = piece[2][rotation]; ## shape[rotation]
+    var height = array.getLength(shape);
+    var width = array.getLength(shape[0]);
+    
+    for (var y = 0; y < height; y = y + 1) {
+        for (var x = 0; x < width; x = x + 1) {
+            if (shape[y][x] == 1) {
+                var boardX = piece[3] + x + offsetX; ## x
+                var boardY = piece[4] + y + offsetY; ## y
+                
+                ## Check if out of bounds
+                if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) {
+                    return false;
+                }
+                
+                ## Check if overlapping with locked pieces
+                ## Make sure boardY is within bounds before accessing gameBoard
+                if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                    if (gameBoard[boardY][boardX] != 0) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    
+    return true;
+}
+
+## Move the current piece left
+function moveLeft() {
+    if (currentPiece != 0 && isValidPosition(currentPiece, -1, 0, currentPiece[5])) {
+        currentPiece[3] = currentPiece[3] - 1; ## x
+        playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/move.wav");
+    }
+}
+
+## Move the current piece right
+function moveRight() {
+    if (currentPiece != 0 && isValidPosition(currentPiece, 1, 0, currentPiece[5])) {
+        currentPiece[3] = currentPiece[3] + 1; ## x
+        playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/move.wav");
+    }
+}
+
+## Move the current piece down
+function moveDown() {
+    ## Check if current piece is valid
+    if (currentPiece == 0 || array.getLength(currentPiece) < 6) {
+        ## If current piece is invalid, try to create a new one
+        currentPiece = generateRandomTetromino();
+        return;
+    }
+    
+    if (isValidPosition(currentPiece, 0, 1, currentPiece[5])) {
+        currentPiece[4] = currentPiece[4] + 1; ## y
+    } else {
+        ## Lock the piece in place
+        lockPiece();
+
+        ## Check for completed lines
+        clearLines();
+
+        ## Spawn the next piece
+        spawnNextPiece();
+
+        ## Check if game over
+        if (currentPiece != 0 && array.getLength(currentPiece) >= 6 && !isValidPosition(currentPiece, 0, 0, currentPiece[5])) {
+            gameOver = true;
+            Timer.stopTimer(gameTimer);
+            playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/gameover.wav");
+            popup.info(gameWindow, "Game Over! Your score: " + score, "Game Over");
+        }
+    }
+}
+
+## Hard drop the current piece
+function hardDrop() {
+    while (isValidPosition(currentPiece, 0, 1, currentPiece[5])) {
+        currentPiece[4] = currentPiece[4] + 1;
+        score = score + 2; ## 2 points per cell dropped
+    }
+
+    ## Lock the piece in place
+    lockPiece();
+
+    ## Check for completed lines
+    clearLines();
+
+    ## Spawn the next piece
+    spawnNextPiece();
+
+    ## Check if game over
+    if (!isValidPosition(currentPiece, 0, 0, currentPiece[5])) {
+        gameOver = true;
+        Timer.stopTimer(gameTimer);
+        playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/gameover.wav");
+        popup.info(gameWindow, "Game Over! Your score: " + score, "Game Over");
+    }
+
+    ## Update score display
+    Label.setLabelText(scoreLabel, "Score: " + score);
+}
+
+## Rotate the current piece
+function rotate() {
+    var newRotation = (currentPiece[5] + 1) % 4; ## rotation
+
+    if (isValidPosition(currentPiece, 0, 0, newRotation)) {
+        currentPiece[5] = newRotation; ## rotation
+        playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/move.wav");
+    } else {
+        ## Try wall kicks
+        if (isValidPosition(currentPiece, 1, 0, newRotation)) {
+            currentPiece[3] = currentPiece[3] + 1; ## x
+            currentPiece[5] = newRotation; ## rotation
+            playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/move.wav");
+        } else if (isValidPosition(currentPiece, -1, 0, newRotation)) {
+            currentPiece[3] = currentPiece[3] - 1; ## x
+            currentPiece[5] = newRotation; ## rotation
+            playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/move.wav");
+        }
+    }
+}
+
+/##
+# Locks the current piece in place on the game board
+# 
+# @author Hussein Abdul-Ameer
+##/
+function lockPiece() {
+    ## Check if current piece is valid
+    if (currentPiece == 0 || array.getLength(currentPiece) < 6) {
+        return;
+    }
+    
+    var shape = currentPiece[2][currentPiece[5]];
+    var height = array.getLength(shape);
+    var width = array.getLength(shape[0]);
+
+    for (var y = 0; y < height; y = y + 1) {
+        for (var x = 0; x < width; x = x + 1) {
+            if (shape[y][x] == 1) {
+                var boardY = currentPiece[4] + y;
+                var boardX = currentPiece[3] + x;
+
+                ## Make sure we're within bounds before setting
+                if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                    gameBoard[boardY][boardX] = currentPiece[1];
+                }
+            }
+        }
+    }
+}
+
+/##
+# Checks and clears completed lines from the game board
+# 
+# @return Number of lines cleared
+# @author Hussein Abdul-Ameer
+##/
+function clearLines() {
+    var linesCleared = 0;
+
+    for (var y = BOARD_HEIGHT - 1; y >= 0; y = y - 1) {
+        var lineComplete = true;
+        
+        ## Check each cell in the row
+        for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+            if (gameBoard[y][x] == 0) {
+                lineComplete = false;
+            }
+        }
+
+        if (lineComplete) {
+            linesCleared = linesCleared + 1;
+
+            ## Move all lines above down
+            for (var moveY = y; moveY > 0; moveY = moveY - 1) {
+                for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+                    gameBoard[moveY][x] = gameBoard[moveY - 1][x];
+                }
+            }
+
+            ## Clear the top line
+            for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+                gameBoard[0][x] = 0;
+            }
+
+            ## Check the same line again (since we moved everything down)
+            y = y + 1;
+        }
+    }
+
+    ## Update score based on lines cleared
+    if (linesCleared > 0) {
+        ## Scoring: 100 for 1 line, 300 for 2 lines, 500 for 3 lines, 800 for 4 lines
+        var points = 0;
+        if (linesCleared == 1) { 
+            points = 100;
+        } else if (linesCleared == 2) {  
+            points = 300;
+        } else if (linesCleared == 3) {  
+            points = 500;
+        } else if (linesCleared == 4) {  
+            points = 800;
+        }
+
+        score = score + points;
+        playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/clear.wav");
+
+        ## Level up every 10 lines
+        var newLevel = arithmetic.floor(score / 1000) + 1;
+        if (newLevel > level) {
+            level = newLevel;
+            ## Increase game speed
+            gameSpeed = arithmetic.max(MIN_GAME_SPEED, GAME_SPEED_INITIAL - (level - 1) * GAME_SPEED_DECREMENT);
+            Timer.stopTimer(gameTimer);
+            gameTimer = Timer.createTimer(gameSpeed, &gameLoop());
+            Timer.startTimer(gameTimer);
+        }
+
+        ## Update score and level display
+        Label.setLabelText(scoreLabel, "Score: " + score);
+        Label.setLabelText(levelLabel, "Level: " + level);
+    }
+}
+
+## Draw the game board
+function drawBoard() {
+    ## Clear the game pane
+    clearPane(gamePane);
+    
+    ## Draw the locked blocks
+    for (var y = 0; y < BOARD_HEIGHT; y = y + 1) {
+        for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+            if (gameBoard[y][x] != 0) {
+                var blockPane = Pane.createPane(
+                    x * BLOCK_SIZE + 1,
+                    y * BLOCK_SIZE + 1,
+                    BLOCK_SIZE - 2,
+                    BLOCK_SIZE - 2
+                );
+                Pane.setPaneColor(blockPane, gameBoard[y][x]);
+                Pane.addComponentToPane(gamePane, blockPane);
+            }
+        }
+    }
+
+    ## Draw the current piece
+    if (currentPiece != 0 && array.getLength(currentPiece) >= 6) {
+        var shape = currentPiece[2][currentPiece[5]];
+        var height = array.getLength(shape);
+        var width = array.getLength(shape[0]);
+
+        for (var y = 0; y < height; y = y + 1) {
+            for (var x = 0; x < width; x = x + 1) {
+                if (shape[y][x] == 1) {
+                    var boardY = currentPiece[4] + y;
+                    var boardX = currentPiece[3] + x;
+
+                    ## Only draw if it's on the board
+                    if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                        var blockPane = Pane.createPane(
+                            boardX * BLOCK_SIZE + 1,
+                            boardY * BLOCK_SIZE + 1,
+                            BLOCK_SIZE - 2,
+                            BLOCK_SIZE - 2
+                        );
+                        Pane.setPaneColor(blockPane, currentPiece[1]);
+                        Pane.addComponentToPane(gamePane, blockPane);
+                    }
+                }
+            }
+        }
+    }
+}
+
+## Spawn the next tetromino
+function spawnNextPiece() {
+    ## Make sure we have a valid next piece before assigning it
+    if (nextPiece != 0 && array.getLength(nextPiece) >= 6) {
+        currentPiece = nextPiece;
+        nextPiece = generateRandomTetromino();
+        updateNextPieceDisplay();
+        
+        ## Remove debug popup that's causing errors
+        ## popup.info(gameWindow, "Current piece type: " + currentPiece[0], "Debug");
+    } else {
+        ## If nextPiece is invalid, generate a new one
+        currentPiece = generateRandomTetromino();
+        nextPiece = generateRandomTetromino();
+        updateNextPieceDisplay();
+    }
+}
+
+## Clear all components from a pane
+function clearPane(pane) {
+    if (pane == gamePane) {
+        ## Remove the old game pane from the window
+        window.removeComponentFromWindow(gameWindow, gamePane);
+        
+        ## Create a new game pane with the same properties
+        gamePane = Pane.createPane(0, 0, BOARD_WIDTH * BLOCK_SIZE, BOARD_HEIGHT * BLOCK_SIZE);
+        Pane.setPaneColor(gamePane, "#000000");
+        Pane.setPaneBorder(gamePane, "#FFFFFF", 2);
+        window.addComponentToWindow(gameWindow, gamePane);
+    } else if (pane == nextPiecePane) {
+        ## Remove the old next piece pane from the window
+        window.removeComponentFromWindow(gameWindow, nextPiecePane);
+        
+        ## Create a new next piece pane with the same properties
+        nextPiecePane = Pane.createPane(
+            BOARD_WIDTH * BLOCK_SIZE + 10, 130,
+            4 * BLOCK_SIZE + 20, 4 * BLOCK_SIZE + 20
+        );
+        Pane.setPaneColor(nextPiecePane, "#000000");
+        Pane.setPaneBorder(nextPiecePane, "#FFFFFF", 1);
+        window.addComponentToWindow(gameWindow, nextPiecePane);
+    }
+}
+
+## Update the display of the next piece
+function updateNextPieceDisplay() {
+    ## Clear the next piece pane
+    clearPane(nextPiecePane);
+    Pane.setPaneColor(nextPiecePane, "#000000");
+
+    ## Draw the next piece
+    var shape = nextPiece[2][0]; ## Use the first rotation
+    var height = array.getLength(shape);
+    var width = array.getLength(shape[0]);
+
+    for (var y = 0; y < height; y = y + 1) {
+        for (var x = 0; x < width; x = x + 1) {
+            if (shape[y][x] == 1) {
+                var blockPane = Pane.createPane(
+                    x * BLOCK_SIZE + 10,
+                    y * BLOCK_SIZE + 10,
+                    BLOCK_SIZE - 2,
+                    BLOCK_SIZE - 2
+                );
+                Pane.setPaneColor(blockPane, nextPiece[1]);
+                Pane.addComponentToPane(nextPiecePane, blockPane);
+            }
+        }
+    }
+}
+
+/##
+# Handles keyboard input for game controls
+# 
+# @param code The keycode of the pressed key
+# @author Hussein Abdul-Ameer
+##/
+function handleKeyPress(code) {
+    if (code == 81) { ## 'Q' key - Quit game
+        ## Stop the game timer
+        Timer.stopTimer(gameTimer);
+        
+        ## Stop any playing sounds
+        Sound.stopAllSounds();
+        
+        ## Dispose the window
+        window.dispose(gameWindow);
+        
+        ## Since there's no exit() function, we'll set a flag and stop all game activity
+        gameOver = true;
+        gamePaused = true;
+        
+        return;
+    }
+    
+    if (code == 27) { ## ESC key - Return to main menu
+        ## Stop the game timer
+        Timer.stopTimer(gameTimer);
+        
+        ## Stop any playing sounds
+        Sound.stopAllSounds();
+        
+        ## Dispose the window
+        window.dispose(gameWindow);
+        
+        ## Show the main menu
+        showMainMenu();
+        return;
+    }
+    
+    if (code == 77) { ## 'M' key - Mute/unmute
+        soundEnabled = !soundEnabled;
+        
+        if (soundEnabled) {
+            ## Resume background music
+            playGameSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+        } else {
+            ## Stop all sounds
+            Sound.stopAllSounds();
+        }
+        return;
+    }
+    
+    if (code == 80) { ## 'P' key - Pause/unpause
+        gamePaused = !gamePaused;
+        
+        if (gamePaused) {
+            ## Pause the game
+            Timer.stopTimer(gameTimer);
+            
+            ## Show pause message
+            var pauseLabel = Label.createLabel("PAUSED", 
+                BOARD_WIDTH * BLOCK_SIZE / 2 - 50, 
+                BOARD_HEIGHT * BLOCK_SIZE / 2 - 15, 
+                100, 30);
+            Label.setLabelTextColor(pauseLabel, "#FFFFFF");
+            Pane.addComponentToPane(gamePane, pauseLabel);
+        } else {
+            ## Resume the game
+            gameTimer = Timer.createTimer(gameSpeed, &gameLoop());
+            Timer.startTimer(gameTimer);
+            
+            ## Redraw the board to remove pause message
+            drawBoard();
+        }
+        return;
+    }
+    
+    if (code == 82) { ## 'R' key - Reset game
+        ## Stop the game timer
+        Timer.stopTimer(gameTimer);
+        
+        ## Stop any playing sounds
+        Sound.stopAllSounds();
+        
+        ## Reset game state variables
+        score = 0;
+        level = 1;
+        gameSpeed = GAME_SPEED_INITIAL;
+        gameOver = false;
+        gamePaused = false;
+        
+        ## Initialize the game board
+        initializeBoard();
+        
+        ## Generate new pieces
+        nextPiece = generateRandomTetromino();
+        currentPiece = generateRandomTetromino();
+        updateNextPieceDisplay();
+        
+        ## Update score and level display
+        Label.setLabelText(scoreLabel, "Score: " + score);
+        Label.setLabelText(levelLabel, "Level: " + level);
+        
+        ## Draw the initial state
+        drawBoard();
+        
+        ## Start a new game timer
+        gameTimer = Timer.createTimer(gameSpeed, &gameLoop());
+        Timer.startTimer(gameTimer);
+        
+        ## Restart music
+        playGameSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+        
+        return;
+    }
+    
+    ## Only process game controls if not paused and not game over
+    if (gameOver || gamePaused) {
+        return;
+    }
+    
+    if (code == 37) { ## Left arrow
+        moveLeft();
+    } else if (code == 39) { ## Right arrow
+        moveRight();
+    } else if (code == 40) { ## Down arrow
+        moveDown();
+    } else if (code == 38) { ## Up arrow
+        rotate();
+    } else if (code == 32) { ## Space bar
+        hardDrop();
+    }
+
+    ## Redraw the board
+    drawBoard();
+}
+
+/##
+# Main game loop handler
+# 
+# @author Hussein Abdul-Ameer
+##/
+function gameLoop() {
+    if (gameOver || gamePaused) {
+        return;
+    }
+
+    moveDown();
+    drawBoard();
+}
+
+## Play sound function that respects mute setting
+function playGameSound(soundFile) {
+    if (soundEnabled) {
+        Sound.playSound(soundFile);
+    }
+}
+
+## Play sound loop function that respects mute setting
+function playGameSoundLoop(soundFile, loops) {
+    if (soundEnabled) {
+        Sound.playSoundLoop(soundFile, loops);
+    }
+}
+
+/##
+# Displays the main menu window
+# 
+# @author Hussein Abdul-Ameer
+##/
+function showMainMenu() {
+    ## Create the main menu window
+    mainMenuWindow = window.create("Tetris - Main Menu", 400, 500);
+    window.setBackgroundColor(mainMenuWindow, "#000000");
+    
+    ## Create a title image instead of text
+    var titleImage = Image.createImage(
+        "C:/Users/hodif/Desktop/usn2024/vg lang/projects/tetris/castle.png", 
+        100, 20, 200, 100
+    );
+    window.addComponentToWindow(mainMenuWindow, titleImage);
+    
+    ## Create a start game button
+    var startButton = Button.createButton("Start Game", 100, 150, 200, 50);
+    Button.setButtonColor(startButton, "#FFFFFF");
+    IOEvents.setOnClick(startButton, &startGameFromMenu());
+    window.addComponentToWindow(mainMenuWindow, startButton);
+    
+    ## Create an instructions button
+    var instructionsButton = Button.createButton("Instructions", 100, 220, 200, 50);
+    Button.setButtonColor(instructionsButton, "#FFFFFF");
+    IOEvents.setOnClick(instructionsButton, &showInstructions());
+    window.addComponentToWindow(mainMenuWindow, instructionsButton);
+    
+    ## Create a mute/unmute button
+    var muteButton = Button.createButton("Toggle Music", 100, 290, 200, 50);
+    Button.setButtonColor(muteButton, "#FFFFFF");
+    IOEvents.setOnClick(muteButton, &toggleMusicFromMenu());
+    window.addComponentToWindow(mainMenuWindow, muteButton);
+    
+    ## Create a quit button
+    var quitButton = Button.createButton("Quit", 100, 360, 200, 50);
+    Button.setButtonColor(quitButton, "#FFFFFF");
+    IOEvents.setOnClick(quitButton, &quitGame());
+    window.addComponentToWindow(mainMenuWindow, quitButton);
+    
+    ## Play background music
+    if (!musicMuted) {
+        Sound.playSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+    }
+    
+    ## Launch the window
+    window.launch(mainMenuWindow);
+}
+
+/##
+# Starts a new game from the main menu
+# 
+# @author Hussein Abdul-Ameer
+##/
+function startGameFromMenu() {
+    ## Stop any currently playing sounds to prevent duplicates
+    Sound.stopAllSounds();
+    
+    ## Dispose of the menu window
+    window.dispose(mainMenuWindow);
+    
+    ## Reset all game state variables
+    score = 0;
+    level = 1;
+    gameSpeed = GAME_SPEED_INITIAL;
+    gameOver = false;
+    gamePaused = false;
+    
+    ## Set sound enabled based on menu choice
+    soundEnabled = !musicMuted;
+    
+    ## Start the game
+    initGame();
+}
+
+## Toggle music from the menu
+function toggleMusicFromMenu() {
+    musicMuted = !musicMuted;
+    
+    if (musicMuted) {
+        Sound.stopAllSounds();
+    } else {
+        Sound.playSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+    }
+}
+
+## Quit the game
+function quitGame() {
+    ## Stop any sounds
+    Sound.stopAllSounds();
+    
+    ## Dispose of the window
+    window.dispose(mainMenuWindow);
+}
+
+## Show game instructions
+function showInstructions() {
+    var instructionsText = 
+        "TETRIS CONTROLS\n\n" +
+        "← : Move Left\n" +
+        "→ : Move Right\n" +
+        "↑ : Rotate\n" +
+        "↓ : Soft Drop\n" +
+        "Space : Hard Drop\n" +
+        "P : Pause\n" +
+        "M : Mute\n" +
+        "Q : Quit\n" +
+        "R : Reset\n" +
+        "ESC : Return to Menu";
+    
+    popup.info(mainMenuWindow, instructionsText, "Game Instructions");
+}
+
+/##
+# Initializes and starts a new game
+# 
+# @author Hussein Abdul-Ameer
+##/
+function initGame() {
+    ## Create the game window
+    gameWindow = window.create("Tetris",
+        BOARD_WIDTH * BLOCK_SIZE + 200, ## Width
+        BOARD_HEIGHT * BLOCK_SIZE + 40  ## Height
+    );
+    window.setBackgroundColor(gameWindow, "#333333");
+    
+    ## Create all UI components before launching the window
+    
+    ## Create the game board pane
+    gamePane = Pane.createPane(0, 0, BOARD_WIDTH * BLOCK_SIZE, BOARD_HEIGHT * BLOCK_SIZE);
+    Pane.setPaneColor(gamePane, "#000000");
+    Pane.setPaneBorder(gamePane, "#FFFFFF", 2);
+    window.addComponentToWindow(gameWindow, gamePane);
+
+    ## Create the score and level labels
+    scoreLabel = Label.createLabel("Score: 0",
+        BOARD_WIDTH * BLOCK_SIZE + 10, 10, 180, 30);
+    Label.setLabelTextColor(scoreLabel, "#FFFFFF");
+    window.addComponentToWindow(gameWindow, scoreLabel);
+
+    levelLabel = Label.createLabel("Level: 1",
+        BOARD_WIDTH * BLOCK_SIZE + 10, 50, 180, 30);
+    Label.setLabelTextColor(levelLabel, "#FFFFFF");
+    window.addComponentToWindow(gameWindow, levelLabel);
+
+    ## Create the next piece display
+    var nextPieceLabel = Label.createLabel("Next Piece:",
+        BOARD_WIDTH * BLOCK_SIZE + 10, 90, 180, 30);
+    Label.setLabelTextColor(nextPieceLabel, "#FFFFFF");
+    window.addComponentToWindow(gameWindow, nextPieceLabel);
+
+    nextPiecePane = Pane.createPane(
+        BOARD_WIDTH * BLOCK_SIZE + 10, 130,
+        4 * BLOCK_SIZE + 20, 4 * BLOCK_SIZE + 20
+    );
+    Pane.setPaneColor(nextPiecePane, "#000000");
+    Pane.setPaneBorder(nextPiecePane, "#FFFFFF", 1);
+    window.addComponentToWindow(gameWindow, nextPiecePane);
+
+    ## Set up key press handler
+    IOEvents.setOnKeyPress(gameWindow, &handleKeyPress());
+    
+    ## Initialize the game board
+    initializeBoard();
+    
+    ## Generate the first pieces - make sure they're valid
+    nextPiece = generateRandomTetromino();
+    currentPiece = generateRandomTetromino(); ## Set current piece directly first time
+    updateNextPieceDisplay();
+    
+    ## Draw the initial state
+    drawBoard();
+    
+    ## Start the game timer
+    gameTimer = Timer.createTimer(gameSpeed, &gameLoop());
+    Timer.startTimer(gameTimer);
+    
+    ## Launch the window last, after all components are added
+    window.launch(gameWindow);
+    
+    ## Play sound after window is launched (only if not muted)
+    if (!musicMuted) {
+        ## Make sure no sounds are playing before starting new ones
+        Sound.stopAllSounds();
+        playGameSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+    }
+}
+
+## Start with the main menu instead of directly starting the game
+showMainMenu();

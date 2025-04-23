@@ -13,7 +13,7 @@ import org.antlr.v4.runtime.misc.ParseCancellationException;
 public class Main {
 
     public static void main(String[] args) {
-        String versionnumber = "1.3.0";
+        String versionnumber = "1.4.0";
         try {
             if (args.length > 0) {
                 if (args[0].equals("--help")) {

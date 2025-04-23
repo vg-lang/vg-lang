@@ -42,7 +42,7 @@ public class  PackageManager {
                 break;
             default:
                 System.out.println("Unkown Command: " + command);
-                System.out.println("Available Commands: install, remove, list");
+                System.out.println("Available Commands: install, remove, list, available ");
         }
     }
     private static String getFileNameFromUrl(String url) {

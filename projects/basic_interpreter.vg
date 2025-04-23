@@ -1,5 +1,5 @@
 import IO.Prompt;
-import RegexLib.regex; ## installable package REGEXLiB
+import RegexLib.regex; 
 import Arrays.array;
 import Util.Double;
 
