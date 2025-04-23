@@ -28,10 +28,24 @@ To start using VG, run the following commands inside the windows terminal:
 ```bash
  vg.exe <file.vg> --help
 
-   Usage: VG  <file.vg> [options]
-    Options:  --help  Show this help menu
-    <file.vg>  The VG source file to interpret
-    --version shows the version of the VG Interpreter
+   VG Language Interpreter
+Usage:
+  vg <file>                  Run a VG program
+  vg --help                  Show this help message
+  vg --version               Show the version number
+  vg --docgen <in> <out>     Generate documentation
+
+Documentation Generation:
+  vg --docgen <input-path> <output-directory>
+    <input-path> can be a single file or a directory
+    <output-directory> is where the documentation will be generated
+
+Examples:
+  vg program.vg              Run program.vg
+  vg --docgen program.vg ./docs
+  vg --docgen libraries/Guilibrary.vglib ./docs
+  vg --docgen . ./docs       Generate docs for entire project
+
 ````
 
 
