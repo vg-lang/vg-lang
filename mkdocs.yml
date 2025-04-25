@@ -1,5 +1,6 @@
 site_name: VG Language Documentation
 site_url: "https://www.vglang.com"
+
 theme:
   name: material
   features:
@@ -16,20 +17,22 @@ theme:
   palette:
     - scheme: default
       toggle:
-        icon: material/toggle-switch-off-outline 
+        icon: material/toggle-switch-off-outline
         name: Switch to dark mode
       primary: "#212121"  # Very dark grey
       accent: amber
-    - scheme: slate 
+    - scheme: slate
       toggle:
         icon: material/toggle-switch
-        name: Switch to light mode    
+        name: Switch to light mode
       primary: "#121212"  # Almost black
       accent: amber
   logo: assets/logo.png
   favicon: favicon.ico
+
 extra_css:
   - assets/stylesheets/custom.css
+
 plugins:
   - search
 
@@ -64,7 +67,6 @@ nav:
       - Structs and Enums: StructsAndEnums.md
       - System Calls: SystemCalls.md
 
-
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
@@ -79,5 +81,5 @@ markdown_extensions:
   - pymdownx.mark
   - attr_list
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg

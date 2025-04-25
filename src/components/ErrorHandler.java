@@ -5,8 +5,10 @@ import org.antlr.v4.runtime.Token;
 import java.awt.EventQueue;
 import java.awt.AWTEvent;
 import java.awt.Toolkit;
+import java.util.HashSet;
+import java.util.Set;
 
-public class ErrorHandler {
+public class ErrorHandler implements Thread.UncaughtExceptionHandler {
     private static final String ANSI_RED = "\u001B[31m";
     private static final String ANSI_YELLOW = "\u001B[33m";
     private static final String ANSI_RESET = "\u001B[0m";
@@ -14,9 +16,103 @@ public class ErrorHandler {
 
     private static boolean useColorOutput = true;
     private static String currentFilePath = "";
+    private static Set<String> reportedErrors = new HashSet<>();
+    private static final long ERROR_RESET_INTERVAL = 5000; // 5 seconds
 
     static {
+        // Install the global exception handler
+        Thread.setDefaultUncaughtExceptionHandler(new ErrorHandler());
+        
+        // Disable standard Java stack traces
+        System.setProperty("java.awt.exceptionHandler", "components.ErrorHandler");
+        
+        // Install our custom exception handler for AWT events
         installAWTExceptionHandler();
+        
+        // Start a timer to reset error tracking
+        Thread resetThread = new Thread(() -> {
+            while (true) {
+                try {
+                    Thread.sleep(ERROR_RESET_INTERVAL);
+                    resetErrorTracking();
+                } catch (InterruptedException e) {
+                    // Ignore
+                }
+            }
+        });
+        resetThread.setDaemon(true);  // Mark as daemon thread so it doesn't prevent JVM exit
+        resetThread.start();
+    }
+    
+    /**
+     * Reset the error tracking to allow errors to be shown again
+     */
+    private static synchronized void resetErrorTracking() {
+        reportedErrors.clear();
+    }
+    
+    /**
+     * Check if an error has already been reported to prevent duplicates
+     */
+    private static synchronized boolean isErrorAlreadyReported(String errorMsg, String location) {
+        String key = errorMsg + "|" + location;
+        if (reportedErrors.contains(key)) {
+            return true;
+        }
+        reportedErrors.add(key);
+        return false;
+    }
+    
+    /**
+     * Handles uncaught exceptions from all threads
+     */
+    @Override
+    public void uncaughtException(Thread t, Throwable e) {
+        if (e instanceof VGException) {
+            VGException vge = (VGException) e;
+            int line = vge.getLine();
+            int column = vge.getColumn();
+            String message = vge.getMessage();
+            String location = (line > 0) ? String.format("at line %d:%d", line, column) : "";
+            
+            // Check if we've already reported this error
+            if (isErrorAlreadyReported(message, location)) {
+                return;
+            }
+            
+            if (message.contains("Error in function call: Argument error: Function expects")) {
+                int expectedArgs = extractNumberAfter(message, "expects ");
+                int receivedArgs = extractNumberAfter(message, "but got ");
+                
+                formatAndPrintError("Function call error", location, buildFunctionArgumentErrorMessage(expectedArgs, receivedArgs));
+            } else {
+                if (line > 0) {
+                    // For errors with a known location
+                    reportRuntimeError(line, column, message);
+                } else {
+                    // For errors without specific location
+                    formatAndPrintError("Runtime Error", null, message);
+                }
+            }
+        } else if (e.getMessage() != null && e.getMessage().contains("Error in function call: Argument error: Function expects")) {
+            String message = e.getMessage();
+            int expectedArgs = extractNumberAfter(message, "expects ");
+            int receivedArgs = extractNumberAfter(message, "but got ");
+            
+            // Check if we've already reported this error
+            if (isErrorAlreadyReported(message, "")) {
+                return;
+            }
+            
+            formatAndPrintError("Function call error", null, buildFunctionArgumentErrorMessage(expectedArgs, receivedArgs));
+        } else {
+            // Check if we've already reported this error
+            if (isErrorAlreadyReported(e.getMessage(), "")) {
+                return;
+            }
+            
+            formatAndPrintError("Runtime Error", null, e.getMessage());
+        }
     }
 
     /**
@@ -44,7 +140,33 @@ public class ErrorHandler {
      */
     private static void handleAWTException(Throwable t) {
         if (t instanceof VGException) {
-            throw (VGException) t;
+            VGException vge = (VGException) t;
+            String message = vge.getMessage();
+            int line = vge.getLine();
+            int column = vge.getColumn();
+            String location = (line > 0) ? String.format("at line %d:%d", line, column) : "";
+            
+            // Check if we've already reported this error
+            if (isErrorAlreadyReported(message, location)) {
+                return;
+            }
+            
+            if (message.contains("Error in function call: Argument error: Function expects")) {
+                int expectedArgs = extractNumberAfter(message, "expects ");
+                int receivedArgs = extractNumberAfter(message, "but got ");
+                
+                formatAndPrintError("Function call error", location, buildFunctionArgumentErrorMessage(expectedArgs, receivedArgs));
+            } else {
+                if (line > 0) {
+                    // For errors with a known location
+                    reportRuntimeError(line, column, message);
+                } else {
+                    // For errors without specific location
+                    formatAndPrintError("Runtime Error", null, message);
+                }
+            }
+            // Don't exit the program - just return to allow window to be displayed
+            return;
         }
         
         String message = t.getMessage();
@@ -52,11 +174,129 @@ public class ErrorHandler {
             message = t.getClass().getName();
         }
         
+        // Check for function argument errors
+        if (message.contains("Error in function call: Argument error: Function expects")) {
+            // Extract the expected argument count and received argument count
+            int expectedArgs = extractNumberAfter(message, "expects ");
+            int receivedArgs = extractNumberAfter(message, "but got ");
+            
+            // Extract line number information if available
+            int lineStart = message.indexOf("line ") + 5;
+            String locationInfo = "";
+            if (lineStart > 5) {
+                int lineEnd = message.indexOf(":", lineStart);
+                if (lineEnd > lineStart) {
+                    String lineStr = message.substring(lineStart, lineEnd);
+                    try {
+                        int line = Integer.parseInt(lineStr);
+                        locationInfo = String.format("at line %d", line);
+                    } catch (NumberFormatException e) {
+                        // Ignore if we can't parse line number
+                    }
+                }
+            }
+            
+            // Check if we've already reported this error
+            if (isErrorAlreadyReported(message, locationInfo)) {
+                return;
+            }
+            
+            formatAndPrintError("Function call error", locationInfo, buildFunctionArgumentErrorMessage(expectedArgs, receivedArgs));
+            // Don't exit the program
+            return;
+        }
+        
         if (t.toString().contains("Method") && t.toString().contains("not found")) {
             message = "Method not allowed: " + extractMethodName(t.toString());
         }
         
-        throw new VGException("AWT Event Error: " + message, -1, -1);
+        // Check if we've already reported this error
+        if (isErrorAlreadyReported(message, "")) {
+            return;
+        }
+        
+        formatAndPrintError("Runtime Error", null, formatUserFriendlyMessage(message));
+        // Don't exit the program
+    }
+    
+    /**
+     * Builds a consistent error message for function argument errors
+     */
+    private static String buildFunctionArgumentErrorMessage(int expectedArgs, int receivedArgs) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Expected ").append(expectedArgs).append(" arguments, but you provided ").append(receivedArgs);
+        
+        if (expectedArgs > receivedArgs) {
+            sb.append("\n    You are missing ").append(expectedArgs - receivedArgs).append(" argument(s)");
+        } else {
+            sb.append("\n    You provided ").append(receivedArgs - expectedArgs).append(" too many argument(s)");
+        }
+        
+        return sb.toString();
+    }
+    
+    /**
+     * Formats and prints an error message with consistent coloring
+     */
+    private static void formatAndPrintError(String errorType, String location, String message) {
+        printError(errorType, location, message);
+    }
+    
+    /**
+     * Extracts a number from a string after the given prefix
+     */
+    private static int extractNumberAfter(String message, String prefix) {
+        try {
+            int startIndex = message.indexOf(prefix) + prefix.length();
+            if (startIndex > prefix.length()) {
+                StringBuilder number = new StringBuilder();
+                for (int i = startIndex; i < message.length(); i++) {
+                    char c = message.charAt(i);
+                    if (Character.isDigit(c)) {
+                        number.append(c);
+                    } else {
+                        break;
+                    }
+                }
+                return Integer.parseInt(number.toString());
+            }
+        } catch (Exception e) {
+            // Just fall back to 0 if we can't parse it
+        }
+        return 0;
+    }
+    
+    /**
+     * Attempts to find the function name from the stack trace
+     */
+    private static String findFunctionNameFromStackTrace(Throwable t) {
+        StackTraceElement[] stackTrace = t.getStackTrace();
+        for (StackTraceElement element : stackTrace) {
+            if (element.getMethodName().equals("call") && 
+                element.getClassName().contains("Function")) {
+                // Try to find the function name in previous stack frames
+                for (int i = 0; i < stackTrace.length; i++) {
+                    String method = stackTrace[i].getMethodName();
+                    if (method.startsWith("visit") && 
+                        stackTrace[i].getClassName().contains("Interpreter")) {
+                        // This might be the function call context
+                        return null; // We would need deeper analysis to get the actual name
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Makes error messages more user-friendly
+     */
+    private static String formatUserFriendlyMessage(String message) {
+        if (message.contains("Error in function call")) {
+            return "Function call error: Incorrect number of arguments provided";
+        }
+        // Add more error message translations as needed
+        return message;
     }
     
     /**
@@ -162,6 +402,29 @@ public class ErrorHandler {
 
         public int getLine() { return line; }
         public int getColumn() { return column; }
+        
+        @Override
+        public String toString() {
+            return getMessage();
+        }
+        
+        @Override
+        public void printStackTrace(java.io.PrintStream s) {
+            // Only print the error message without the stack trace
+            s.println(getMessage());
+            if (line > 0 && column > 0) {
+                s.println("At line " + line + ", column " + column);
+            }
+        }
+        
+        @Override
+        public void printStackTrace(java.io.PrintWriter w) {
+            // Only print the error message without the stack trace
+            w.println(getMessage());
+            if (line > 0 && column > 0) {
+                w.println("At line " + line + ", column " + column);
+            }
+        }
     }
 
     public static class VGTypeException extends VGException {

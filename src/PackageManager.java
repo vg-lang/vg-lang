@@ -9,13 +9,27 @@ import java.nio.file.StandardCopyOption;
 
 public class  PackageManager {
     private static final String REPO_URL = "https://raw.githubusercontent.com/Husseinabdulameer11/vg-lang-packagemanager/main/packages.json";
-    private static final String PACKAGES_PATH = "packages/";
+    private static String PACKAGES_PATH = "packages/";
 
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
             System.out.println(" vgpkg <Command> [PackageName]");
             System.out.println("Example: vgpkg install mathlib");
+            System.out.println("Use --path=<custom_path> to specify a custom packages location");
             return;
+        }
+
+        // Check for custom path parameter
+        String customPath = null;
+        for (String arg : args) {
+            if (arg.startsWith("--path=")) {
+                customPath = arg.substring(7);
+                if (!customPath.endsWith("/") && !customPath.endsWith("\\")) {
+                    customPath += "/";
+                }
+                PACKAGES_PATH = customPath;
+                break;
+            }
         }
 
         String command = args[0];
@@ -24,6 +38,7 @@ public class  PackageManager {
                 if (args.length < 2) {
                     System.out.println("Missing PackageName: vgpkg install <PackageName>");
                 } else {
+                    ensurePackagesFolder();
                     installPackage(args[1]);
                 }
                 break;
@@ -31,10 +46,12 @@ public class  PackageManager {
                 if (args.length < 2) {
                     System.out.println("Missing PackageName: vgpkg remove <PackageName>");
                 } else {
+                    ensurePackagesFolder();
                     removePackage(args[1]);
                 }
                 break;
             case "list":
+                ensurePackagesFolder();
                 listInstalledPackages();
                 break;
             case "available":
@@ -45,6 +62,22 @@ public class  PackageManager {
                 System.out.println("Available Commands: install, remove, list, available ");
         }
     }
+    
+    /**
+     * Creates the packages directory if it doesn't exist
+     */
+    private static void ensurePackagesFolder() {
+        File packageDir = new File(PACKAGES_PATH);
+        if (!packageDir.exists()) {
+            boolean created = packageDir.mkdirs();
+            if (created) {
+                System.out.println("Created packages directory at: " + packageDir.getAbsolutePath());
+            } else {
+                System.out.println("Failed to create packages directory at: " + packageDir.getAbsolutePath());
+            }
+        }
+    }
+    
     private static String getFileNameFromUrl(String url) {
         int lastSlash = url.lastIndexOf('/');
         if (lastSlash == -1) {
@@ -54,14 +87,10 @@ public class  PackageManager {
     }
 
     public static void installPackage(String packageName) throws Exception {
-        File packageDir = new File(PACKAGES_PATH);
-        if (!packageDir.exists()) {
-            packageDir.mkdirs();
-        }
+        // Packages folder already ensured by this point
         String jsonStr = readFromURL(REPO_URL);
         JSONObject json = new JSONObject(jsonStr);
         JSONArray pkgArray = json.getJSONArray("packages");
-
 
         for (int i = 0; i < pkgArray.length(); i++) {
             JSONObject pkg = pkgArray.getJSONObject(i);
@@ -91,7 +120,6 @@ public class  PackageManager {
 
         if (files != null) {
             for (File file : files) {
-
                 if (file.getName().equals(packageName + ".vglib")) {
                     Files.delete(file.toPath());
                     removed = true;
@@ -106,7 +134,6 @@ public class  PackageManager {
         }
     }
 
-
     public static void listInstalledPackages() {
         File libDir = new File(PACKAGES_PATH);
         if (!libDir.exists()) {
@@ -118,11 +145,11 @@ public class  PackageManager {
             System.out.println("No packages Installed.");
             return;
         }
+        System.out.println("Installed packages at " + libDir.getAbsolutePath() + ":");
         for (File f : files) {
             System.out.println(f.getName());
         }
     }
-
 
     private static String readFromURL(String urlString) throws Exception {
         StringBuilder sb = new StringBuilder();
@@ -143,6 +170,7 @@ public class  PackageManager {
             Files.copy(in, Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
         }
     }
+    
     public static void listAvailablePackages() throws Exception {
         String jsonStr = readFromURL(REPO_URL);
         JSONObject json = new JSONObject(jsonStr);

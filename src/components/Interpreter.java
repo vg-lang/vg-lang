@@ -1040,12 +1040,27 @@ public class Interpreter extends vg_langBaseVisitor {
             String fieldName = ctx.IDENTIFIER(1).getText();
 
             Object obj = getVariable(objName);
-            if (!(obj instanceof Struct)) {
+            
+            if (obj instanceof StructDefinition) {
+                // Convert StructDefinition to Struct instance for assignment
+                StructDefinition structDef = (StructDefinition) obj;
+                Struct struct = structDef.createInstance();
+                
+                // Store the new struct instance back in the variable
+                for (SymbolTable table : symbolTableStack) {
+                    if (table.contains(objName)) {
+                        table.set(objName, struct);
+                        break;
+                    }
+                }
+                
+                return new VariableReference(struct, fieldName);
+            } else if (obj instanceof Struct) {
+                Struct struct = (Struct) obj;
+                return new VariableReference(struct, fieldName);
+            } else {
                 throw new RuntimeException("Cannot access field '" + fieldName + "' on non-struct object '" + objName + "'");
             }
-
-            Struct struct = (Struct) obj;
-            return new VariableReference(struct, fieldName);
         } else {
             throw new RuntimeException("Invalid assignment target.");
         }
@@ -1423,6 +1438,20 @@ public class Interpreter extends vg_langBaseVisitor {
                         );
                     }
                     value = member;
+                } else if (value instanceof StructDefinition) {
+                    // Automatically create a Struct instance if accessing fields on a StructDefinition
+                    if (memberName.equals("createInstance")) {
+                        // Support for explicit createInstance() call
+                        value = ((StructDefinition) value).createInstance();
+                    } else {
+                        // Auto-create instance and access the field 
+                        StructDefinition structDef = (StructDefinition) value;
+                        Struct struct = structDef.createInstance();
+                        if (!struct.hasField(memberName)) {
+                            throw new RuntimeException("Field '" + memberName + "' not found in struct '" + struct.getName() + "'");
+                        }
+                        value = struct.getField(memberName);
+                    }
                 } else if (value instanceof Struct) {
                     Struct struct = (Struct) value;
                     if (!struct.hasField(memberName)) {

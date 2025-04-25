@@ -38,7 +38,6 @@ public class Main {
                         System.out.println("Documentation generated successfully in: " + outputDir);
                     } catch (Exception e) {
                         System.err.println("Error generating documentation: " + e.getMessage());
-                        e.printStackTrace();
                     }
                 } else {
                     String filePath = args[0];
@@ -71,13 +70,15 @@ public class Main {
                             int line = e.getLine();
                             int column = e.getColumn();
                             
-                            if (line <= 0) line = 1;
-                            
-                            System.err.println(e.getMessage());
-                            System.err.println("At line " + line + ", column " + column);
+                            if (line <= 0) {
+                                // For errors without specific location (like AWT errors), just print the message
+                                System.err.println("VG Error: " + e.getMessage());
+                            } else {
+                                // For errors with a known location
+                                ErrorHandler.reportRuntimeError(line, column, e.getMessage());
+                            }
                         } catch (Exception e) {
-                            System.err.println("Unexpected error: " + e.getMessage());
-                            e.printStackTrace();
+                            System.err.println("Runtime error: " + e.getMessage());
                         }
                     } catch (IOException e) {
                         ErrorHandler.reportError("File Error", "Error reading file: " + e.getMessage());

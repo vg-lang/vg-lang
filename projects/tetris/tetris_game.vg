@@ -11,6 +11,11 @@ import Guilibrary.popup;
 import Guilibrary.Sound;
 import Guilibrary.Button;
 import Guilibrary.Image;
+import Guilibrary.TextField;
+import IO.File;
+import Util.String;
+import Util.Integer;
+import RegexLib.regex;
 
 
 /## 
@@ -58,6 +63,9 @@ var soundEnabled = true;
 var gamePaused = false;
 var mainMenuWindow = 0;
 var musicMuted = false;
+var highScoreWindow = 0;
+var nameTextField = 0;
+var highScoreFilePath = "tetris_high_scores.txt";
 
 /##
 # Tetromino types enumeration
@@ -364,7 +372,7 @@ function moveDown() {
             gameOver = true;
             Timer.stopTimer(gameTimer);
             playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/gameover.wav");
-            popup.info(gameWindow, "Game Over! Your score: " + score, "Game Over");
+            showHighScoreEntry();
         }
     }
 }
@@ -390,16 +398,37 @@ function hardDrop() {
         gameOver = true;
         Timer.stopTimer(gameTimer);
         playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/gameover.wav");
-        popup.info(gameWindow, "Game Over! Your score: " + score, "Game Over");
+        showHighScoreEntry();
     }
 
     ## Update score display
     Label.setLabelText(scoreLabel, "Score: " + score);
 }
 
-## Rotate the current piece
-function rotate() {
+## Rotate the current piece clockwise
+function rotateClockwise() {
     var newRotation = (currentPiece[5] + 1) % 4; ## rotation
+
+    if (isValidPosition(currentPiece, 0, 0, newRotation)) {
+        currentPiece[5] = newRotation; ## rotation
+        playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/move.wav");
+    } else {
+        ## Try wall kicks
+        if (isValidPosition(currentPiece, 1, 0, newRotation)) {
+            currentPiece[3] = currentPiece[3] + 1; ## x
+            currentPiece[5] = newRotation; ## rotation
+            playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/move.wav");
+        } else if (isValidPosition(currentPiece, -1, 0, newRotation)) {
+            currentPiece[3] = currentPiece[3] - 1; ## x
+            currentPiece[5] = newRotation; ## rotation
+            playGameSound("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/move.wav");
+        }
+    }
+}
+
+## Rotate the current piece counterclockwise
+function rotateCounterClockwise() {
+    var newRotation = (currentPiece[5] + 3) % 4; ## rotation (adding 3 is the same as subtracting 1 in modulo 4)
 
     if (isValidPosition(currentPiece, 0, 0, newRotation)) {
         currentPiece[5] = newRotation; ## rotation
@@ -521,6 +550,31 @@ function clearLines() {
     }
 }
 
+## Calculate the ghost piece position (where the piece would land if dropped)
+function calculateGhostPosition() {
+    ## Check if current piece is valid
+    if (currentPiece == 0 || array.getLength(currentPiece) < 6) {
+        return 0;
+    }
+    
+    ## Create a copy of the current piece
+    var ghostPiece = [];
+    for (var i = 0; i < array.getLength(currentPiece); i = i + 1) {
+        array.push(ghostPiece, currentPiece[i]);
+    }
+    
+    ## Drop the ghost piece as far as it can go
+    var dropDistance = 0;
+    while (isValidPosition(ghostPiece, 0, dropDistance + 1, ghostPiece[5])) {
+        dropDistance = dropDistance + 1;
+    }
+    
+    ## Set the ghost piece's y position
+    ghostPiece[4] = ghostPiece[4] + dropDistance;
+    
+    return ghostPiece;
+}
+
 ## Draw the game board
 function drawBoard() {
     ## Clear the game pane
@@ -538,6 +592,39 @@ function drawBoard() {
                 );
                 Pane.setPaneColor(blockPane, gameBoard[y][x]);
                 Pane.addComponentToPane(gamePane, blockPane);
+            }
+        }
+    }
+
+    ## Draw the ghost piece
+    var ghostPiece = calculateGhostPosition();
+    if (ghostPiece != 0) {
+        var shape = ghostPiece[2][ghostPiece[5]];
+        var height = array.getLength(shape);
+        var width = array.getLength(shape[0]);
+
+        for (var y = 0; y < height; y = y + 1) {
+            for (var x = 0; x < width; x = x + 1) {
+                if (shape[y][x] == 1) {
+                    var boardY = ghostPiece[4] + y;
+                    var boardX = ghostPiece[3] + x;
+
+                    ## Only draw if it's on the board and not where the current piece is
+                    if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH &&
+                        (boardY != currentPiece[4] + y || boardX != currentPiece[3] + x)) {
+                        
+                        ## Create a black block with white border for the ghost piece
+                        var ghostBlock = Pane.createPane(
+                            boardX * BLOCK_SIZE + 1,
+                            boardY * BLOCK_SIZE + 1,
+                            BLOCK_SIZE - 2,
+                            BLOCK_SIZE - 2
+                        );
+                        Pane.setPaneColor(ghostBlock, "#000000");  ## Black fill
+                        Pane.setPaneBorder(ghostBlock, "#FFFFFF", 1);  ## White border
+                        Pane.addComponentToPane(gamePane, ghostBlock);
+                    }
+                }
             }
         }
     }
@@ -769,8 +856,10 @@ function handleKeyPress(code) {
         moveRight();
     } else if (code == 40) { ## Down arrow
         moveDown();
-    } else if (code == 38) { ## Up arrow
-        rotate();
+    } else if (code == 90) { ## Z key
+        rotateCounterClockwise();
+    } else if (code == 67) { ## C key
+        rotateClockwise();
     } else if (code == 32) { ## Space bar
         hardDrop();
     }
@@ -830,20 +919,26 @@ function showMainMenu() {
     IOEvents.setOnClick(startButton, &startGameFromMenu());
     window.addComponentToWindow(mainMenuWindow, startButton);
     
+    ## Create a high scores button
+    var highScoresButton = Button.createButton("High Scores", 100, 220, 200, 50);
+    Button.setButtonColor(highScoresButton, "#FFFFFF");
+    IOEvents.setOnClick(highScoresButton, &showHighScores());
+    window.addComponentToWindow(mainMenuWindow, highScoresButton);
+    
     ## Create an instructions button
-    var instructionsButton = Button.createButton("Instructions", 100, 220, 200, 50);
+    var instructionsButton = Button.createButton("Instructions", 100, 290, 200, 50);
     Button.setButtonColor(instructionsButton, "#FFFFFF");
     IOEvents.setOnClick(instructionsButton, &showInstructions());
     window.addComponentToWindow(mainMenuWindow, instructionsButton);
     
     ## Create a mute/unmute button
-    var muteButton = Button.createButton("Toggle Music", 100, 290, 200, 50);
+    var muteButton = Button.createButton("Toggle Music", 100, 360, 200, 50);
     Button.setButtonColor(muteButton, "#FFFFFF");
     IOEvents.setOnClick(muteButton, &toggleMusicFromMenu());
     window.addComponentToWindow(mainMenuWindow, muteButton);
     
     ## Create a quit button
-    var quitButton = Button.createButton("Quit", 100, 360, 200, 50);
+    var quitButton = Button.createButton("Quit", 100, 430, 200, 50);
     Button.setButtonColor(quitButton, "#FFFFFF");
     IOEvents.setOnClick(quitButton, &quitGame());
     window.addComponentToWindow(mainMenuWindow, quitButton);
@@ -909,7 +1004,8 @@ function showInstructions() {
         "TETRIS CONTROLS\n\n" +
         "← : Move Left\n" +
         "→ : Move Right\n" +
-        "↑ : Rotate\n" +
+        "Z : Rotate Counter-Clockwise\n" +
+        "C : Rotate Clockwise\n" +
         "↓ : Soft Drop\n" +
         "Space : Hard Drop\n" +
         "P : Pause\n" +
@@ -994,6 +1090,306 @@ function initGame() {
         Sound.stopAllSounds();
         playGameSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
     }
+}
+
+## Show high score entry window
+function showHighScoreEntry() {
+    ## Create the high score window
+    highScoreWindow = window.create("Enter Your Name", 300, 200);
+    window.setBackgroundColor(highScoreWindow, "#333333");
+    
+    ## Create a label for instructions
+    var instructionLabel = Label.createLabel("Game Over! Your Score: " + score, 20, 20, 260, 30);
+    Label.setLabelTextColor(instructionLabel, "#FFFFFF");
+    window.addComponentToWindow(highScoreWindow, instructionLabel);
+    
+    ## Create a name entry label
+    var nameLabel = Label.createLabel("Enter Your Name:", 20, 60, 260, 30);
+    Label.setLabelTextColor(nameLabel, "#FFFFFF");
+    window.addComponentToWindow(highScoreWindow, nameLabel);
+    
+    ## Create a text field for name entry
+    nameTextField = TextField.createTextField("", 20, 90, 260, 30);
+    window.addComponentToWindow(highScoreWindow, nameTextField);
+    
+    ## Create a submit button
+    var submitButton = Button.createButton("Submit", 100, 140, 100, 40);
+    Button.setButtonColor(submitButton, "#00FF00");
+    IOEvents.setOnClick(submitButton, &saveHighScoreAndRestart());
+    window.addComponentToWindow(highScoreWindow, submitButton);
+    
+    ## Launch the window
+    window.launch(highScoreWindow);
+}
+
+## Save high score and restart game
+function saveHighScoreAndRestart() {
+    ## Get the player name from text field
+    var playerName = TextField.getText(nameTextField);
+    
+    ## If name is empty, use "Anonymous"
+    if (playerName == "") {
+        playerName = "Anonymous";
+    }
+    
+    ## Replace any commas in the name with spaces to avoid CSV parsing issues
+    var sanitizedName = regex.replaceAll(playerName, ",", " ");
+    
+    ## Format the high score entry
+    var currentTime = timestamp.currentTimeMillis();
+    var highScoreEntry = sanitizedName + "," + score + "," + level + "," + currentTime + "\n";
+    
+    ## Append the score to the high score file
+    try {
+        ## Check if file exists first
+        var existingData = File.readFile(highScoreFilePath);
+        ## File exists, append to it
+        File.appendToFile(highScoreFilePath, highScoreEntry);
+    } catch (e) {
+        ## File doesn't exist yet, create it with header
+        File.writeFile(highScoreFilePath, "Player,Score,Level,Timestamp\n" + highScoreEntry);
+    }
+    
+    ## Close the high score window
+    window.dispose(highScoreWindow);
+    
+    ## Reset the game
+    resetGame();
+}
+
+## Reset the game
+function resetGame() {
+    ## Stop the game timer
+    Timer.stopTimer(gameTimer);
+    
+    ## Stop any playing sounds
+    Sound.stopAllSounds();
+    
+    ## Reset game state variables
+    score = 0;
+    level = 1;
+    gameSpeed = GAME_SPEED_INITIAL;
+    gameOver = false;
+    gamePaused = false;
+    
+    ## Initialize the game board
+    initializeBoard();
+    
+    ## Generate new pieces
+    nextPiece = generateRandomTetromino();
+    currentPiece = generateRandomTetromino();
+    updateNextPieceDisplay();
+    
+    ## Update score and level display
+    Label.setLabelText(scoreLabel, "Score: " + score);
+    Label.setLabelText(levelLabel, "Level: " + level);
+    
+    ## Draw the initial state
+    drawBoard();
+    
+    ## Start a new game timer
+    gameTimer = Timer.createTimer(gameSpeed, &gameLoop());
+    Timer.startTimer(gameTimer);
+    
+    ## Restart music
+    playGameSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+}
+
+## Display high scores from the file
+function showHighScores() {
+    var highScoresWindow = window.create("Tetris - High Scores", 400, 500);
+    window.setBackgroundColor(highScoresWindow, "#000000");
+    
+    ## Create a title label
+    var titleLabel = Label.createLabel("Top Scores", 100, 20, 200, 30);
+    Label.setLabelTextColor(titleLabel, "#FFFFFF");
+    window.addComponentToWindow(highScoresWindow, titleLabel);
+    
+    var scoreData = "";
+    try {
+        ## Read high score data from file
+        scoreData = File.readFile(highScoreFilePath);
+    } catch (e) {
+        ## If file doesn't exist, show message
+        var noScoresLabel = Label.createLabel("No high scores yet!", 100, 60, 200, 30);
+        Label.setLabelTextColor(noScoresLabel, "#FFFFFF");
+        window.addComponentToWindow(highScoresWindow, noScoresLabel);
+        
+        ## Add back button
+        var backButton = Button.createButton("Back", 150, 400, 100, 40);
+        Button.setButtonColor(backButton, "#FFFFFF");
+        IOEvents.setOnClick(backButton, &closeHighScoresWindow(highScoresWindow));
+        window.addComponentToWindow(highScoresWindow, backButton);
+        
+        window.launch(highScoresWindow);
+        return;
+    }
+    
+    ## Split the file content into lines
+    var lines = splitByNewline(scoreData);
+    var entries = [];
+    
+    ## Skip the header line (first line)
+    for (var i = 1; i < array.getLength(lines); i = i + 1) {
+        if (lines[i] != "") {
+            var entry = parseScoreLine(lines[i]);
+            if (array.getLength(entry) >= 3) {
+                array.push(entries, entry);
+            }
+        }
+    }
+    
+    ## Sort entries by score (descending)
+    for (var i = 0; i < array.getLength(entries); i = i + 1) {
+        for (var j = i + 1; j < array.getLength(entries); j = j + 1) {
+            if (Integer.toInt(entries[j][1]) > Integer.toInt(entries[i][1])) {
+                var temp = entries[i];
+                entries[i] = entries[j];
+                entries[j] = temp;
+            }
+        }
+    }
+    
+    ## Display the top scores (up to 10)
+    var maxToShow = arithmetic.min(10, array.getLength(entries));
+    var yPos = 60;
+    
+    ## Define column positions
+    var rankX = 50;    ## Position for rank column
+    var nameX = 100;   ## Position for player name column
+    var scoreX = 220;  ## Position for score column
+    var levelX = 300;  ## Position for level column
+    
+    ## Add header row
+    var rankHeader = Label.createLabel("Rank", rankX, yPos, 50, 30);
+    Label.setLabelTextColor(rankHeader, "#FFFF00");
+    window.addComponentToWindow(highScoresWindow, rankHeader);
+    
+    var nameHeader = Label.createLabel("Player", nameX, yPos, 120, 30);
+    Label.setLabelTextColor(nameHeader, "#FFFF00");
+    window.addComponentToWindow(highScoresWindow, nameHeader);
+    
+    var scoreHeader = Label.createLabel("Score", scoreX, yPos, 80, 30);
+    Label.setLabelTextColor(scoreHeader, "#FFFF00");
+    window.addComponentToWindow(highScoresWindow, scoreHeader);
+    
+    var levelHeader = Label.createLabel("Level", levelX, yPos, 50, 30);
+    Label.setLabelTextColor(levelHeader, "#FFFF00");
+    window.addComponentToWindow(highScoresWindow, levelHeader);
+    
+    yPos = yPos + 30;
+    
+    ## Draw a separator line
+    var separatorPane = Pane.createPane(50, yPos, 300, 1);
+    Pane.setPaneColor(separatorPane, "#444444");
+    window.addComponentToWindow(highScoresWindow, separatorPane);
+    
+    yPos = yPos + 10;
+    
+    for (var i = 0; i < maxToShow; i = i + 1) {
+        var rank = i + 1;
+        var name = entries[i][0];
+        var score = entries[i][1];
+        var level = entries[i][2];
+        
+        ## Add each column as a separate label with fixed position
+        var rankLabel = Label.createLabel(rank + ".", rankX, yPos, 50, 30);
+        Label.setLabelTextColor(rankLabel, "#FFFFFF");
+        window.addComponentToWindow(highScoresWindow, rankLabel);
+        
+        var nameLabel = Label.createLabel(name, nameX, yPos, 120, 30);
+        Label.setLabelTextColor(nameLabel, "#FFFFFF");
+        window.addComponentToWindow(highScoresWindow, nameLabel);
+        
+        var scoreLabel = Label.createLabel(score, scoreX, yPos, 80, 30);
+        Label.setLabelTextColor(scoreLabel, "#FFFFFF");
+        window.addComponentToWindow(highScoresWindow, scoreLabel);
+        
+        var levelLabel = Label.createLabel(level, levelX, yPos, 50, 30);
+        Label.setLabelTextColor(levelLabel, "#FFFFFF");
+        window.addComponentToWindow(highScoresWindow, levelLabel);
+        
+        yPos = yPos + 30;
+    }
+    
+    ## Add back button
+    var backButton = Button.createButton("Back", 150, 400, 100, 40);
+    Button.setButtonColor(backButton, "#FFFFFF");
+    IOEvents.setOnClick(backButton, &closeHighScoresWindow(highScoresWindow));
+    window.addComponentToWindow(highScoresWindow, backButton);
+    
+    window.launch(highScoresWindow);
+}
+
+## Helper function to split string by newline character
+function splitByNewline(text) {
+    var lines = [];
+    var currentLine = "";
+    
+    for (var i = 0; i < String.stringLength(text); i = i + 1) {
+        var char = String.substring(text, i, i + 1);
+        
+        if (char == "\n") {
+            ## End of line reached, add current line to lines array
+            array.push(lines, currentLine);
+            currentLine = "";
+        } else {
+            ## Add character to current line
+            currentLine = currentLine + char;
+        }
+    }
+    
+    ## Add the last line if there's any text left
+    if (currentLine != "") {
+        array.push(lines, currentLine);
+    }
+    
+    return lines;
+}
+
+## Helper function to parse a score line into fields
+function parseScoreLine(line) {
+    var fields = [];
+    var parts = splitByComma(line);
+    
+    ## Only return valid entries (need at least name, score, level)
+    if (array.getLength(parts) >= 3) {
+        return parts;
+    }
+    
+    ## Return empty array for invalid entries
+    return [];
+}
+
+## Helper function to split string by comma
+function splitByComma(text) {
+    var fields = [];
+    var currentField = "";
+    
+    for (var i = 0; i < String.stringLength(text); i = i + 1) {
+        var char = String.substring(text, i, i + 1);
+        
+        if (char == ",") {
+            ## End of field, add current field to fields array
+            array.push(fields, currentField);
+            currentField = "";
+        } else {
+            ## Add character to current field
+            currentField = currentField + char;
+        }
+    }
+    
+    ## Add the last field if there's any text left
+    if (currentField != "") {
+        array.push(fields, currentField);
+    }
+    
+    return fields;
+}
+
+## Close high scores window
+function closeHighScoresWindow(highScoresWindow) {
+    window.dispose(highScoresWindow);
 }
 
 ## Start with the main menu instead of directly starting the game

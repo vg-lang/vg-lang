@@ -1,0 +1,190 @@
+import Guilibrary.window.*;
+import Guilibrary.Button;
+import Guilibrary.Label;
+import Guilibrary.Pane;
+import Guilibrary.IOEvents;
+import Guilibrary.Sound;
+import Guilibrary.Timer;
+import Random.number;
+import MathLib.arithmetic;
+import Util.String;
+import Util.Integer;
+
+## Game properties
+var score = 0;
+var speed = 1000; ## Initial mole popup speed in milliseconds
+var running = true;
+var currentMoleIndex = 0; ## Initialize to a valid index
+
+## UI elements
+var gameWindow = 0;
+var scoreLabel = 0;
+var gamePane = 0;
+var buttons = [0, 0, 0, 0, 0, 0, 0, 0, 0]; ## Flat array for 9 buttons
+
+## Sound effects
+var hitSound = "";
+var missSound = "";
+
+## Store button indices for click handlers
+var buttonIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+## Initialize the game
+function initGame() {
+    ## Initialize window
+    gameWindow = create("Whack-A-Mole", 400, 450);
+    setBackgroundColor(gameWindow, "#FFFFFF");
+
+    ## Set sound file paths
+    hitSound = "C:/Users/hodif/Desktop/usn2024/vg lang/projects/hit.wav";
+    missSound = "C:/Users/hodif/Desktop/usn2024/vg lang/projects/miss.wav";
+
+    ## Create score label
+    scoreLabel = Label.createLabel("Score: 0", 150, 20, 100, 30);
+    Label.setLabelTextColor(scoreLabel, "#000000");
+    addComponentToWindow(gameWindow, scoreLabel);
+
+    ## Create game pane
+    gamePane = Pane.createPane(0, 50, 400, 400);
+    Pane.setPaneColor(gamePane, "#90EE90");  ## lightgreen
+    addComponentToWindow(gameWindow, gamePane);
+
+    ## Create buttons in a 3x3 grid
+    for (var i = 0; i < 9; i = i + 1) {
+        ## Calculate row and column using integer division
+        var row = i / 3; ## Integer division in VG language
+        var col = i % 3;
+        
+        var btn = Button.createButton("", col*130+30, row*130+30, 100, 100);
+        
+        ## Set up click handler based on position
+        if (i == 0){ IOEvents.setOnClick(btn, &handleClick0());}
+        if (i == 1){ IOEvents.setOnClick(btn, &handleClick1());}
+        if (i == 2){ IOEvents.setOnClick(btn, &handleClick2());}
+        if (i == 3){ IOEvents.setOnClick(btn, &handleClick3());}
+        if (i == 4){ IOEvents.setOnClick(btn, &handleClick4());}
+        if (i == 5){ IOEvents.setOnClick(btn, &handleClick5());}
+        if (i == 6){ IOEvents.setOnClick(btn, &handleClick6());}
+        if (i == 7){ IOEvents.setOnClick(btn, &handleClick7());}
+        if (i == 8){ IOEvents.setOnClick(btn, &handleClick8());}
+        
+        Pane.addComponentToPane(gamePane, btn);
+        buttons[i] = btn;
+
+        ## Initialize all buttons with the default color
+        Button.setButtonColor(buttons[i], "#DDDDDD");
+    }
+
+    ## Create timer for mole spawning
+    var moleTimer = Timer.createTimer(speed, &spawnMoleCallback());
+    Timer.startTimer(moleTimer);
+
+    ## Start the game with initial mole
+    spawnMole();
+
+    ## Launch the window
+    launch(gameWindow);
+}
+
+## Individual click handlers for each button
+function handleClick0() { checkHit(0); }
+function handleClick1() { checkHit(1); }
+function handleClick2() { checkHit(2); }
+function handleClick3() { checkHit(3); }
+function handleClick4() { checkHit(4); }
+function handleClick5() { checkHit(5); }
+function handleClick6() { checkHit(6); }
+function handleClick7() { checkHit(7); }
+function handleClick8() { checkHit(8); }
+
+## Timer callback function
+function spawnMoleCallback() {
+    if (running) {
+        spawnMole();
+    }
+}
+
+function spawnMole() {
+    if (!running) {
+        return;
+    }
+
+    ## Reset the current mole to default color
+    Button.setButtonColor(buttons[currentMoleIndex], "#DDDDDD");
+
+    ## Spawn new mole at a random position - ensure it's an integer
+    currentMoleIndex = number.integer(0, 8);
+
+    ## Set the new mole color
+    Button.setButtonColor(buttons[currentMoleIndex], "#FF0000");
+    
+    ## Debug output to console
+    print("New mole at position: " + currentMoleIndex);
+}
+
+## Function to get the integer part of a number
+function getIntValue(num) {
+    ## Convert the number to a string
+    var str = String.toString(num);
+    
+    ## Find the position of the dot
+    var dotIndex = String.indexOf(str, ".");
+    
+    ## If there's a dot, return only the part before it
+    if (dotIndex > 0) {
+        return String.substring(str, 0, dotIndex);
+    }
+    
+    ## Otherwise return the whole string
+    return str;
+}
+
+function checkHit(index) {
+    ## Debug output
+    print("Button clicked: " + index + ", Current mole: " + currentMoleIndex);
+    
+    ## Get integer values as strings
+    var indexInt = getIntValue(index);
+    var moleInt = getIntValue(currentMoleIndex);
+    
+    print("Integer parts - Clicked: '" + indexInt + "', Mole: '" + moleInt + "'");
+    
+    ## Compare the integer parts
+    if (indexInt == moleInt) {
+        print("INTEGER MATCH!");
+        ## Hit the mole
+        score = score + 50;
+        print("HIT! Playing sound: " + hitSound);
+        Sound.playSound(hitSound);
+        speed = arithmetic.max(200, speed - 50);
+
+        ## Reset the mole immediately
+        spawnMole();
+    } 
+    else {
+        ## Missed the mole
+        print("NO INTEGER MATCH - MISS!");
+        print("MISS! Playing sound: " + missSound);
+        Sound.playSound(missSound);
+    }
+
+    ## Update score display
+    Label.setLabelText(scoreLabel, "Score: " + score);
+
+    ## Check for win condition
+    if (score >= 1000) {
+        endGame("You win!");
+    }
+}
+
+function endGame(message) {
+    running = false;
+
+    Label.setLabelText(scoreLabel, message);
+    
+    ## Reset the current mole to default color
+    Button.setButtonColor(buttons[currentMoleIndex], "#DDDDDD");
+}
+
+## Start the game
+initGame(); 

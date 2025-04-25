@@ -83,19 +83,6 @@ public class VGErrorListener extends BaseErrorListener {
 
         return errorMsg;
     }
-    
-    /**
-     * Handles AWT event exceptions by converting them to VGExceptions
-     */
-    public static void handleAWTException(Throwable t) {
-
-        String message = t.getMessage();
-        if (message == null) {
-            message = t.getClass().getName();
-        }
-        
-        throw new ErrorHandler.VGException("AWT Event Error: " + message, -1, -1);
-    }
 
     private String extractInvalidEscape(String errorMsg) {
         int backslashPos = errorMsg.indexOf('\\');
