@@ -62,10 +62,18 @@ public class Interpreter extends vg_langBaseVisitor {
     }
 
     public void loadLibrariesFromFolder(String folderPath) {
-        try (Stream<Path> paths = Files.walk(Paths.get(folderPath))) {
-            paths.filter(Files::isRegularFile)
-                    .filter(path -> path.toString().endsWith(".vglib"))
-                    .forEach(path -> loadLibraryFile(path.toString()));
+        try {
+            Path path = Paths.get(folderPath);
+            if (!Files.exists(path)) {
+                Files.createDirectories(path);
+                System.out.println("Created packages directory: " + folderPath);
+            }
+
+            try (Stream<Path> paths = Files.walk(path)) {
+                paths.filter(Files::isRegularFile)
+                        .filter(p -> p.toString().endsWith(".vglib"))
+                        .forEach(p -> loadLibraryFile(p.toString()));
+            }
         } catch (IOException e) {
             throw new RuntimeException("Error loading libraries from folder: " + folderPath, e);
         }

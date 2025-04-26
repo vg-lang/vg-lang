@@ -61,6 +61,12 @@ public class Main {
                         Path scriptPath = Paths.get(filePath).toAbsolutePath();
                         Path projectRoot = scriptPath.getParent();
                         Path packageFolder = projectRoot.resolve("packages");
+                        
+                        if (!Files.exists(packageFolder)) {
+                            Files.createDirectories(packageFolder);
+                            System.out.println("Created packages directory: " + packageFolder);
+                        }
+                        
                         String sourceCode = new String(Files.readAllBytes(Paths.get(filePath)));
                         Interpreter interpreter = new Interpreter(packageFolder.toString());
                         

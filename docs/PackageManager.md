@@ -53,6 +53,18 @@ The repository contains a `packages.json` file that lists all available packages
 
 Installed packages are stored in the `packages/` directory of your VG Language installation. Each package is stored as a `.vglib` file that can be imported into your programs.
 
+The `packages/` directory is automatically created if it doesn't exist when:
+- Running a VG program
+- Installing a package
+- Using any package manager commands
+
+## Custom Package Location
+
+
+```sh
+vgpkg install mathlib 
+```
+
 ## Creating Your Own Packages
 
 You can create your own packages by:

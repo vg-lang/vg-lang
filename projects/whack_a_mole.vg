@@ -32,7 +32,7 @@ var buttonIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0];
 ## Initialize the game
 function initGame() {
     ## Initialize window
-    gameWindow = create("Whack-A-Mole", 400, 450);
+    gameWindow = create("Whack-A-Mole", 400, 484);
     setBackgroundColor(gameWindow, "#FFFFFF");
 
     ## Set sound file paths

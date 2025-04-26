@@ -69,11 +69,17 @@ public class  PackageManager {
     private static void ensurePackagesFolder() {
         File packageDir = new File(PACKAGES_PATH);
         if (!packageDir.exists()) {
-            boolean created = packageDir.mkdirs();
-            if (created) {
-                System.out.println("Created packages directory at: " + packageDir.getAbsolutePath());
-            } else {
-                System.out.println("Failed to create packages directory at: " + packageDir.getAbsolutePath());
+            try {
+                boolean created = packageDir.mkdirs();
+                if (created) {
+                    System.out.println("Created packages directory at: " + packageDir.getAbsolutePath());
+                } else {
+                    System.err.println("Failed to create packages directory at: " + packageDir.getAbsolutePath());
+                    System.err.println("You may need to run this command with administrator privileges or check folder permissions.");
+                }
+            } catch (SecurityException e) {
+                System.err.println("Security exception when creating packages directory: " + e.getMessage());
+                System.err.println("You may need to run this command with administrator privileges.");
             }
         }
     }
