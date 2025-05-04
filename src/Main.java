@@ -29,10 +29,10 @@ public class Main {
                         System.out.println("  <output-directory> is where the documentation will be generated");
                         return;
                     }
-                    
+
                     String inputPath = args[1];
                     String outputDir = args[2];
-                    
+
                     try {
                         generateDocumentation(inputPath, outputDir);
                         System.out.println("Documentation generated successfully in: " + outputDir);
@@ -61,26 +61,24 @@ public class Main {
                         Path scriptPath = Paths.get(filePath).toAbsolutePath();
                         Path projectRoot = scriptPath.getParent();
                         Path packageFolder = projectRoot.resolve("packages");
-                        
+
                         if (!Files.exists(packageFolder)) {
                             Files.createDirectories(packageFolder);
                             System.out.println("Created packages directory: " + packageFolder);
                         }
-                        
+
                         String sourceCode = new String(Files.readAllBytes(Paths.get(filePath)));
                         Interpreter interpreter = new Interpreter(packageFolder.toString());
-                        
+
                         try {
                             interpreter.interpret(sourceCode);
                         } catch (ErrorHandler.VGException e) {
                             int line = e.getLine();
                             int column = e.getColumn();
-                            
+
                             if (line <= 0) {
-                                // For errors without specific location (like AWT errors), just print the message
                                 System.err.println("VG Error: " + e.getMessage());
                             } else {
-                                // For errors with a known location
                                 ErrorHandler.reportRuntimeError(line, column, e.getMessage());
                             }
                         } catch (Exception e) {
@@ -121,7 +119,7 @@ public class Main {
 
     private static void generateDocumentation(String inputPath, String outputDir) throws IOException {
         DocGenerator docGen = new DocGenerator(outputDir);
-        
+
         File inputFile = new File(inputPath);
         if (inputFile.isDirectory()) {
 
