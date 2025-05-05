@@ -183,13 +183,6 @@ public class Main {
                     System.err.println("Error clearing console: " + e.getMessage());
                 }
                 continue;
-            } else if (input.equalsIgnoreCase("libs")) {
-                if (loadedLibraries.isEmpty()) {
-                    System.out.println("No libraries are currently loaded.");
-                } else {
-                    System.out.println("Loaded libraries: " + String.join(", ", loadedLibraries));
-                }
-                continue;
             }
 
             inputBuilder.append(input);
@@ -316,7 +309,6 @@ public class Main {
         System.out.println("  exit   - Exit the REPL");
         System.out.println("  quit   - Exit the REPL");
         System.out.println("  clear  - Clear the console");
-        System.out.println("  libs   - Show currently loaded libraries");
         System.out.println("  .      - End multi-line input (when in multi-line mode)");
 
     }
