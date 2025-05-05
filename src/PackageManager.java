@@ -15,7 +15,6 @@ public class  PackageManager {
         if (args.length < 1) {
             System.out.println(" vgpkg <Command> [PackageName]");
             System.out.println("Example: vgpkg install mathlib");
-            System.out.println("Use --path=<custom_path> to specify a custom packages location");
             return;
         }
 
