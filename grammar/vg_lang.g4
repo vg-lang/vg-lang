@@ -23,7 +23,7 @@ statement
     | libraryDeclaration
     | importStatement
     | structDeclaration
-     | enumDeclaration
+    | enumDeclaration
     ;
 
         importStatement
