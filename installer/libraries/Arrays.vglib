@@ -1,0 +1,79 @@
+library Arrays {
+    /## The array namespace contains functions for manipulating arrays.
+    # This namespace provides utility functions for working with arrays, including
+    # getting array length, adding and removing elements, and other common operations.
+    ##/
+    namespace array {
+        /## Gets the length of an array.
+        # This function returns the number of elements in the specified array.
+        #
+        # @param array The array to get the length of
+        # @return The number of elements in the array
+        # @author Hussein Abdul-Ameer
+        ##/
+        function getLength(array) {
+            return VgSystemCall("components.ArrayUtils", "length", array);
+        }
+
+        /## Adds an element to the end of an array.
+        # This function appends the specified element to the end of the array (push operation).
+        #
+        # @param array The array to modify
+        # @param element The element to add to the end of the array
+        # @return The modified array
+        # @author Hussein Abdul-Ameer
+        ##/
+        function push(array, element) {
+            VgSystemCall("components.ArrayUtils", "push", array, element);
+            return array;  ## Return the modified array
+        }
+
+        /## Replaces all occurrences of a substring.
+        # This function replaces all occurrences of a target substring with a replacement string.
+        #
+        # @param original The original string to modify
+        # @param target The substring to replace
+        # @param replacement The string to replace the target with
+        # @return The modified string with all replacements made
+        # @author Hussein Abdul-Ameer
+        ##/
+        function replaceAll(original, target, replacement) {
+            return VgSystemCall("components.ArrayUtils", "replaceAll", original, target, replacement);
+        }
+
+        /## Removes and returns the last element of an array.
+        # This function removes the last element from the array and returns that element (pop operation).
+        #
+        # @param array The array to modify
+        # @return The removed element from the end of the array
+        # @author Hussein Abdul-Ameer
+        ##/
+        function pop(array) {
+            return VgSystemCall("components.ArrayUtils", "pop", array);
+        }
+
+        /## Adds an element to the beginning of an array.
+        # This function inserts the specified element at the start of the array (unshift operation).
+        #
+        # @param array The array to modify
+        # @param element The element to add to the beginning of the array
+        # @return The modified array
+        # @author Hussein Abdul-Ameer
+        ##/
+        function unshift(array, element) {
+            VgSystemCall("components.ArrayUtils", "unshift", array, element);
+            return array;
+        }
+
+        /## Removes and returns the first element of an array.
+        # This function removes the first element from the array and returns that element (shift operation).
+        #
+        # @param array The array to modify
+        # @return The removed element from the beginning of the array
+        # @author Hussein Abdul-Ameer
+        ##/
+        function shift(array) {
+            return VgSystemCall("components.ArrayUtils", "shift", array);
+        }
+    }
+}

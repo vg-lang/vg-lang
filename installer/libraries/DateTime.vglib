@@ -1,0 +1,97 @@
+library DateTime {
+    /## The timestamp namespace contains functions for working with Unix timestamps.
+    # This namespace provides functionality for getting the current time as a
+    # Unix timestamp (milliseconds since January 1, 1970).
+    ##/
+    namespace timestamp {
+        /## Gets the current time in milliseconds since the Unix epoch.
+        # This function returns the current time as milliseconds since
+        # January 1, 1970, 00:00:00 GMT.
+        #
+        # @return The current time in milliseconds
+        # @author Hussein Abdul-Ameer
+        ##/
+        function currentTimeMillis() {
+            return VgSystemCall("java.lang.System", "currentTimeMillis");
+        }
+    }
+
+    /## The time namespace contains functions for working with time components.
+    # This namespace provides functionality for getting the current hour,
+    # minute, and second.
+    ##/
+    namespace time {
+        /## Gets the current hour.
+        # This function returns the current hour in 24-hour format (0-23).
+        #
+        # @return The current hour (0-23)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function getHour() {
+            var date = VgSystemCall("java.util.Date", "<init>");
+            return VgSystemCall("java.util.Date", "getHours", date);
+        }
+
+        /## Gets the current minute.
+        # This function returns the current minute (0-59).
+        #
+        # @return The current minute (0-59)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function getMinute() {
+            var date = VgSystemCall("java.util.Date", "<init>");
+            return VgSystemCall("java.util.Date", "getMinutes", date);
+        }
+
+        /## Gets the current second.
+        # This function returns the current second (0-59).
+        #
+        # @return The current second (0-59)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function getSecond() {
+            var date = VgSystemCall("java.util.Date", "<init>");
+            return VgSystemCall("java.util.Date", "getSeconds", date);
+        }
+    }
+
+    /## The date namespace contains functions for working with date components.
+    # This namespace provides functionality for getting the current day,
+    # month, and year.
+    ##/
+    namespace date {
+        /## Gets the current day of the month.
+        # This function returns the current day of the month (1-31).
+        #
+        # @return The current day of the month (1-31)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function getDay() {
+            var d = VgSystemCall("java.util.Date", "<init>");
+            return VgSystemCall("java.util.Date", "getDate", d);
+        }
+
+        /## Gets the current month.
+        # This function returns the current month (0-11, where 0 = January and 11 = December).
+        #
+        # @return The current month (0-11)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function getMonth() {
+            var d = VgSystemCall("java.util.Date", "<init>");
+            return VgSystemCall("java.util.Date", "getMonth", d);
+        }
+
+        /## Gets the current year.
+        # This function returns the current year (e.g., 2024).
+        #
+        # @return The current year (e.g., 2024)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function getYear() {
+            var d = VgSystemCall("java.util.Date", "<init>");
+            var y = VgSystemCall("java.util.Date", "getYear", d);
+            return y + 1900;
+        }
+    }
+}

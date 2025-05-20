@@ -1,0 +1,390 @@
+library MathLib {
+    /## The constants namespace contains mathematical constants.
+    # This namespace provides common mathematical constants like pi and e.
+    ##/
+    namespace constants {
+        /## Returns the value of pi.
+        # This function returns the mathematical constant π (pi), which is the ratio
+        # of a circle's circumference to its diameter.
+        #
+        # @return The value of pi (approximately 3.14159)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function pi() {
+            return 3.14159;
+        }
+
+        /## Returns the value of e.
+        # This function returns the mathematical constant e, which is the base
+        # of the natural logarithm.
+        #
+        # @return The value of e (approximately 2.71828)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function e() {
+            return 2.718281828459045;
+        }
+    }
+
+    /## The arithmetic namespace contains basic arithmetic operations.
+    # This namespace provides elementary mathematical operations like
+    # addition, subtraction, multiplication, and division.
+    ##/
+    namespace arithmetic {
+        /## Adds two numbers.
+        # This function returns the sum of two numbers.
+        #
+        # @param a The first number
+        # @param b The second number
+        # @return The sum of a and b
+        # @author Hussein Abdul-Ameer
+        ##/
+        function add(a, b) {
+            return a + b;
+        }
+
+        /## Subtracts one number from another.
+        # This function returns the difference between two numbers.
+        #
+        # @param a The number to subtract from
+        # @param b The number to subtract
+        # @return The difference (a - b)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function subtract(a, b) {
+            return a - b;
+        }
+
+        /## Multiplies two numbers.
+        # This function returns the product of two numbers.
+        #
+        # @param a The first number
+        # @param b The second number
+        # @return The product of a and b
+        # @author Hussein Abdul-Ameer
+        ##/
+        function multiply(a, b) {
+            return a * b;
+        }
+
+        /## Divides one number by another.
+        # This function returns the quotient of two numbers.
+        # Returns an error message if attempting to divide by zero.
+        #
+        # @param a The dividend (number to be divided)
+        # @param b The divisor (number to divide by)
+        # @return The quotient (a / b) or an error message if b is zero
+        # @author Hussein Abdul-Ameer
+        ##/
+        function divide(a, b) {
+            if (b == 0) {
+                return "Error: Division by zero";
+            } else {
+                return a / b;
+            }
+        }
+
+        /## Returns the absolute value of a number.
+        # This function returns the absolute (non-negative) value of a number.
+        #
+        # @param x The number to get the absolute value of
+        # @return The absolute value of x
+        # @author Hussein Abdul-Ameer
+        ##/
+        function abs(x) {
+            if (x < 0) {
+                return -x;
+            } else {
+                return x;
+            }
+        }
+
+        /## Returns the smaller of two numbers.
+        # This function compares two numbers and returns the smaller one.
+        #
+        # @param a The first number to compare
+        # @param b The second number to compare
+        # @return The smaller of a and b
+        # @author Hussein Abdul-Ameer
+        ##/
+        function min(a, b) {
+            if (a > b) {
+                return b;
+            } else {
+                return a;
+            }
+        }
+
+        /## Returns the larger of two numbers.
+        # This function compares two numbers and returns the larger one.
+        #
+        # @param a The first number to compare
+        # @param b The second number to compare
+        # @return The larger of a and b
+        # @author Hussein Abdul-Ameer
+        ##/
+        function max(a, b) {
+            if (a > b) {
+                return a;
+            } else {
+                return b;
+            }
+        }
+
+        /## Returns the largest integer less than or equal to a number.
+        # This function rounds a number down to the nearest integer.
+        #
+        # @param x The number to floor
+        # @return The largest integer less than or equal to x
+        ##/
+        function floor(x) {
+            if (x >= 0) {
+                return x - (x % 1);
+            } else {
+                return x - (x % 1) - 1;
+            }
+        }
+
+        /## Returns the smallest integer greater than or equal to a number.
+        # This function rounds a number up to the nearest integer.
+        #
+        # @param x The number to ceil
+        # @return The smallest integer greater than or equal to x
+        ##/
+        function ceil(x) {
+            if (x % 1 == 0) {
+                return x;
+            } else if (x > 0) {
+                return x - (x % 1) + 1;
+            } else {
+                return x - (x % 1);
+            }
+        }
+    }
+
+    /## The power namespace contains functions for exponentiation and roots.
+    # This namespace provides functionality for calculating powers, square roots,
+    # and other related operations.
+    ##/
+    namespace power {
+        /## Raises a base to an exponent.
+        # This function calculates the result of raising a base number to a power.
+        #
+        # @param base The base number
+        # @param exponent The exponent (power) to raise the base to
+        # @return The result of base^exponent
+        ##/
+        function pow(base, exponent) {
+            var result = 1;
+            var isNegative = 0;
+            if (exponent < 0) {
+                isNegative = 1;
+                exponent = -exponent;
+            }
+
+            for (var i = 0; i < exponent; i = i + 1) {
+                result = result * base;
+            }
+
+            if (isNegative) {
+                return 1 / result;
+            } else {
+                return result;
+            }
+        }
+
+        /## Calculates the square root of a number.
+        # This function returns the square root of a non-negative number.
+        # Returns -1 if the input is negative.
+        #
+        # @param x The number to find the square root of
+        # @return The square root of x, or -1 if x is negative
+        ##/
+        function sqrt(x) {
+            if (x < 0) {
+                return -1;
+            }
+            var guess = x;
+            var tolerance = 1 / 100000; ## 0.00001
+            while ((guess * guess - x > tolerance) || (guess * guess - x < -tolerance)) {
+                guess = (guess + x / guess) / 2;
+            }
+            return guess;
+        }
+    }
+
+    /## The sequence namespace contains functions for mathematical sequences.
+    # This namespace provides functionality for calculating factorial, Fibonacci,
+    # and other mathematical sequences.
+    ##/
+    namespace sequence {
+        /## Calculates the factorial of a number.
+        # This function returns the product of all positive integers less than or equal to n.
+        #
+        # @param n The non-negative integer to calculate the factorial of
+        # @return The factorial of n (n!)
+        ##/
+        function factorial(n) {
+            var result = 1;
+            for (var i = 2; i <= n; i = i + 1) {
+                result = result * i;
+            }
+            return result;
+        }
+
+        /## Calculates the nth Fibonacci number.
+        # This function returns the nth number in the Fibonacci sequence,
+        # where each number is the sum of the two preceding ones.
+        #
+        # @param n The position in the Fibonacci sequence (0-based)
+        # @return The nth Fibonacci number
+        ##/
+        function fibonacci(n) {
+            if (n == 0){return 0;}
+            if (n == 1){return 1;}
+
+            var a = 0;
+            var b = 1;
+            var result = 0;
+
+            for (var i = 2; i <= n; i = i + 1) {
+                result = a + b;
+                a = b;
+                b = result;
+            }
+
+            return result;
+        }
+    }
+
+    /## The trig namespace contains trigonometric functions.
+    # This namespace provides functionality for sine, cosine, tangent,
+    # and other trigonometric calculations.
+    ##/
+    namespace trig {
+        /## Calculates the sine of an angle.
+        # This function returns the sine of an angle in radians.
+        #
+        # @param x The angle in radians
+        # @return The sine of the angle
+        # @author Hussein Abdul-Ameer
+        ##/
+        function sin(x) {
+            var pi = 3.14159;
+            var tolerance = 1.0 / 1000000000000000.0;
+            x = x % (2 * pi);
+            if (x > pi) {
+                x = x - (2 * pi);
+            } else if (x < -pi) {
+                x = x + (2 * pi);
+            }
+
+            var sum = x;
+            var term = x;
+            var n = 1;
+            while (term > tolerance || term < -tolerance) {
+                term = term * -1 * x * x / ((2 * n) * (2 * n + 1));
+                sum = sum + term;
+                n = n + 1;
+            }
+
+            return sum;
+        }
+
+        /## Calculates the cosine of an angle.
+        # This function returns the cosine of an angle in radians.
+        #
+        # @param x The angle in radians
+        # @return The cosine of the angle
+        # @author Hussein Abdul-Ameer
+        ##/
+        function cos(x) {
+            var pi = 3.14159;
+            var tolerance = 1.0 / 1000000000000000.0;
+            x = x % (2 * pi);
+            if (x > pi) {
+                x = x - (2 * pi);
+            } else if (x < -pi) {
+                x = x + (2 * pi);
+            }
+
+            var sum = 1;
+            var term = 1;
+            var n = 1;
+            while (term > tolerance || term < -tolerance) {
+                term = term * -1 * x * x / ((2 * n - 1) * (2 * n));
+                sum = sum + term;
+                n = n + 1;
+            }
+
+            return sum;
+        }
+
+        /## Calculates the tangent of an angle.
+        # This function returns the tangent of an angle in radians.
+        #
+        # @param x The angle in radians
+        # @return The tangent of the angle
+        # @author Hussein Abdul-Ameer
+        ##/
+        function tan(x) {
+            var pi = 3.14159;
+            var tolerance = 1.0 / 1000000000000000.0;
+            x = x % (2 * pi);
+            if (x > pi) {
+                x = x - (2 * pi);
+            } else if (x < -pi) {
+                x = x + (2 * pi);
+            }
+
+            ## sin(x)
+            var sinx = x;
+            var sinTerm = x;
+            var n = 1;
+            while (sinTerm > tolerance || sinTerm < -tolerance) {
+                sinTerm = sinTerm * -1 * x * x / ((2 * n) * (2 * n + 1));
+                sinx = sinx + sinTerm;
+                n = n + 1;
+            }
+
+            ## cos(x)
+            var cosx = 1;
+            var cosTerm = 1;
+            n = 1;
+            while (cosTerm > tolerance || cosTerm < -tolerance) {
+                cosTerm = cosTerm * -1 * x * x / ((2 * n - 1) * (2 * n));
+                cosx = cosx + cosTerm;
+                n = n + 1;
+            }
+
+            if (cosx > -tolerance && cosx < tolerance) {
+                if (sinx > 0) {
+                    return 1 / tolerance;
+                } else {
+                    return -1 / tolerance;
+                }
+            } else {
+                return sinx / cosx;
+            }
+        }
+
+        /## Calculates the hypotenuse of a right triangle.
+        # This function returns the length of the hypotenuse of a right triangle
+        # given the lengths of the other two sides.
+        #
+        # @param x The length of one side
+        # @param y The length of the other side
+        # @return The length of the hypotenuse
+        # @author Hussein Abdul-Ameer
+        ##/
+        function hypot(x, y) {
+            var sum = x * x + y * y;
+            var guess = sum;
+            var tolerance = 1.0 / 100000.0;
+            while ((guess * guess - sum > tolerance) || (guess * guess - sum < -tolerance)) {
+                guess = (guess + sum / guess) / 2;
+            }
+            return guess;
+        }
+    }
+}
