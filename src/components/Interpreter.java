@@ -314,6 +314,11 @@ public class Interpreter extends vg_langBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitForEachStatement(vg_langParser.ForEachStatementContext ctx) {
+        return statementVisitor.visitForEachStatement(ctx);
+    }
+
+    @Override
     public Object visitWhileStatement(vg_langParser.WhileStatementContext ctx) {
         return statementVisitor.visitWhileStatement(ctx);
     }
@@ -321,6 +326,21 @@ public class Interpreter extends vg_langBaseVisitor<Object> {
     @Override
     public Object visitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx) {
         return statementVisitor.visitDoWhileStatement(ctx);
+    }
+
+    @Override
+    public Object visitSwitchStatement(vg_langParser.SwitchStatementContext ctx) {
+        return statementVisitor.visitSwitchStatement(ctx);
+    }
+
+    @Override
+    public Object visitBreakStatement(vg_langParser.BreakStatementContext ctx) {
+        return statementVisitor.visitBreakStatement(ctx);
+    }
+
+    @Override
+    public Object visitContinueStatement(vg_langParser.ContinueStatementContext ctx) {
+        return statementVisitor.visitContinueStatement(ctx);
     }
 
     @Override

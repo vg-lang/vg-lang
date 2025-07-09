@@ -1,4 +1,4 @@
-// Generated from ../../grammar/vg_lang.g4 by ANTLR 4.13.2
+// Generated from grammar/vg_lang.g4 by ANTLR 4.13.2
 package components;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -138,6 +138,16 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitForUpdate(vg_langParser.ForUpdateContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#forEachStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterForEachStatement(vg_langParser.ForEachStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#forEachStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitForEachStatement(vg_langParser.ForEachStatementContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#whileStatement}.
 	 * @param ctx the parse tree
 	 */
@@ -157,6 +167,56 @@ public interface vg_langListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#switchStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterSwitchStatement(vg_langParser.SwitchStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#switchStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitSwitchStatement(vg_langParser.SwitchStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#switchCase}.
+	 * @param ctx the parse tree
+	 */
+	void enterSwitchCase(vg_langParser.SwitchCaseContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#switchCase}.
+	 * @param ctx the parse tree
+	 */
+	void exitSwitchCase(vg_langParser.SwitchCaseContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#defaultCase}.
+	 * @param ctx the parse tree
+	 */
+	void enterDefaultCase(vg_langParser.DefaultCaseContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#defaultCase}.
+	 * @param ctx the parse tree
+	 */
+	void exitDefaultCase(vg_langParser.DefaultCaseContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#breakStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterBreakStatement(vg_langParser.BreakStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#breakStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitBreakStatement(vg_langParser.BreakStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#continueStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterContinueStatement(vg_langParser.ContinueStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#continueStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitContinueStatement(vg_langParser.ContinueStatementContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vg_langParser#arrayLiteral}.
 	 * @param ctx the parse tree

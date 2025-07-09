@@ -14,12 +14,16 @@ statement
     | expressionStatement
     | constDeclaration
     | forStatement
+    | forEachStatement
     | functionDeclaration
     | returnStatement
     | tryStatement
     | throwStatement
     | whileStatement
     | doWhileStatement
+    | switchStatement
+    | breakStatement
+    | continueStatement
     | libraryDeclaration
     | importStatement
     | structDeclaration
@@ -72,11 +76,36 @@ statement
     forUpdate
         : assignmentNoSemi
         ;
+
+forEachStatement
+    : 'for' '(' 'var' IDENTIFIER ':' expression ')' block
+    ;
+
 whileStatement
     : 'while' '(' expression ')' block
     ;
 doWhileStatement
     : 'do' block 'while' '(' expression ')' ';'
+    ;
+
+switchStatement
+    : 'switch' '(' expression ')' '{' switchCase* defaultCase? '}'
+    ;
+
+switchCase
+    : 'case' expression ':' statement*
+    ;
+
+defaultCase
+    : 'default' ':' statement*
+    ;
+
+breakStatement
+    : 'break' ';'
+    ;
+
+continueStatement
+    : 'continue' ';'
     ;
 
 

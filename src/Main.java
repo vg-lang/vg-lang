@@ -65,10 +65,6 @@ public class Main {
                         Path projectRoot = scriptPath.getParent();
                         Path packageFolder = projectRoot.resolve("packages");
 
-                        System.out.println("Script path: " + scriptPath);
-                        System.out.println("Project root: " + projectRoot);
-                        System.out.println("Package folder: " + packageFolder);
-
                         if (!Files.exists(packageFolder)) {
                             Files.createDirectories(packageFolder);
                             System.out.println("Created packages directory: " + packageFolder);

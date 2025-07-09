@@ -1,4 +1,4 @@
-// Generated from ../../grammar/vg_lang.g4 by ANTLR 4.13.2
+// Generated from grammar/vg_lang.g4 by ANTLR 4.13.2
 package components;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -89,6 +89,12 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitForUpdate(vg_langParser.ForUpdateContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#forEachStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForEachStatement(vg_langParser.ForEachStatementContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#whileStatement}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -100,6 +106,36 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#switchStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSwitchStatement(vg_langParser.SwitchStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#switchCase}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSwitchCase(vg_langParser.SwitchCaseContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#defaultCase}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitDefaultCase(vg_langParser.DefaultCaseContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#breakStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBreakStatement(vg_langParser.BreakStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#continueStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitContinueStatement(vg_langParser.ContinueStatementContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vg_langParser#arrayLiteral}.
 	 * @param ctx the parse tree
