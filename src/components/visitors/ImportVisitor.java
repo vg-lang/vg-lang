@@ -11,7 +11,7 @@ public class ImportVisitor extends BaseVisitor {
         super(interpreter);
     }
 
-    public void processImport(String importPath) {
+    public void processImport(String importPath, String alias) {
         String[] parts = importPath.split("\\.");
         if (parts.length < 2) {
             throw new RuntimeException("Invalid import path: " + importPath);
@@ -23,29 +23,73 @@ public class ImportVisitor extends BaseVisitor {
             throw new RuntimeException("Library not found: " + libraryName);
         }
 
-        String namespaceName = parts[1];
-        Namespace namespace = library.getNamespace(namespaceName);
-        if (namespace == null) {
-            throw new RuntimeException("Namespace not found: " + namespaceName);
-        }
-
-        // If importing a specific namespace (e.g., import Guilibrary.window)
-        // add the namespace itself as a symbol
-        interpreter.getSymbolTableStack().peek().set(namespaceName, namespace);
-
-        // If importing all symbols from a namespace (e.g., import Guilibrary.window.*)
-        if (parts.length > 2 && parts[2].equals("*")) {
-            // Import all symbols from the namespace into the current symbol table
-            for (Map.Entry<String, Object> entry : namespace.getSymbols().entrySet()) {
-                interpreter.getSymbolTableStack().peek().set(entry.getKey(), entry.getValue());
+        // Handle different import patterns
+        if (parts.length == 3 && parts[2].equals("*")) {
+            // Import all symbols from a specific namespace (e.g., import IO.File.*)
+            String namespaceName = parts[1];
+            Namespace namespace = library.getNamespace(namespaceName);
+            if (namespace == null) {
+                throw new RuntimeException("Namespace not found: " + namespaceName);
             }
+            
+            String fullNamespaceName = libraryName + "." + namespaceName;
+            SymbolTable currentScope = interpreter.getSymbolTableStack().peek();
+            
+            // Import symbols with conflict detection
+            for (Map.Entry<String, Object> entry : namespace.getSymbols().entrySet()) {
+                String symbolName = entry.getKey();
+                Object symbolValue = entry.getValue();
+                
+                // Use the new setWithOrigin method for conflict detection
+                currentScope.setWithOrigin(symbolName, symbolValue, fullNamespaceName);
+            }
+            
+            // Also make the namespace available for qualified access
+            currentScope.set(namespaceName, namespace);
+            
+        } else if (parts.length == 3 && !parts[2].equals("*")) {
+            // Import a specific function from a namespace (e.g., import MathLib.power.pow)
+            String namespaceName = parts[1];
+            String functionName = parts[2];
+            Namespace namespace = library.getNamespace(namespaceName);
+            if (namespace == null) {
+                throw new RuntimeException("Namespace not found: " + namespaceName);
+            }
+            
+            Object function = namespace.getSymbol(functionName);
+            if (function == null) {
+                throw new RuntimeException("Function not found: " + functionName + " in namespace " + namespaceName);
+            }
+            
+            String symbolName = alias != null ? alias : functionName;
+            String fullFunctionName = libraryName + "." + namespaceName + "." + functionName;
+            interpreter.getSymbolTableStack().peek().setWithOrigin(symbolName, function, fullFunctionName);
+            
+        } else if (parts.length == 2) {
+            // Import a specific namespace (e.g., import IO.File or import IO.File as fileOps)
+            String namespaceName = parts[1];
+            Namespace namespace = library.getNamespace(namespaceName);
+            if (namespace == null) {
+                throw new RuntimeException("Namespace not found: " + namespaceName);
+            }
+            String symbolName = alias != null ? alias : namespaceName;
+            interpreter.getSymbolTableStack().peek().set(symbolName, namespace);
+        } else {
+            throw new RuntimeException("Invalid import path: " + importPath);
         }
     }
 
     @Override
     public Object visitImportStatement(vg_langParser.ImportStatementContext ctx) {
         String importPath = ctx.importPath().getText();
-        processImport(importPath);
+        String alias = null;
+        
+        // Check if there's an alias specified
+        if (ctx.IDENTIFIER() != null) {
+            alias = ctx.IDENTIFIER().getText();
+        }
+        
+        processImport(importPath, alias);
         return null;
     }
 

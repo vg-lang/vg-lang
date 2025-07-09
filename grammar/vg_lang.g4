@@ -31,7 +31,7 @@ statement
     ;
 
         importStatement
-            : 'import' importPath ';'
+            : 'import' importPath ('as' IDENTIFIER)? ';'
             ;
 
         importPath

@@ -60,8 +60,10 @@ public class BasicExpressionVisitor extends vg_langBaseVisitor<Object> {
             }
             
             Object value = null;
+            SymbolTable foundTable = null;
             for (SymbolTable table : interpreter.getSymbolTableStack()) {
                 if (table.contains(varName)) {
+                    foundTable = table;
                     value = table.get(varName);
                     break;
                 }
@@ -70,6 +72,14 @@ public class BasicExpressionVisitor extends vg_langBaseVisitor<Object> {
             if (value == null) {
                 throw new RuntimeException("Variable '" + varName + "' is not defined.");
             }
+            
+            // Check if the symbol is ambiguous (has conflicts from wildcard imports)
+            if (foundTable != null && foundTable.isAmbiguous(varName)) {
+                throw new RuntimeException("Ambiguous symbol '" + varName + "'. " +
+                    "This symbol exists in multiple imported namespaces. " +
+                    "Use 'namespace." + varName + "' to specify which one you want.");
+            }
+            
             return value;
         } else if (ctx.expression() != null) {
             return interpreter.visit(ctx.expression());

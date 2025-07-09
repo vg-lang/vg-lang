@@ -47,6 +47,14 @@ public class VariableVisitor extends BaseVisitor {
             for (SymbolTable table : symbolTableStack) {
                 if (table.contains(varName)) {
                     targetTable = table;
+                    
+                    // Check if the symbol is ambiguous
+                    if (table.isAmbiguous(varName)) {
+                        throw new RuntimeException("Ambiguous symbol '" + varName + "'. " +
+                            "This symbol exists in multiple imported namespaces. " +
+                            "Use 'namespace." + varName + "' to specify which one you want.");
+                    }
+                    
                     break;
                 }
             }
@@ -86,8 +94,18 @@ public class VariableVisitor extends BaseVisitor {
     }
 
     private Object getVariable(String name) {
+        SymbolTable foundTable = null;
         for (SymbolTable table : symbolTableStack) {
             if (table.contains(name)) {
+                foundTable = table;
+                
+                // Check if the symbol is ambiguous
+                if (table.isAmbiguous(name)) {
+                    throw new RuntimeException("Ambiguous symbol '" + name + "'. " +
+                        "This symbol exists in multiple imported namespaces. " +
+                        "Use 'namespace." + name + "' to specify which one you want.");
+                }
+                
                 return table.get(name);
             }
         }
