@@ -26,6 +26,7 @@ shelf/
 *.tmp
 *.bak
 *.swp
+*.jar
 .gradle/
 build/
 target/
