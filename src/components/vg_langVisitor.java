@@ -287,6 +287,48 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitEnumValue(vg_langParser.EnumValueContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#classDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitClassDeclaration(vg_langParser.ClassDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#classMember}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitClassMember(vg_langParser.ClassMemberContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#fieldDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitFieldDeclaration(vg_langParser.FieldDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#methodDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMethodDeclaration(vg_langParser.MethodDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#constructorDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitConstructorDeclaration(vg_langParser.ConstructorDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#accessModifier}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAccessModifier(vg_langParser.AccessModifierContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#methodModifier}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMethodModifier(vg_langParser.MethodModifierContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#block}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -310,6 +352,12 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitPrimary(vg_langParser.PrimaryContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#newExpression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitNewExpression(vg_langParser.NewExpressionContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vg_langParser#functionCall}.
 	 * @param ctx the parse tree

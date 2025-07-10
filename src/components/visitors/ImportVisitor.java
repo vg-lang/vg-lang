@@ -5,6 +5,14 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
 import org.antlr.v4.runtime.tree.ParseTree;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
+import java.io.IOException;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
 
 public class ImportVisitor extends BaseVisitor {
     public ImportVisitor(Interpreter interpreter) {
@@ -47,24 +55,6 @@ public class ImportVisitor extends BaseVisitor {
             // Also make the namespace available for qualified access
             currentScope.set(namespaceName, namespace);
             
-        } else if (parts.length == 3 && !parts[2].equals("*")) {
-            // Import a specific function from a namespace (e.g., import MathLib.power.pow)
-            String namespaceName = parts[1];
-            String functionName = parts[2];
-            Namespace namespace = library.getNamespace(namespaceName);
-            if (namespace == null) {
-                throw new RuntimeException("Namespace not found: " + namespaceName);
-            }
-            
-            Object function = namespace.getSymbol(functionName);
-            if (function == null) {
-                throw new RuntimeException("Function not found: " + functionName + " in namespace " + namespaceName);
-            }
-            
-            String symbolName = alias != null ? alias : functionName;
-            String fullFunctionName = libraryName + "." + namespaceName + "." + functionName;
-            interpreter.getSymbolTableStack().peek().setWithOrigin(symbolName, function, fullFunctionName);
-            
         } else if (parts.length == 2) {
             // Import a specific namespace (e.g., import IO.File or import IO.File as fileOps)
             String namespaceName = parts[1];
@@ -74,9 +64,123 @@ public class ImportVisitor extends BaseVisitor {
             }
             String symbolName = alias != null ? alias : namespaceName;
             interpreter.getSymbolTableStack().peek().set(symbolName, namespace);
+        } else if (parts.length == 3 && !parts[2].equals("*")) {
+            // Import a specific function from a namespace (e.g., import MathLib.constants.pi)
+            String namespaceName = parts[1];
+            String functionName = parts[2];
+            
+            Namespace namespace = library.getNamespace(namespaceName);
+            if (namespace == null) {
+                throw new RuntimeException("Namespace not found: " + namespaceName);
+            }
+            
+            Object symbol = namespace.getSymbol(functionName);
+            if (symbol == null) {
+                throw new RuntimeException("Symbol not found: " + functionName + " in namespace " + namespaceName);
+            }
+            
+            String symbolName = alias != null ? alias : functionName;
+            interpreter.getSymbolTableStack().peek().set(symbolName, symbol);
         } else {
             throw new RuntimeException("Invalid import path: " + importPath);
         }
+    }
+
+    public void processFileImport(String filePath, String alias) {
+        try {
+            // Resolve the file path relative to the importing file's directory
+            Path resolvedPath = resolveImportPath(filePath);
+            
+            // Load the file content
+            String content = new String(Files.readAllBytes(resolvedPath), StandardCharsets.UTF_8);
+            
+            // Save the current file path and set the new one for nested imports
+            String previousFile = ErrorHandler.getCurrentFile();
+            ErrorHandler.setCurrentFile(resolvedPath.toString());
+            
+            try {
+                // Parse the file
+                CharStream input = CharStreams.fromString(content);
+                vg_langLexer lexer = new vg_langLexer(input);
+                CommonTokenStream tokens = new CommonTokenStream(lexer);
+                vg_langParser parser = new vg_langParser(tokens);
+                
+                // Parse the program
+                vg_langParser.ProgramContext programCtx = parser.program();
+                
+                // Execute the imported file like a normal program (similar to ProgramVisitor)
+                // First pass: Process all function and class declarations
+                for (vg_langParser.StatementContext stmtCtx : programCtx.statement()) {
+                    if (stmtCtx.functionDeclaration() != null) {
+                        interpreter.visit(stmtCtx.functionDeclaration());
+                    } else if (stmtCtx.classDeclaration() != null) {
+                        interpreter.visit(stmtCtx.classDeclaration());
+                    }
+                }
+
+
+
+                // Second pass: Process all other statements (excluding functions and classes)
+                for (vg_langParser.StatementContext stmtCtx : programCtx.statement()) {
+                    if (stmtCtx.functionDeclaration() == null && stmtCtx.classDeclaration() == null) {
+                        interpreter.visit(stmtCtx);
+                    }
+                }
+                
+                // If an alias is specified, we need to handle it for classes
+                if (alias != null) {
+                    SymbolTable currentScope = interpreter.getSymbolTableStack().peek();
+                    
+                    // Find classes that were defined in the imported file and create alias mappings
+                    for (vg_langParser.StatementContext stmtCtx : programCtx.statement()) {
+                        if (stmtCtx.classDeclaration() != null) {
+                            String className = stmtCtx.classDeclaration().IDENTIFIER(0).getText();
+                            Object classDef = currentScope.get(className);
+                            if (classDef != null) {
+                                currentScope.set(alias, classDef);
+                                // Optionally remove the original class name to avoid conflicts
+                                // currentScope.remove(className);
+                            }
+                        }
+                    }
+                }
+            } finally {
+                // Restore the previous file path
+                ErrorHandler.setCurrentFile(previousFile);
+            }
+            
+        } catch (IOException e) {
+            throw new RuntimeException("Error reading file: " + filePath + " - " + e.getMessage());
+        } catch (Exception e) {
+            throw new RuntimeException("Error parsing file: " + filePath + " - " + e.getMessage());
+        }
+    }
+    
+    private Path resolveImportPath(String filePath) {
+        // Get the current file being processed
+        String currentFile = ErrorHandler.getCurrentFile();
+        
+        // If we have a current file, resolve relative to its directory
+        if (currentFile != null && !currentFile.isEmpty()) {
+            Path currentFilePath = Paths.get(currentFile);
+            Path currentDir = currentFilePath.getParent();
+            
+            if (currentDir != null) {
+                Path relativePath = currentDir.resolve(filePath);
+                if (Files.exists(relativePath)) {
+                    return relativePath;
+                }
+            }
+        }
+        
+        // Fall back to current working directory
+        Path absolutePath = Paths.get(filePath);
+        if (Files.exists(absolutePath)) {
+            return absolutePath;
+        }
+        
+        // If neither exists, return the original path to get a proper error message
+        return Paths.get(filePath);
     }
 
     @Override
@@ -89,7 +193,15 @@ public class ImportVisitor extends BaseVisitor {
             alias = ctx.IDENTIFIER().getText();
         }
         
-        processImport(importPath, alias);
+        // Check if it's a file import (string literal) or library import (dot notation)
+        if (importPath.startsWith("\"") && importPath.endsWith("\"")) {
+            // File import: import "path/to/file.vg"
+            String filePath = importPath.substring(1, importPath.length() - 1); // Remove quotes
+            processFileImport(filePath, alias);
+        } else {
+            // Library import: import Library.Namespace
+            processImport(importPath, alias);
+        }
         return null;
     }
 
@@ -143,6 +255,13 @@ public class ImportVisitor extends BaseVisitor {
             Namespace childNs = new Namespace(childName);
             processNamespaceBody(childNsCtx, childNs);
             namespace.addChildNamespace(childNs);
+        }
+
+        // Process class declarations in the namespace
+        for (vg_langParser.ClassDeclarationContext classCtx : nsCtx.classDeclaration()) {
+            String className = classCtx.IDENTIFIER(0).getText(); // First identifier is the class name
+            ClassDefinition classDef = (ClassDefinition) interpreter.visit(classCtx);
+            namespace.addSymbol(className, classDef);
         }
     }
 

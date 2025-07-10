@@ -28,6 +28,7 @@ statement
     | importStatement
     | structDeclaration
     | enumDeclaration
+    | classDeclaration
     ;
 
         importStatement
@@ -35,7 +36,8 @@ statement
             ;
 
         importPath
-            : IDENTIFIER ('.' IDENTIFIER)* ('.' '*')?
+            : IDENTIFIER ('.' IDENTIFIER)* ('.' '*')?    // Library import (MyLib.MyClass)
+            | STRING_LITERAL                              // File import ("path/to/file.vg")
             ;
 
         libraryDeclaration
@@ -43,7 +45,7 @@ statement
             ;
 
         namespaceDeclaration
-            : 'namespace' IDENTIFIER '{' (functionDeclaration | variableDeclaration | constDeclaration| namespaceDeclaration)* '}'
+            : 'namespace' IDENTIFIER '{' (functionDeclaration | variableDeclaration | constDeclaration | classDeclaration | namespaceDeclaration)* '}'
             ;
 
 
@@ -131,6 +133,7 @@ assignmentNoSemi
 leftHandSide
     : IDENTIFIER ( '[' expression ']' )*
     | IDENTIFIER '.' IDENTIFIER
+    | 'this' '.' IDENTIFIER
     ;
 printStatement
     : 'print' '(' expression (',' expression)* ')' ';'
@@ -199,6 +202,39 @@ elseStatement
         enumValue
             : IDENTIFIER ('=' expression)?
             ;
+
+    classDeclaration
+        : accessModifier? 'class' IDENTIFIER ('extends' IDENTIFIER)? '{' classMember* '}'
+        ;
+
+    classMember
+        : fieldDeclaration
+        | methodDeclaration
+        | constructorDeclaration
+        ;
+
+    fieldDeclaration
+        : accessModifier? methodModifier* 'var' IDENTIFIER ('=' expression)? ';'
+        ;
+
+    methodDeclaration
+        : accessModifier? methodModifier* 'function' IDENTIFIER '(' parameterList? ')' block
+        ;
+
+    constructorDeclaration
+        : accessModifier? 'constructor' '(' parameterList? ')' block
+        ;
+
+    accessModifier
+        : 'public'
+        | 'private'
+        ;
+
+    methodModifier
+        : 'static'
+        | 'const'
+        ;
+
 block
     : '{' statement* '}'
     ;
@@ -216,8 +252,14 @@ postfixOp
     | IDENTIFIER
     | '(' expression ')'
     | functionCall
+    | newExpression
+    | 'this'
 
     ;
+
+    newExpression
+        : 'new' IDENTIFIER '(' argumentList? ')'
+        ;
 
     functionCall
         : (IDENTIFIER) '(' argumentList? ')'
@@ -278,11 +320,20 @@ MULTI_LINE_COMMENT
     : '/#' .*? '#/' -> skip
     ;
 
+TRUE    : 'true';
+FALSE   : 'false';
+CLASS   : 'class';
+EXTENDS : 'extends';
+CONSTRUCTOR : 'constructor';
+PUBLIC  : 'public';
+PRIVATE : 'private';
+STATIC  : 'static';
+CONST   : 'const';
+NEW     : 'new';
+THIS    : 'this';
 IDENTIFIER
     : [a-zA-Z_] [a-zA-Z_0-9]*
     ;
-TRUE    : 'true';
-FALSE   : 'false';
 INT : [0-9]+
     ;
 

@@ -47,6 +47,7 @@ public class Interpreter extends vg_langBaseVisitor<Object> {
     private ArithmeticVisitor arithmeticVisitor;
     private BasicExpressionVisitor basicExpressionVisitor;
     private SimpleStatementVisitor simpleStatementVisitor;
+    private ClassVisitor classVisitor;
 
     public Interpreter(String projectPackageFolder) {
         globalSymbolTable = new SymbolTable();
@@ -73,6 +74,7 @@ public class Interpreter extends vg_langBaseVisitor<Object> {
         arithmeticVisitor = new ArithmeticVisitor(this);
         basicExpressionVisitor = new BasicExpressionVisitor(this);
         simpleStatementVisitor = new SimpleStatementVisitor(this);
+        classVisitor = new ClassVisitor(this);
 
         // Load libraries after visitors are initialized
         loadLibrariesFromFolder(libraryFolder);
@@ -89,6 +91,10 @@ public class Interpreter extends vg_langBaseVisitor<Object> {
 
     public Deque<SymbolTable> getSymbolTableStack() {
         return symbolTableStack;
+    }
+
+    public ClassVisitor getClassVisitor() {
+        return classVisitor;
     }
 
     private void setupErrorHandling(vg_langParser parser) {
@@ -284,6 +290,16 @@ public class Interpreter extends vg_langBaseVisitor<Object> {
     }
 
     @Override
+    public Object visitClassDeclaration(vg_langParser.ClassDeclarationContext ctx) {
+        return classVisitor.visitClassDeclaration(ctx);
+    }
+
+    @Override
+    public Object visitNewExpression(vg_langParser.NewExpressionContext ctx) {
+        return classVisitor.visitNewExpression(ctx);
+    }
+
+    @Override
     public Object visitAssignment(vg_langParser.AssignmentContext ctx) {
         return variableVisitor.visitAssignment(ctx);
     }
@@ -443,6 +459,10 @@ public class Interpreter extends vg_langBaseVisitor<Object> {
         if (value instanceof Namespace) return "namespace";
         if (value instanceof Library) return "library";
         if (value instanceof components.Enum) return "enum";
+        if (value instanceof ClassDefinition) return "class";
+        if (value instanceof ClassInstance) return ((ClassInstance) value).getClassName();
+        if (value instanceof MethodReference) return "method";
+        if (value instanceof StaticMethodReference) return "static_method";
         
         String className = value.getClass().getName();
         if (className.startsWith("java.")) {

@@ -85,6 +85,16 @@ public class BasicExpressionVisitor extends vg_langBaseVisitor<Object> {
             return interpreter.visit(ctx.expression());
         } else if (ctx.functionCall() != null) {
             return interpreter.visit(ctx.functionCall());
+        } else if (ctx.newExpression() != null) {
+            return interpreter.visit(ctx.newExpression());
+        } else if (ctx.getText().equals("this")) {
+            // Handle 'this' keyword
+            for (SymbolTable table : interpreter.getSymbolTableStack()) {
+                if (table.contains("this")) {
+                    return table.get("this");
+                }
+            }
+            throw new RuntimeException("'this' can only be used within a class method or constructor");
         }
         return null;
     }
@@ -144,6 +154,31 @@ public class BasicExpressionVisitor extends vg_langBaseVisitor<Object> {
                         throw new RuntimeException("Value '" + memberName + "' not found in enum '" + enumObj.getName() + "'");
                     }
                     value = enumObj.getValue(memberName);
+                } else if (value instanceof ClassDefinition) {
+                    ClassDefinition classDef = (ClassDefinition) value;
+                    // For static members or methods
+                    if (classDef.hasStaticMethod(memberName)) {
+                        value = new StaticMethodReference(classDef, memberName);
+                    } else {
+                        throw new RuntimeException("Static member '" + memberName + "' not found in class '" + classDef.getName() + "'");
+                    }
+                } else if (value instanceof ClassInstance) {
+                    ClassInstance instance = (ClassInstance) value;
+                    if (instance.hasField(memberName)) {
+                        // Check access control for field access
+                        if (instance.isFieldPrivate(memberName)) {
+                            // Check if we're accessing from within the same class
+                            if (!isAccessingFromSameClass(instance)) {
+                                throw new RuntimeException("Field '" + memberName + "' is private and cannot be accessed");
+                            }
+                        }
+                        value = instance.getField(memberName);
+                    } else if (instance.hasMethod(memberName)) {
+                        // Return a method reference that can be called
+                        value = new MethodReference(instance, memberName);
+                    } else {
+                        throw new RuntimeException("Member '" + memberName + "' not found in class '" + instance.getClassName() + "'");
+                    }
                 } else {
                     updatePosition(opCtx.start);
                     throw new ErrorHandler.VGTypeException(
@@ -173,6 +208,26 @@ public class BasicExpressionVisitor extends vg_langBaseVisitor<Object> {
                         updatePosition(opCtx.start);
                         throw new ErrorHandler.VGException(
                                 "Error in function call: " + e.getMessage(),
+                                getCurrentLine(), getCurrentColumn()
+                        );
+                    }
+                } else if (value instanceof MethodReference) {
+                    try {
+                        value = ((MethodReference) value).call(argValues, interpreter);
+                    } catch (Exception e) {
+                        updatePosition(opCtx.start);
+                        throw new ErrorHandler.VGException(
+                                "Error in method call: " + e.getMessage(),
+                                getCurrentLine(), getCurrentColumn()
+                        );
+                    }
+                } else if (value instanceof StaticMethodReference) {
+                    try {
+                        value = ((StaticMethodReference) value).call(argValues, interpreter);
+                    } catch (Exception e) {
+                        updatePosition(opCtx.start);
+                        throw new ErrorHandler.VGException(
+                                "Error in static method call: " + e.getMessage(),
                                 getCurrentLine(), getCurrentColumn()
                         );
                     }
@@ -239,6 +294,10 @@ public class BasicExpressionVisitor extends vg_langBaseVisitor<Object> {
         if (value instanceof Namespace) return "namespace";
         if (value instanceof Library) return "library";
         if (value instanceof components.Enum) return "enum";
+        if (value instanceof ClassDefinition) return "class";
+        if (value instanceof ClassInstance) return ((ClassInstance) value).getClassName();
+        if (value instanceof MethodReference) return "method";
+        if (value instanceof StaticMethodReference) return "static_method";
         
         String className = value.getClass().getName();
         if (className.startsWith("java.")) {
@@ -260,5 +319,25 @@ public class BasicExpressionVisitor extends vg_langBaseVisitor<Object> {
 
     private int getCurrentColumn() {
         return interpreter.getCurrentColumn();
+    }
+    
+    private boolean isAccessingFromSameClass(ClassInstance targetInstance) {
+        // Check if we're currently executing within a method/constructor of the same class
+        // This is done by checking if there's a 'this' variable in the current symbol table
+        // that refers to an instance of the same class
+        
+        for (SymbolTable table : interpreter.getSymbolTableStack()) {
+            if (table.contains("this")) {
+                Object thisObj = table.get("this");
+                if (thisObj instanceof ClassInstance) {
+                    ClassInstance currentInstance = (ClassInstance) thisObj;
+                    // Check if both instances are of the same class
+                    if (currentInstance.getClassName().equals(targetInstance.getClassName())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 } 

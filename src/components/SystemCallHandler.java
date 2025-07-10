@@ -46,7 +46,7 @@ public class SystemCallHandler {
                     }
                 };
 
-                Method setOnClickMethod = clazz.getMethod("setOnClick", ActionListener.class);
+                java.lang.reflect.Method setOnClickMethod = clazz.getMethod("setOnClick", ActionListener.class);
                 setOnClickMethod.invoke(instanceObj, listener);
 
                 return null;
@@ -72,7 +72,7 @@ public class SystemCallHandler {
                     }
                 };
 
-                Method method = clazz.getMethod("setOnKeyPress", KeyListener.class);
+                java.lang.reflect.Method method = clazz.getMethod("setOnKeyPress", KeyListener.class);
                 method.invoke(instanceObj, listener);
 
                 return null;
@@ -91,7 +91,7 @@ public class SystemCallHandler {
                     }
                 };
 
-                Method method = clazz.getMethod(memberName, KeyListener.class);
+                java.lang.reflect.Method method = clazz.getMethod(memberName, KeyListener.class);
                 Object instance = ((LanguageObjectWrapper) instanceObj).getObject();
                 method.invoke(instance, listener);
                 return null;
@@ -108,7 +108,7 @@ public class SystemCallHandler {
                 Object instanceObj = methodArgs.get(0);
                 FunctionReference callbackFunction = extractFunctionFromArg(methodArgs.get(1));
 
-                Method method = clazz.getMethod("setOnMouseDrag", FunctionReference.class);
+                java.lang.reflect.Method method = clazz.getMethod("setOnMouseDrag", FunctionReference.class);
                 Object instance = ((LanguageObjectWrapper) instanceObj).getObject();
                 method.invoke(instance, callbackFunction);
                 return null;
@@ -128,7 +128,7 @@ public class SystemCallHandler {
                     }
                 };
 
-                Method method = clazz.getMethod(memberName, KeyListener.class);
+                java.lang.reflect.Method method = clazz.getMethod(memberName, KeyListener.class);
                 Object instance = ((LanguageObjectWrapper) instanceObj).getObject();
                 method.invoke(instance, listener);
                 return null;
@@ -154,7 +154,7 @@ public class SystemCallHandler {
                     }
                 };
 
-                Constructor<?> constructor = clazz.getConstructor(int.class, ActionListener.class);
+                java.lang.reflect.Constructor<?> constructor = clazz.getConstructor(int.class, ActionListener.class);
                 Object instance = constructor.newInstance(delay, listener);
 
                 return new LanguageObjectWrapper(instance);
@@ -172,13 +172,13 @@ public class SystemCallHandler {
 
             AccessibleObject accessibleObject = null;
             if (memberName.equals("<init>")) {
-                Constructor<?> constructor = findConstructor(clazz, methodArgs);
+                java.lang.reflect.Constructor<?> constructor = findConstructor(clazz, methodArgs);
                 if (constructor == null) {
                     throw new RuntimeException("Constructor not found in class '" + className + "' with " + methodArgs.size() + " arguments.");
                 }
                 accessibleObject = constructor;
             } else {
-                Method method = findMethod(clazz, memberName, methodArgs);
+                java.lang.reflect.Method method = findMethod(clazz, memberName, methodArgs);
                 if (method == null) {
                     throw new RuntimeException("Method '" + memberName + "' not found in class '" + className + "'");
                 }
@@ -188,10 +188,10 @@ public class SystemCallHandler {
             Object[] javaArgs = convertArguments(methodArgs, accessibleObject);
 
             Object result;
-            if (accessibleObject instanceof Constructor<?>) {
-                result = ((Constructor<?>) accessibleObject).newInstance(javaArgs);
+            if (accessibleObject instanceof java.lang.reflect.Constructor<?>) {
+                result = ((java.lang.reflect.Constructor<?>) accessibleObject).newInstance(javaArgs);
             } else {
-                result = ((Method) accessibleObject).invoke(instance, javaArgs);
+                result = ((java.lang.reflect.Method) accessibleObject).invoke(instance, javaArgs);
             }
 
             if (result != null && !isPrimitiveOrWrapper(result.getClass())) {
@@ -229,8 +229,8 @@ public class SystemCallHandler {
         return methods != null && (methods.contains(methodName) || methods.contains("*"));
     }
 
-    private Constructor<?> findConstructor(Class<?> clazz, List<Object> args) {
-        for (Constructor<?> constructor : clazz.getConstructors()) {
+    private java.lang.reflect.Constructor<?> findConstructor(Class<?> clazz, List<Object> args) {
+        for (java.lang.reflect.Constructor<?> constructor : clazz.getConstructors()) {
             if (matchParameterTypes(constructor.getParameterTypes(), args)) {
                 return constructor;
             }
@@ -278,8 +278,8 @@ public class SystemCallHandler {
         return primitiveType;
     }
 
-    private Method findMethod(Class<?> clazz, String methodName, List<Object> args) {
-        for (Method method : clazz.getMethods()) {
+    private java.lang.reflect.Method findMethod(Class<?> clazz, String methodName, List<Object> args) {
+        for (java.lang.reflect.Method method : clazz.getMethods()) {
             if (method.getName().equals(methodName) && matchParameterTypes(method.getParameterTypes(), args)) {
                 return method;
             }
@@ -289,10 +289,10 @@ public class SystemCallHandler {
 
     private Object[] convertArguments(List<Object> args, AccessibleObject accessibleObject) {
         Class<?>[] paramTypes;
-        if (accessibleObject instanceof Method) {
-            paramTypes = ((Method) accessibleObject).getParameterTypes();
+        if (accessibleObject instanceof java.lang.reflect.Method) {
+            paramTypes = ((java.lang.reflect.Method) accessibleObject).getParameterTypes();
         } else {
-            paramTypes = ((Constructor<?>) accessibleObject).getParameterTypes();
+            paramTypes = ((java.lang.reflect.Constructor<?>) accessibleObject).getParameterTypes();
         }
 
         Object[] convertedArgs = new Object[args.size()];

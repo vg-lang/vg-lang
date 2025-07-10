@@ -29,7 +29,31 @@ public class VariableVisitor extends BaseVisitor {
     }
 
     public Object visitLeftHandSide(vg_langParser.LeftHandSideContext ctx) {
-        if (ctx.IDENTIFIER().size() == 1) {
+        // Check for 'this.fieldName' pattern
+        if (ctx.getText().startsWith("this.")) {
+            String fieldName = ctx.IDENTIFIER(0).getText();
+            
+            // Get the current 'this' object from the symbol table
+            Object thisObj = null;
+            for (SymbolTable table : symbolTableStack) {
+                if (table.contains("this")) {
+                    thisObj = table.get("this");
+                    break;
+                }
+            }
+            
+            if (thisObj == null) {
+                throw new RuntimeException("'this' is not available in this context.");
+            }
+            
+            if (thisObj instanceof ClassInstance) {
+                ClassInstance instance = (ClassInstance) thisObj;
+                return new VariableReference(instance, fieldName);
+            } else {
+                throw new RuntimeException("Cannot access field '" + fieldName + "' on 'this' - not a class instance.");
+            }
+        }
+        else if (ctx.IDENTIFIER().size() == 1) {
             String varName = ctx.IDENTIFIER(0).getText();
 
             List<Integer> indices = new ArrayList<>();
@@ -85,8 +109,11 @@ public class VariableVisitor extends BaseVisitor {
             } else if (obj instanceof Struct) {
                 Struct struct = (Struct) obj;
                 return new VariableReference(struct, fieldName);
+            } else if (obj instanceof ClassInstance) {
+                ClassInstance instance = (ClassInstance) obj;
+                return new VariableReference(instance, fieldName);
             } else {
-                throw new RuntimeException("Cannot access field '" + fieldName + "' on non-struct object '" + objName + "'");
+                throw new RuntimeException("Cannot access field '" + fieldName + "' on non-struct/class object '" + objName + "'");
             }
         } else {
             throw new RuntimeException("Invalid assignment target.");
