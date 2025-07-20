@@ -66,6 +66,8 @@ var musicMuted = false;
 var highScoreWindow = 0;
 var nameTextField = 0;
 var highScoreFilePath = "tetris_high_scores.txt";
+var currentDifficulty = "easy"; ## "easy", "medium", "hard"
+var difficultySelectionWindow = 0;
 
 /##
 # Tetromino types enumeration
@@ -184,6 +186,225 @@ var TetrominoShapes = [
 ];
 
 /##
+# Pentomino types enumeration (for medium difficulty)
+# 
+# @value F  F-shaped pentomino
+# @value I  I-shaped pentomino
+# @value L  L-shaped pentomino
+# @value N  N-shaped pentomino
+# @value P  P-shaped pentomino
+# @value T  T-shaped pentomino
+# @value U  U-shaped pentomino
+# @value V  V-shaped pentomino
+# @value W  W-shaped pentomino
+# @value X  X-shaped pentomino
+# @value Y  Y-shaped pentomino
+# @value Z  Z-shaped pentomino
+# @author Hussein Abdul-Ameer
+##/
+enum PentominoType{
+    F, I, L, N, P, T, U, V, W, X, Y, Z
+}
+
+## Colors for pentomino pieces
+var PentominoColors = [
+    "#FF6B6B", ## F - Light Red
+    "#4ECDC4", ## I - Teal
+    "#45B7D1", ## L - Sky Blue
+    "#96CEB4", ## N - Mint Green
+    "#FFEAA7", ## P - Light Yellow
+    "#DDA0DD", ## T - Plum
+    "#98D8C8", ## U - Mint
+    "#F7DC6F", ## V - Light Gold
+    "#BB8FCE", ## W - Light Purple
+    "#85C1E9", ## X - Light Blue
+    "#F8C471", ## Y - Peach
+    "#82E0AA"  ## Z - Light Green
+];
+
+/##
+# Pentomino shapes (5 blocks each)
+# 12 unique pentomino pieces with rotation states
+##/
+var PentominoShapes = [
+    ## F
+    [
+        [[0, 1, 1], [1, 1, 0], [0, 1, 0]],
+        [[1, 0, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [0, 1, 1], [1, 1, 0]],
+        [[0, 1, 0], [1, 1, 1], [0, 0, 1]]
+    ],
+    ## I
+    [
+        [[1, 1, 1, 1, 1]],
+        [[1], [1], [1], [1], [1]],
+        [[1, 1, 1, 1, 1]],
+        [[1], [1], [1], [1], [1]]
+    ],
+    ## L
+    [
+        [[1, 0, 0, 0], [1, 1, 1, 1]],
+        [[1, 1], [1, 0], [1, 0], [1, 0]],
+        [[1, 1, 1, 1], [0, 0, 0, 1]],
+        [[0, 1], [0, 1], [0, 1], [1, 1]]
+    ],
+    ## N
+    [
+        [[1, 1, 0, 0], [0, 1, 1, 1]],
+        [[0, 1], [1, 1], [1, 0], [1, 0]],
+        [[1, 1, 1, 0], [0, 0, 1, 1]],
+        [[0, 1], [0, 1], [1, 1], [1, 0]]
+    ],
+    ## P
+    [
+        [[1, 1], [1, 1], [1, 0]],
+        [[1, 1, 1], [0, 1, 1]],
+        [[0, 1], [1, 1], [1, 1]],
+        [[1, 1, 0], [1, 1, 1]]
+    ],
+    ## T
+    [
+        [[1, 1, 1], [0, 1, 0], [0, 1, 0]],
+        [[0, 0, 1], [1, 1, 1], [0, 0, 1]],
+        [[0, 1, 0], [0, 1, 0], [1, 1, 1]],
+        [[1, 0, 0], [1, 1, 1], [1, 0, 0]]
+    ],
+    ## U
+    [
+        [[1, 0, 1], [1, 1, 1]],
+        [[1, 1], [1, 0], [1, 1]],
+        [[1, 1, 1], [1, 0, 1]],
+        [[1, 1], [0, 1], [1, 1]]
+    ],
+    ## V
+    [
+        [[1, 0, 0], [1, 0, 0], [1, 1, 1]],
+        [[1, 1, 1], [1, 0, 0], [1, 0, 0]],
+        [[1, 1, 1], [0, 0, 1], [0, 0, 1]],
+        [[0, 0, 1], [0, 0, 1], [1, 1, 1]]
+    ],
+    ## W
+    [
+        [[1, 0, 0], [1, 1, 0], [0, 1, 1]],
+        [[0, 1, 1], [1, 1, 0], [1, 0, 0]],
+        [[1, 1, 0], [0, 1, 1], [0, 0, 1]],
+        [[0, 0, 1], [0, 1, 1], [1, 1, 0]]
+    ],
+    ## X
+    [
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
+    ],
+    ## Y
+    [
+        [[0, 1, 0, 0], [1, 1, 1, 1]],
+        [[1, 0], [1, 1], [1, 0], [1, 0]],
+        [[1, 1, 1, 1], [0, 0, 1, 0]],
+        [[0, 1], [0, 1], [1, 1], [0, 1]]
+    ],
+    ## Z
+    [
+        [[1, 1, 0], [0, 1, 0], [0, 1, 1]],
+        [[0, 0, 1], [1, 1, 1], [1, 0, 0]],
+        [[1, 1, 0], [0, 1, 0], [0, 1, 1]],
+        [[0, 0, 1], [1, 1, 1], [1, 0, 0]]
+    ]
+];
+
+## Colors for hexomino pieces (for hard difficulty)
+var HexominoColors = [
+    "#FF5733", ## Red-Orange
+    "#33FF57", ## Bright Green
+    "#3357FF", ## Bright Blue
+    "#FF33F5", ## Bright Pink
+    "#F5FF33", ## Bright Yellow
+    "#33FFF5", ## Cyan
+    "#FF8C33", ## Orange
+    "#8C33FF", ## Purple
+    "#33FF8C", ## Light Green
+    "#FF3333"  ## Bright Red
+];
+
+/##
+# Hexomino shapes (6 blocks each)
+# Selection of hexomino pieces for hard difficulty
+##/
+var HexominoShapes = [
+    ## Linear hexomino (6 in a row)
+    [
+        [[1, 1, 1, 1, 1, 1]],
+        [[1], [1], [1], [1], [1], [1]],
+        [[1, 1, 1, 1, 1, 1]],
+        [[1], [1], [1], [1], [1], [1]]
+    ],
+    ## L-shaped hexomino
+    [
+        [[1, 0, 0, 0, 0], [1, 1, 1, 1, 1]],
+        [[1, 1], [1, 0], [1, 0], [1, 0], [1, 0]],
+        [[1, 1, 1, 1, 1], [0, 0, 0, 0, 1]],
+        [[0, 1], [0, 1], [0, 1], [0, 1], [1, 1]]
+    ],
+    ## T-shaped hexomino
+    [
+        [[1, 1, 1], [0, 1, 0], [0, 1, 0], [0, 1, 0]],
+        [[0, 0, 0, 1], [1, 1, 1, 1], [0, 0, 0, 1]],
+        [[0, 1, 0], [0, 1, 0], [0, 1, 0], [1, 1, 1]],
+        [[1, 0, 0, 0], [1, 1, 1, 1], [1, 0, 0, 0]]
+    ],
+    ## Plus-shaped hexomino
+    [
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0], [0, 1, 0]],
+        [[0, 1, 0, 0], [1, 1, 1, 1], [0, 1, 0, 0]],
+        [[0, 1, 0], [0, 1, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 0, 1, 0], [1, 1, 1, 1], [0, 0, 1, 0]]
+    ],
+    ## Z-shaped hexomino
+    [
+        [[1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 1, 1]],
+        [[0, 0, 1], [0, 1, 1], [1, 1, 0], [1, 0, 0]],
+        [[1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 1, 1]],
+        [[0, 0, 1], [0, 1, 1], [1, 1, 0], [1, 0, 0]]
+    ],
+    ## Square with tail hexomino
+    [
+        [[1, 1, 0], [1, 1, 0], [1, 1, 0]],
+        [[1, 1, 1], [1, 1, 1]],
+        [[0, 1, 1], [0, 1, 1], [0, 1, 1]],
+        [[1, 1, 1], [1, 1, 1]]
+    ],
+    ## Staircase hexomino
+    [
+        [[1, 0, 0], [1, 1, 0], [0, 1, 1], [0, 0, 1]],
+        [[0, 0, 1, 1], [1, 1, 1, 0], [1, 0, 0, 0]],
+        [[1, 0, 0, 0], [1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 1, 1]],
+        [[0, 0, 0, 1], [0, 1, 1, 1], [1, 1, 0, 0]]
+    ],
+    ## Cross hexomino
+    [
+        [[0, 1, 0], [1, 1, 1], [1, 1, 1]],
+        [[1, 0, 1], [1, 1, 1], [0, 1, 0]],
+        [[1, 1, 1], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [1, 1, 1], [1, 0, 1]]
+    ],
+    ## Hook hexomino
+    [
+        [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 1, 0]],
+        [[0, 0, 1], [0, 0, 1], [1, 1, 1], [1, 0, 0]],
+        [[0, 1, 0, 0], [0, 1, 0, 0], [1, 1, 1, 1]],
+        [[0, 0, 1], [1, 1, 1], [1, 0, 0], [1, 0, 0]]
+    ],
+    ## Bent hexomino
+    [
+        [[1, 1, 0], [0, 1, 1], [0, 0, 1], [0, 0, 1]],
+        [[0, 0, 1, 1], [1, 1, 1, 0], [1, 0, 0, 0]],
+        [[1, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 1]],
+        [[0, 0, 0, 1], [0, 1, 1, 1], [1, 1, 0, 0]]
+    ]
+];
+
+/##
 # Shuffles the tetromino bag using Fisher-Yates algorithm
 # 
 # Modifies the tetrominoBag array in-place to create
@@ -205,18 +426,29 @@ function shuffleBag() {
 }
 
 /##
-# Gets random tetromino type using 7-bag randomization system
+# Gets random piece type using bag randomization system
 # 
-# Implements the classic Tetris "bag" system where all 7 pieces
-# are shuffled and dealt consecutively before refilling
+# Implements the bag system where all pieces are shuffled and dealt
+# consecutively before refilling. Works for all difficulty levels.
 # 
-# @return number Index of TetrominoType (0-6)
+# @return number Index of piece type
 # @author Hussein Abdul-Ameer
 ##/
-function getRandomTetrominoType() {
+function getRandomPieceType() {
     if (array.getLength(tetrominoBag) == 0) {
-        ## Refill the bag with all tetromino types
-        tetrominoBag = [0, 1, 2, 3, 4, 5, 6];
+        ## Refill the bag based on current difficulty
+        if (currentDifficulty == "easy") {
+            ## Classic tetris - 7 pieces
+            tetrominoBag = [0, 1, 2, 3, 4, 5, 6];
+        } else if (currentDifficulty == "medium") {
+            ## Pentomino - 12 pieces
+            tetrominoBag = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        } else if (currentDifficulty == "hard") {
+            ## Polynomino - mix of tetrominoes, pentominoes, and hexominoes
+            ## Use indices to represent different piece types
+            ## 0-6: tetrominoes, 7-18: pentominoes, 19-28: hexominoes
+            tetrominoBag = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28];
+        }
         shuffleBag();
     }
     
@@ -235,23 +467,50 @@ function getRandomTetrominoType() {
 }
 
 /##
-# Creates a new tetromino instance
+# Creates a new piece instance based on current difficulty
 # 
-# @param type  The type of tetromino (TetrominoType)
+# @param type  The type of piece (depends on difficulty)
 # @param x     Initial x position
 # @param y     Initial y position
-# @return      Array representing the tetromino with [type, color, shape, x, y, rotation]
+# @return      Array representing the piece with [type, color, shape, x, y, rotation]
 # @author Hussein Abdul-Ameer
 ##/
-function createTetromino(type, x, y) {
-    var tetromino = [];
-    array.push(tetromino, type);        ## index 0: type
-    array.push(tetromino, TetrominoColors[type]); ## index 1: color
-    array.push(tetromino, TetrominoShapes[type]); ## index 2: shape
-    array.push(tetromino, x);           ## index 3: x
-    array.push(tetromino, y);           ## index 4: y
-    array.push(tetromino, 0);           ## index 5: rotation
-    return tetromino;
+function createPiece(type, x, y) {
+    var piece = [];
+    array.push(piece, type);        ## index 0: type
+    
+    ## Determine color and shape based on difficulty and piece type
+    if (currentDifficulty == "easy") {
+        ## Classic tetris
+        array.push(piece, TetrominoColors[type]); ## index 1: color
+        array.push(piece, TetrominoShapes[type]); ## index 2: shape
+    } else if (currentDifficulty == "medium") {
+        ## Pentomino
+        array.push(piece, PentominoColors[type]); ## index 1: color
+        array.push(piece, PentominoShapes[type]); ## index 2: shape
+    } else if (currentDifficulty == "hard") {
+        ## Polynomino - mix of different piece types
+        if (type <= 6) {
+            ## Tetromino
+            array.push(piece, TetrominoColors[type]); ## index 1: color
+            array.push(piece, TetrominoShapes[type]); ## index 2: shape
+        } else if (type <= 18) {
+            ## Pentomino (indices 7-18 map to 0-11 in PentominoShapes)
+            var pentIndex = type - 7;
+            array.push(piece, PentominoColors[pentIndex]); ## index 1: color
+            array.push(piece, PentominoShapes[pentIndex]); ## index 2: shape
+        } else {
+            ## Hexomino (indices 19-28 map to 0-9 in HexominoShapes)
+            var hexIndex = type - 19;
+            array.push(piece, HexominoColors[hexIndex]); ## index 1: color
+            array.push(piece, HexominoShapes[hexIndex]); ## index 2: shape
+        }
+    }
+    
+    array.push(piece, x);           ## index 3: x
+    array.push(piece, y);           ## index 4: y
+    array.push(piece, 0);           ## index 5: rotation
+    return piece;
 }
 
 /##
@@ -270,12 +529,12 @@ function initializeBoard() {
     }
 }
 
-## Generate a random tetromino
-function generateRandomTetromino() {
-    var type = getRandomTetrominoType();
+## Generate a random piece based on current difficulty
+function generateRandomPiece() {
+    var type = getRandomPieceType();
     var x = arithmetic.floor(BOARD_WIDTH / 2) - 1;
     var y = 0;
-    return createTetromino(type, x, y);
+    return createPiece(type, x, y);
 }
 
 /##
@@ -351,7 +610,7 @@ function moveDown() {
     ## Check if current piece is valid
     if (currentPiece == 0 || array.getLength(currentPiece) < 6) {
         ## If current piece is invalid, try to create a new one
-        currentPiece = generateRandomTetromino();
+        currentPiece = generateRandomPiece();
         return;
     }
     
@@ -663,15 +922,15 @@ function spawnNextPiece() {
     ## Make sure we have a valid next piece before assigning it
     if (nextPiece != 0 && array.getLength(nextPiece) >= 6) {
         currentPiece = nextPiece;
-        nextPiece = generateRandomTetromino();
+        nextPiece = generateRandomPiece();
         updateNextPieceDisplay();
         
         ## Remove debug popup that's causing errors
         ## popup.info(gameWindow, "Current piece type: " + currentPiece[0], "Debug");
     } else {
         ## If nextPiece is invalid, generate a new one
-        currentPiece = generateRandomTetromino();
-        nextPiece = generateRandomTetromino();
+        currentPiece = generateRandomPiece();
+        nextPiece = generateRandomPiece();
         updateNextPieceDisplay();
     }
 }
@@ -773,7 +1032,7 @@ function handleKeyPress(code) {
         
         if (soundEnabled) {
             ## Resume background music
-            playGameSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+            playGameSoundLoop("C:/Users/hodif/Downloads/tetrischnager/vg-lang-master/projects/tetris/Tetris.wav", -1);
         } else {
             ## Stop all sounds
             Sound.stopAllSounds();
@@ -824,8 +1083,8 @@ function handleKeyPress(code) {
         initializeBoard();
         
         ## Generate new pieces
-        nextPiece = generateRandomTetromino();
-        currentPiece = generateRandomTetromino();
+        nextPiece = generateRandomPiece();
+        currentPiece = generateRandomPiece();
         updateNextPieceDisplay();
         
         ## Update score and level display
@@ -840,7 +1099,7 @@ function handleKeyPress(code) {
         Timer.startTimer(gameTimer);
         
         ## Restart music
-        playGameSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+        playGameSoundLoop("C:/Users/hodif/Downloads/tetrischnager/vg-lang-master/projects/tetris/Tetris.wav", -1);
         
         return;
     }
@@ -908,7 +1167,7 @@ function showMainMenu() {
     
     ## Create a title image instead of text
     var titleImage = Image.createImage(
-        "C:/Users/hodif/Desktop/usn2024/vg lang/projects/tetris/castle.png", 
+        "C:/Users/hodif/Downloads/tetrischnager/vg-lang-master/projects/tetris/castle.png", 
         100, 20, 200, 100
     );
     window.addComponentToWindow(mainMenuWindow, titleImage);
@@ -945,7 +1204,7 @@ function showMainMenu() {
     
     ## Play background music
     if (!musicMuted) {
-        Sound.playSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+        Sound.playSoundLoop("C:/Users/hodif/Downloads/tetrischnager/vg-lang-master/projects/tetris/Tetris.wav", -1);
     }
     
     ## Launch the window
@@ -964,12 +1223,110 @@ function startGameFromMenu() {
     ## Dispose of the menu window
     window.dispose(mainMenuWindow);
     
+    ## Show difficulty selection window
+    showDifficultySelection();
+}
+
+/##
+# Shows the difficulty selection window
+# 
+# @author Hussein Abdul-Ameer
+##/
+function showDifficultySelection() {
+    ## Create the difficulty selection window
+    difficultySelectionWindow = window.create("Select Difficulty", 500, 450);
+    window.setBackgroundColor(difficultySelectionWindow, "#000000");
+    
+    ## Create a title label
+    var titleLabel = Label.createLabel("Choose Your Challenge", 125, 30, 250, 40);
+    Label.setLabelTextColor(titleLabel, "#FFFFFF");
+    window.addComponentToWindow(difficultySelectionWindow, titleLabel);
+    
+    ## Easy difficulty button
+    var easyButton = Button.createButton("Easy - Classic Tetris", 100, 100, 300, 60);
+    Button.setButtonColor(easyButton, "#00FF00");
+    IOEvents.setOnClick(easyButton, &startEasyGame());
+    window.addComponentToWindow(difficultySelectionWindow, easyButton);
+    
+    ## Easy description
+    var easyDescription = Label.createLabel("7 classic tetrominoes (4 blocks each)", 50, 170, 400, 30);
+    Label.setLabelTextColor(easyDescription, "#CCCCCC");
+    window.addComponentToWindow(difficultySelectionWindow, easyDescription);
+    
+    ## Medium difficulty button
+    var mediumButton = Button.createButton("Medium - Pentomino Tetris", 100, 210, 300, 60);
+    Button.setButtonColor(mediumButton, "#FFFF00");
+    IOEvents.setOnClick(mediumButton, &startMediumGame());
+    window.addComponentToWindow(difficultySelectionWindow, mediumButton);
+    
+    ## Medium description
+    var mediumDescription = Label.createLabel("12 pentomino pieces (5 blocks each)", 50, 280, 400, 30);
+    Label.setLabelTextColor(mediumDescription, "#CCCCCC");
+    window.addComponentToWindow(difficultySelectionWindow, mediumDescription);
+    
+    ## Hard difficulty button
+    var hardButton = Button.createButton("Hard - Polynomino Tetris", 100, 320, 300, 60);
+    Button.setButtonColor(hardButton, "#FF0000");
+    IOEvents.setOnClick(hardButton, &startHardGame());
+    window.addComponentToWindow(difficultySelectionWindow, hardButton);
+    
+    ## Hard description
+    var hardDescription = Label.createLabel("Mix of tetrominoes, pentominoes & hexominoes", 50, 390, 400, 30);
+    Label.setLabelTextColor(hardDescription, "#CCCCCC");
+    window.addComponentToWindow(difficultySelectionWindow, hardDescription);
+    
+    ## Launch the window
+    window.launch(difficultySelectionWindow);
+}
+
+/##
+# Starts easy game (classic tetris)
+# 
+# @author Hussein Abdul-Ameer
+##/
+function startEasyGame() {
+    currentDifficulty = "easy";
+    window.dispose(difficultySelectionWindow);
+    initGameWithDifficulty();
+}
+
+/##
+# Starts medium game (pentomino tetris)
+# 
+# @author Hussein Abdul-Ameer
+##/
+function startMediumGame() {
+    currentDifficulty = "medium";
+    window.dispose(difficultySelectionWindow);
+    initGameWithDifficulty();
+}
+
+/##
+# Starts hard game (polynomino tetris)
+# 
+# @author Hussein Abdul-Ameer
+##/
+function startHardGame() {
+    currentDifficulty = "hard";
+    window.dispose(difficultySelectionWindow);
+    initGameWithDifficulty();
+}
+
+/##
+# Initializes the game with selected difficulty
+# 
+# @author Hussein Abdul-Ameer
+##/
+function initGameWithDifficulty() {
     ## Reset all game state variables
     score = 0;
     level = 1;
     gameSpeed = GAME_SPEED_INITIAL;
     gameOver = false;
     gamePaused = false;
+    
+    ## Clear the tetromino bag to force refill with new difficulty pieces
+    tetrominoBag = [];
     
     ## Set sound enabled based on menu choice
     soundEnabled = !musicMuted;
@@ -985,7 +1342,7 @@ function toggleMusicFromMenu() {
     if (musicMuted) {
         Sound.stopAllSounds();
     } else {
-        Sound.playSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+        Sound.playSoundLoop("C:/Users/hodif/Downloads/tetrischnager/vg-lang-master/projects/tetris/Tetris.wav", -1);
     }
 }
 
@@ -1070,8 +1427,8 @@ function initGame() {
     initializeBoard();
     
     ## Generate the first pieces - make sure they're valid
-    nextPiece = generateRandomTetromino();
-    currentPiece = generateRandomTetromino(); ## Set current piece directly first time
+    nextPiece = generateRandomPiece();
+    currentPiece = generateRandomPiece(); ## Set current piece directly first time
     updateNextPieceDisplay();
     
     ## Draw the initial state
@@ -1088,7 +1445,7 @@ function initGame() {
     if (!musicMuted) {
         ## Make sure no sounds are playing before starting new ones
         Sound.stopAllSounds();
-        playGameSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+        playGameSoundLoop("C:/Users/hodif/Downloads/tetrischnager/vg-lang-master/projects/tetris/Tetris.wav", -1);
     }
 }
 
@@ -1176,8 +1533,8 @@ function resetGame() {
     initializeBoard();
     
     ## Generate new pieces
-    nextPiece = generateRandomTetromino();
-    currentPiece = generateRandomTetromino();
+    nextPiece = generateRandomPiece();
+    currentPiece = generateRandomPiece();
     updateNextPieceDisplay();
     
     ## Update score and level display
@@ -1192,7 +1549,7 @@ function resetGame() {
     Timer.startTimer(gameTimer);
     
     ## Restart music
-    playGameSoundLoop("C:/Users/hodif/Desktop/easygraphicsoppgaver/Interpreter/projects/tetris/Tetris.wav", -1);
+    playGameSoundLoop("C:/Users/hodif/Downloads/tetrischnager/vg-lang-master/projects/tetris/Tetris.wav", -1);
 }
 
 ## Display high scores from the file
