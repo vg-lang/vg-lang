@@ -32,7 +32,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
       - name: Install packages website dependencies
         run: |
           cd packages-website
@@ -55,7 +54,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
       - name: Install main website dependencies
         run: |
           cd vg-website
