@@ -1,4 +1,4 @@
-name: ci
+name: Deploy VG Language Websites
 on:
   push:
     branches:
@@ -7,17 +7,66 @@ on:
 permissions:
   contents: write
 jobs:
-  deploy:
+  deploy-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
           python-version: 3.x
-      - uses: actions/cache@v3  # Updated from v2 to v3
+      - uses: actions/cache@v3
         with:
-          key: ${{ github.ref }}
+          key: ${{ github.ref }}-docs
           path: .cache
-      - run: pip install mkdocs-material
-      - run: pip install pillow cairosvg
-      - run: mkdocs gh-deploy --force
+      - name: Install MkDocs dependencies
+        run: |
+          pip install mkdocs-material
+          pip install pillow cairosvg
+      - name: Build and deploy documentation
+        run: mkdocs gh-deploy --force
+
+  deploy-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - name: Install packages website dependencies
+        run: |
+          cd packages-website
+          npm install
+      - name: Build packages website
+        run: |
+          cd packages-website
+          npm run build
+      - name: Deploy packages website
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./packages-website/out
+          destination_dir: packages
+
+  deploy-main-website:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - name: Install main website dependencies
+        run: |
+          cd vg-website
+          npm install
+      - name: Build main website
+        run: |
+          cd vg-website
+          npm run build
+      - name: Deploy main website
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./vg-website/out
+          destination_dir: main
