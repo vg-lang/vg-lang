@@ -1,4 +1,4 @@
-// Generated from C:/Users/hodif/Desktop/usn2024/vg lang/grammar/vg_lang.g4 by ANTLR 4.13.2
+// Generated from grammar/vg_lang.g4 by ANTLR 4.13.2
 package components;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -138,6 +138,16 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitForUpdate(vg_langParser.ForUpdateContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#forEachStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterForEachStatement(vg_langParser.ForEachStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#forEachStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitForEachStatement(vg_langParser.ForEachStatementContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#whileStatement}.
 	 * @param ctx the parse tree
 	 */
@@ -157,6 +167,56 @@ public interface vg_langListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#switchStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterSwitchStatement(vg_langParser.SwitchStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#switchStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitSwitchStatement(vg_langParser.SwitchStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#switchCase}.
+	 * @param ctx the parse tree
+	 */
+	void enterSwitchCase(vg_langParser.SwitchCaseContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#switchCase}.
+	 * @param ctx the parse tree
+	 */
+	void exitSwitchCase(vg_langParser.SwitchCaseContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#defaultCase}.
+	 * @param ctx the parse tree
+	 */
+	void enterDefaultCase(vg_langParser.DefaultCaseContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#defaultCase}.
+	 * @param ctx the parse tree
+	 */
+	void exitDefaultCase(vg_langParser.DefaultCaseContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#breakStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterBreakStatement(vg_langParser.BreakStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#breakStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitBreakStatement(vg_langParser.BreakStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#continueStatement}.
+	 * @param ctx the parse tree
+	 */
+	void enterContinueStatement(vg_langParser.ContinueStatementContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#continueStatement}.
+	 * @param ctx the parse tree
+	 */
+	void exitContinueStatement(vg_langParser.ContinueStatementContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vg_langParser#arrayLiteral}.
 	 * @param ctx the parse tree
@@ -408,6 +468,76 @@ public interface vg_langListener extends ParseTreeListener {
 	 */
 	void exitEnumValue(vg_langParser.EnumValueContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link vg_langParser#classDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterClassDeclaration(vg_langParser.ClassDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#classDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitClassDeclaration(vg_langParser.ClassDeclarationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#classMember}.
+	 * @param ctx the parse tree
+	 */
+	void enterClassMember(vg_langParser.ClassMemberContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#classMember}.
+	 * @param ctx the parse tree
+	 */
+	void exitClassMember(vg_langParser.ClassMemberContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#fieldDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterFieldDeclaration(vg_langParser.FieldDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#fieldDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitFieldDeclaration(vg_langParser.FieldDeclarationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#methodDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterMethodDeclaration(vg_langParser.MethodDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#methodDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitMethodDeclaration(vg_langParser.MethodDeclarationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#constructorDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void enterConstructorDeclaration(vg_langParser.ConstructorDeclarationContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#constructorDeclaration}.
+	 * @param ctx the parse tree
+	 */
+	void exitConstructorDeclaration(vg_langParser.ConstructorDeclarationContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#accessModifier}.
+	 * @param ctx the parse tree
+	 */
+	void enterAccessModifier(vg_langParser.AccessModifierContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#accessModifier}.
+	 * @param ctx the parse tree
+	 */
+	void exitAccessModifier(vg_langParser.AccessModifierContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#methodModifier}.
+	 * @param ctx the parse tree
+	 */
+	void enterMethodModifier(vg_langParser.MethodModifierContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#methodModifier}.
+	 * @param ctx the parse tree
+	 */
+	void exitMethodModifier(vg_langParser.MethodModifierContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link vg_langParser#block}.
 	 * @param ctx the parse tree
 	 */
@@ -447,6 +577,16 @@ public interface vg_langListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitPrimary(vg_langParser.PrimaryContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link vg_langParser#newExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterNewExpression(vg_langParser.NewExpressionContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link vg_langParser#newExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitNewExpression(vg_langParser.NewExpressionContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link vg_langParser#functionCall}.
 	 * @param ctx the parse tree

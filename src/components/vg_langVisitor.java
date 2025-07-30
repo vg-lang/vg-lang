@@ -1,4 +1,4 @@
-// Generated from C:/Users/hodif/Desktop/usn2024/vg lang/grammar/vg_lang.g4 by ANTLR 4.13.2
+// Generated from grammar/vg_lang.g4 by ANTLR 4.13.2
 package components;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -89,6 +89,12 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitForUpdate(vg_langParser.ForUpdateContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#forEachStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitForEachStatement(vg_langParser.ForEachStatementContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#whileStatement}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -100,6 +106,36 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitDoWhileStatement(vg_langParser.DoWhileStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#switchStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSwitchStatement(vg_langParser.SwitchStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#switchCase}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitSwitchCase(vg_langParser.SwitchCaseContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#defaultCase}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitDefaultCase(vg_langParser.DefaultCaseContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#breakStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBreakStatement(vg_langParser.BreakStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#continueStatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitContinueStatement(vg_langParser.ContinueStatementContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vg_langParser#arrayLiteral}.
 	 * @param ctx the parse tree
@@ -251,6 +287,48 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitEnumValue(vg_langParser.EnumValueContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link vg_langParser#classDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitClassDeclaration(vg_langParser.ClassDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#classMember}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitClassMember(vg_langParser.ClassMemberContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#fieldDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitFieldDeclaration(vg_langParser.FieldDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#methodDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMethodDeclaration(vg_langParser.MethodDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#constructorDeclaration}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitConstructorDeclaration(vg_langParser.ConstructorDeclarationContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#accessModifier}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitAccessModifier(vg_langParser.AccessModifierContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#methodModifier}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitMethodModifier(vg_langParser.MethodModifierContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link vg_langParser#block}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -274,6 +352,12 @@ public interface vg_langVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitPrimary(vg_langParser.PrimaryContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link vg_langParser#newExpression}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitNewExpression(vg_langParser.NewExpressionContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link vg_langParser#functionCall}.
 	 * @param ctx the parse tree

@@ -9,6 +9,8 @@ public class VariableReference {
     private String fieldName;
 
     private Struct struct;
+    private ClassInstance classInstance;
+    
     public VariableReference(SymbolTable table, String name, List<Integer> indices) {
 
         this.table = table;
@@ -24,6 +26,11 @@ public class VariableReference {
         this.fieldName = fieldName;
 
     }
+    
+    public VariableReference(ClassInstance classInstance, String fieldName) {
+        this.classInstance = classInstance;
+        this.fieldName = fieldName;
+    }
 
 
 
@@ -34,6 +41,11 @@ public class VariableReference {
 
             return;
 
+        }
+        
+        if (classInstance != null) {
+            classInstance.setField(fieldName, value);
+            return;
         }
 
         Object currentValue = table.get(name);
@@ -84,6 +96,10 @@ public class VariableReference {
         if (struct != null) {
 
             return struct.getField(fieldName);
+        }
+        
+        if (classInstance != null) {
+            return classInstance.getField(fieldName);
         }
         Object value = table.get(name);
 

@@ -320,6 +320,10 @@ public class ErrorHandler implements Thread.UncaughtExceptionHandler {
         currentFilePath = filePath;
     }
 
+    public static String getCurrentFile() {
+        return currentFilePath;
+    }
+
 
     public static void reportSyntaxError(Token token, String message) {
         String location = token != null ?

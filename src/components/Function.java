@@ -34,7 +34,7 @@ public class Function {
             functionScope.set(parameters.get(i), args.get(i));
         }
         
-        interpreter.symbolTableStack.push(functionScope);
+        interpreter.getSymbolTableStack().push(functionScope);
         
         Object result = null;
         try {
@@ -42,7 +42,7 @@ public class Function {
         } catch (ReturnException e) {
             result = e.getValue();
         } finally {
-            interpreter.symbolTableStack.pop();
+            interpreter.getSymbolTableStack().pop();
         }
         
         return result;

@@ -8,6 +8,7 @@ public class Namespace {
     private Map<String, Object> symbols = new HashMap<>();
     private Map<String, Namespace> children = new HashMap<>();
     private Map<String, Function> functions = new HashMap<>();
+    private Map<String, ClassDefinition> classes = new HashMap<>();
 
     public Namespace(String name) {
         this.name = name;
