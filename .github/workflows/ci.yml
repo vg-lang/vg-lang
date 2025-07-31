@@ -7,31 +7,42 @@ on:
 permissions:
   contents: write
 jobs:
-  deploy-docs:
+  deploy-all:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      # Debug: List directory contents
+      - name: Debug - List repository contents
+        run: |
+          echo "=== Repository root ==="
+          ls -la
+          echo "=== vg-website directory ==="
+          ls -la vg-website/
+          echo "=== packages-website directory ==="
+          ls -la packages-website/
+      
+      # Build Documentation
       - uses: actions/setup-python@v4
         with:
           python-version: 3.x
-      - uses: actions/cache@v3
-        with:
-          key: ${{ github.ref }}-docs
-          path: .cache
       - name: Install MkDocs dependencies
         run: |
           pip install mkdocs-material
           pip install pillow cairosvg
-      - name: Build and deploy documentation
-        run: mkdocs gh-deploy --force
-
-  deploy-packages:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
+      - name: Build documentation
+        run: mkdocs build
+      
+      # Build Packages Website
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
+      - name: Debug - Check packages-website package.json
+        run: |
+          echo "=== Checking packages-website package.json ==="
+          cat packages-website/package.json
       - name: Install packages website dependencies
         run: |
           cd packages-website
@@ -40,20 +51,12 @@ jobs:
         run: |
           cd packages-website
           npm run build
-      - name: Deploy packages website
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./packages-website/out
-          destination_dir: packages
-
-  deploy-main-website:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+      
+      # Build Main Website
+      - name: Debug - Check vg-website package.json
+        run: |
+          echo "=== Checking vg-website package.json ==="
+          cat vg-website/package.json
       - name: Install main website dependencies
         run: |
           cd vg-website
@@ -62,9 +65,34 @@ jobs:
         run: |
           cd vg-website
           npm run build
-      - name: Deploy main website
+      
+      # Organize files for deployment
+      - name: Organize deployment files
+        run: |
+          # Create deployment directory
+          mkdir -p deploy
+          
+          # Copy documentation (root)
+          cp -r docs/site/* deploy/
+          
+          # Copy packages website to /packages/
+          mkdir -p deploy/packages
+          cp -r packages-website/out/* deploy/packages/
+          
+          # Copy main website to /main/
+          mkdir -p deploy/main
+          cp -r vg-website/out/* deploy/main/
+          
+          # Copy CNAME files
+          cp docs/CNAME deploy/
+          cp packages-website/public/CNAME deploy/packages/
+          cp vg-website/public/CNAME deploy/main/
+      
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./vg-website/out
-          destination_dir: main
+          publish_dir: ./deploy
+          destination_dir: .
+          force_orphan: true
