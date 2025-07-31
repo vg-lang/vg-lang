@@ -1,4 +1,4 @@
-name: Deploy VG Language Websites
+name: Deploy VG Language Documentation
 on:
   push:
     branches:
@@ -7,7 +7,7 @@ on:
 permissions:
   contents: write
 jobs:
-  deploy-all:
+  deploy-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -19,8 +19,8 @@ jobs:
         run: |
           echo "=== Repository root ==="
           ls -la
-          echo "=== docs directory ==="
-          ls -la docs/
+          echo "=== vg-lang-docs directory ==="
+          ls -la vg-lang-docs/
       
       # Build Documentation
       - uses: actions/setup-python@v4
@@ -33,81 +33,23 @@ jobs:
       - name: Debug - Check mkdocs.yml
         run: |
           echo "=== Checking mkdocs.yml ==="
-          cat mkdocs.yml
+          cat vg-lang-docs/mkdocs.yml
       - name: Build documentation
         run: |
           echo "=== Building documentation ==="
+          cd vg-lang-docs
           mkdocs build --verbose
       - name: Debug - Check docs build
         run: |
           echo "=== Checking docs build ==="
-          ls -la docs/
-          if [ -d "docs/site" ]; then
-            echo "docs/site exists"
-            ls -la docs/site/
+          ls -la vg-lang-docs/
+          if [ -d "vg-lang-docs/site" ]; then
+            echo "vg-lang-docs/site exists"
+            ls -la vg-lang-docs/site/
           else
-            echo "docs/site does not exist"
+            echo "vg-lang-docs/site does not exist"
             echo "Checking if site directory was created elsewhere:"
             find . -name "site" -type d 2>/dev/null || echo "No site directory found"
-          fi
-      
-      # Build Packages Website
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Debug - Check packages-website package.json
-        run: |
-          echo "=== Checking packages-website package.json ==="
-          if [ -f "packages-website/package.json" ]; then
-            cat packages-website/package.json
-          else
-            echo "ERROR: packages-website/package.json not found!"
-            ls -la packages-website/
-          fi
-      - name: Install packages website dependencies
-        run: |
-          cd packages-website
-          npm install
-      - name: Build packages website
-        run: |
-          cd packages-website
-          npm run build
-      - name: Debug - Check packages build
-        run: |
-          echo "=== Checking packages build ==="
-          if [ -d "packages-website/out" ]; then
-            echo "packages-website/out exists"
-            ls -la packages-website/out/
-          else
-            echo "packages-website/out does not exist"
-          fi
-      
-      # Build Main Website
-      - name: Debug - Check vg-website package.json
-        run: |
-          echo "=== Checking vg-website package.json ==="
-          if [ -f "vg-website/package.json" ]; then
-            cat vg-website/package.json
-          else
-            echo "ERROR: vg-website/package.json not found!"
-            ls -la vg-website/
-          fi
-      - name: Install main website dependencies
-        run: |
-          cd vg-website
-          npm install
-      - name: Build main website
-        run: |
-          cd vg-website
-          npm run build
-      - name: Debug - Check main website build
-        run: |
-          echo "=== Checking main website build ==="
-          if [ -d "vg-website/out" ]; then
-            echo "vg-website/out exists"
-            ls -la vg-website/out/
-          else
-            echo "vg-website/out does not exist"
           fi
       
       # Organize files for deployment
@@ -116,59 +58,24 @@ jobs:
           # Create deployment directory
           mkdir -p deploy
           
-          # Copy documentation (root) - use docs folder directly
-          echo "Copying docs folder to deploy/"
-          cp -r docs/* deploy/
-          
-          # Copy packages website to /packages/ - with error checking
-          if [ -d "packages-website/out" ]; then
-            echo "Copying packages-website/out to deploy/packages/"
-            mkdir -p deploy/packages
-            cp -r packages-website/out/* deploy/packages/
+          # Copy documentation (root) - use site folder directly
+          echo "Copying vg-lang-docs/site to deploy/"
+          if [ -d "vg-lang-docs/site" ]; then
+            cp -r vg-lang-docs/site/* deploy/
           else
-            echo "ERROR: packages-website/out does not exist!"
-            exit 1
-          fi
-          
-          # Copy main website to /main/ - with error checking
-          if [ -d "vg-website/out" ]; then
-            echo "Copying vg-website/out to deploy/main/"
-            mkdir -p deploy/main
-            cp -r vg-website/out/* deploy/main/
-          else
-            echo "ERROR: vg-website/out does not exist!"
+            echo "ERROR: vg-lang-docs/site does not exist!"
             exit 1
           fi
           
           # Copy CNAME files - with error checking
-          if [ -f "docs/CNAME" ]; then
-            cp docs/CNAME deploy/
+          if [ -f "vg-lang-docs/docs/CNAME" ]; then
+            cp vg-lang-docs/docs/CNAME deploy/
           else
-            echo "WARNING: docs/CNAME not found"
-          fi
-          
-          if [ -f "packages-website/public/CNAME" ]; then
-            cp packages-website/public/CNAME deploy/packages/
-          else
-            echo "WARNING: packages-website/public/CNAME not found"
-          fi
-          
-          if [ -f "vg-website/public/CNAME" ]; then
-            cp vg-website/public/CNAME deploy/main/
-          else
-            echo "WARNING: vg-website/public/CNAME not found"
+            echo "WARNING: vg-lang-docs/docs/CNAME not found"
           fi
           
           echo "=== Final deployment structure ==="
           ls -la deploy/
-          if [ -d "deploy/packages" ]; then
-            echo "deploy/packages contents:"
-            ls -la deploy/packages/
-          fi
-          if [ -d "deploy/main" ]; then
-            echo "deploy/main contents:"
-            ls -la deploy/main/
-          fi
       
       # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
@@ -177,4 +84,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./deploy
           destination_dir: .
-          force_orphan: true
+          force_orphan: true 
