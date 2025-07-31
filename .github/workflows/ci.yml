@@ -19,10 +19,8 @@ jobs:
         run: |
           echo "=== Repository root ==="
           ls -la
-          echo "=== vg-website directory ==="
-          ls -la vg-website/
-          echo "=== packages-website directory ==="
-          ls -la packages-website/
+          echo "=== docs directory ==="
+          ls -la docs/
       
       # Build Documentation
       - uses: actions/setup-python@v4
@@ -32,8 +30,14 @@ jobs:
         run: |
           pip install mkdocs-material
           pip install pillow cairosvg
+      - name: Debug - Check mkdocs.yml
+        run: |
+          echo "=== Checking mkdocs.yml ==="
+          cat mkdocs.yml
       - name: Build documentation
-        run: mkdocs build
+        run: |
+          echo "=== Building documentation ==="
+          mkdocs build --verbose
       - name: Debug - Check docs build
         run: |
           echo "=== Checking docs build ==="
@@ -43,6 +47,8 @@ jobs:
             ls -la docs/site/
           else
             echo "docs/site does not exist"
+            echo "Checking if site directory was created elsewhere:"
+            find . -name "site" -type d 2>/dev/null || echo "No site directory found"
           fi
       
       # Build Packages Website
@@ -110,14 +116,9 @@ jobs:
           # Create deployment directory
           mkdir -p deploy
           
-          # Copy documentation (root) - with error checking
-          if [ -d "docs/site" ]; then
-            echo "Copying docs/site to deploy/"
-            cp -r docs/site/* deploy/
-          else
-            echo "ERROR: docs/site does not exist!"
-            exit 1
-          fi
+          # Copy documentation (root) - use docs folder directly
+          echo "Copying docs folder to deploy/"
+          cp -r docs/* deploy/
           
           # Copy packages website to /packages/ - with error checking
           if [ -d "packages-website/out" ]; then
