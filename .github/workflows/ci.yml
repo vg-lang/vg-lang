@@ -34,6 +34,16 @@ jobs:
           pip install pillow cairosvg
       - name: Build documentation
         run: mkdocs build
+      - name: Debug - Check docs build
+        run: |
+          echo "=== Checking docs build ==="
+          ls -la docs/
+          if [ -d "docs/site" ]; then
+            echo "docs/site exists"
+            ls -la docs/site/
+          else
+            echo "docs/site does not exist"
+          fi
       
       # Build Packages Website
       - uses: actions/setup-node@v3
@@ -42,7 +52,12 @@ jobs:
       - name: Debug - Check packages-website package.json
         run: |
           echo "=== Checking packages-website package.json ==="
-          cat packages-website/package.json
+          if [ -f "packages-website/package.json" ]; then
+            cat packages-website/package.json
+          else
+            echo "ERROR: packages-website/package.json not found!"
+            ls -la packages-website/
+          fi
       - name: Install packages website dependencies
         run: |
           cd packages-website
@@ -51,12 +66,26 @@ jobs:
         run: |
           cd packages-website
           npm run build
+      - name: Debug - Check packages build
+        run: |
+          echo "=== Checking packages build ==="
+          if [ -d "packages-website/out" ]; then
+            echo "packages-website/out exists"
+            ls -la packages-website/out/
+          else
+            echo "packages-website/out does not exist"
+          fi
       
       # Build Main Website
       - name: Debug - Check vg-website package.json
         run: |
           echo "=== Checking vg-website package.json ==="
-          cat vg-website/package.json
+          if [ -f "vg-website/package.json" ]; then
+            cat vg-website/package.json
+          else
+            echo "ERROR: vg-website/package.json not found!"
+            ls -la vg-website/
+          fi
       - name: Install main website dependencies
         run: |
           cd vg-website
@@ -65,6 +94,15 @@ jobs:
         run: |
           cd vg-website
           npm run build
+      - name: Debug - Check main website build
+        run: |
+          echo "=== Checking main website build ==="
+          if [ -d "vg-website/out" ]; then
+            echo "vg-website/out exists"
+            ls -la vg-website/out/
+          else
+            echo "vg-website/out does not exist"
+          fi
       
       # Organize files for deployment
       - name: Organize deployment files
@@ -72,21 +110,64 @@ jobs:
           # Create deployment directory
           mkdir -p deploy
           
-          # Copy documentation (root)
-          cp -r docs/site/* deploy/
+          # Copy documentation (root) - with error checking
+          if [ -d "docs/site" ]; then
+            echo "Copying docs/site to deploy/"
+            cp -r docs/site/* deploy/
+          else
+            echo "ERROR: docs/site does not exist!"
+            exit 1
+          fi
           
-          # Copy packages website to /packages/
-          mkdir -p deploy/packages
-          cp -r packages-website/out/* deploy/packages/
+          # Copy packages website to /packages/ - with error checking
+          if [ -d "packages-website/out" ]; then
+            echo "Copying packages-website/out to deploy/packages/"
+            mkdir -p deploy/packages
+            cp -r packages-website/out/* deploy/packages/
+          else
+            echo "ERROR: packages-website/out does not exist!"
+            exit 1
+          fi
           
-          # Copy main website to /main/
-          mkdir -p deploy/main
-          cp -r vg-website/out/* deploy/main/
+          # Copy main website to /main/ - with error checking
+          if [ -d "vg-website/out" ]; then
+            echo "Copying vg-website/out to deploy/main/"
+            mkdir -p deploy/main
+            cp -r vg-website/out/* deploy/main/
+          else
+            echo "ERROR: vg-website/out does not exist!"
+            exit 1
+          fi
           
-          # Copy CNAME files
-          cp docs/CNAME deploy/
-          cp packages-website/public/CNAME deploy/packages/
-          cp vg-website/public/CNAME deploy/main/
+          # Copy CNAME files - with error checking
+          if [ -f "docs/CNAME" ]; then
+            cp docs/CNAME deploy/
+          else
+            echo "WARNING: docs/CNAME not found"
+          fi
+          
+          if [ -f "packages-website/public/CNAME" ]; then
+            cp packages-website/public/CNAME deploy/packages/
+          else
+            echo "WARNING: packages-website/public/CNAME not found"
+          fi
+          
+          if [ -f "vg-website/public/CNAME" ]; then
+            cp vg-website/public/CNAME deploy/main/
+          else
+            echo "WARNING: vg-website/public/CNAME not found"
+          fi
+          
+          echo "=== Final deployment structure ==="
+          ls -la deploy/
+          if [ -d "deploy/packages" ]; then
+            echo "deploy/packages contents:"
+            ls -la deploy/packages/
+          fi
+          if [ -d "deploy/main" ]; then
+            echo "deploy/main contents:"
+            ls -la deploy/main/
+          fi
       
       # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
