@@ -22,6 +22,16 @@ new programmers, how to code by making both console applications and Graphical U
 
 VG features a clean, readable syntax with support for variables, functions, control structures, object-oriented programming with classes and methods, structs, enums, error handling with try-catch blocks, and comprehensive GUI development capabilities. The language includes built-in support for arrays, strings, mathematical operations, file I/O, and system calls.
 
+**Project Overview: VG Language is an educational programming language designed to teach new programmers how to code by creating both console applications and graphical user interfaces readme.md:19-24 . The name comes from "Visual" and "Graphics", reflecting its focus on accessibility and GUI development.
+
+Key Features: The language includes comprehensive programming constructs as documented in the MkDocs configuration mkdocs.yml:39-68 :
+
+-Variables, constants, and arrays
+-Control flow (if statements, loops)
+-Functions and object-oriented programming
+-Error handling with try-catch blocks
+-Built-in GUI development capabilities
+-Package management system
 
 ##  Getting Started
 
