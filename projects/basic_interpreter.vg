@@ -14,8 +14,17 @@ function createStatement(cmd, arg1, arg2) {
 function main() {
     print("Welcome to MyBASIC in vg_lang!");
     var variables = [];
+    var multiLineBuffer = [];
+    var inMultiLineMode = false;
+    var currentBlockType = "";
+    
     while (true) {
-        var line = Prompt.input("BASIC> ");
+        var prompt = "BASIC> ";
+        if (inMultiLineMode) {
+            prompt = "    > ";
+        }
+        
+        var line = Prompt.input(prompt);
         line = trimString(line);
 
         if (line == "END" || line == "QUIT") {
@@ -23,6 +32,32 @@ function main() {
             return false;
         }
 
+        ## Check if this starts a multi-line block
+        var blockType = getBlockType(line);
+        if (blockType != "") {
+            inMultiLineMode = true;
+            currentBlockType = blockType;
+            array.push(multiLineBuffer, line);
+            continue;
+        }
+        
+        ## Check if this ends the current block
+        if (inMultiLineMode && isBlockEnd(line, currentBlockType)) {
+            array.push(multiLineBuffer, line);
+            executeMultiLineBlock(multiLineBuffer, variables);
+            multiLineBuffer = [];
+            inMultiLineMode = false;
+            currentBlockType = "";
+            continue;
+        }
+        
+        ## If in multi-line mode, collect the line
+        if (inMultiLineMode) {
+            array.push(multiLineBuffer, line);
+            continue;
+        }
+        
+        ## Execute single line statement
         var statement = parseBASICStatement(line);
         executeStatement(statement, variables);
     }
@@ -45,6 +80,41 @@ function parseBASICStatement(line) {
     if ((cmd == "ADD" || cmd == "SUBTRACT" || cmd == "MULTIPLY" || cmd == "DIVIDE") && count == 3) {
         return createStatement(cmd, tokens[1], tokens[2]);
     }
+    if (cmd == "LET" && count >= 4 && tokens[2] == "=") {
+        var varName = tokens[1];
+        var value = joinTokens(tokens, 3, count);
+        return createStatement("LET", varName, value);
+    }
+    if (cmd == "IF" && count >= 6) {
+        ## Parse IF condition THEN statement
+        var thenIndex = findToken(tokens, "THEN");
+        if (thenIndex > 1) {
+            var condition = joinTokens(tokens, 1, thenIndex);
+            var thenStatement = joinTokens(tokens, thenIndex + 1, count);
+            return createStatement("IF", condition, thenStatement);
+        }
+    }
+    if (cmd == "FOR" && count >= 6) {
+        ## Parse FOR variable = start TO end
+        var toIndex = findToken(tokens, "TO");
+        if (toIndex > 3 && tokens[2] == "=") {
+            var variable = tokens[1];
+            var startValue = tokens[3];
+            var endValue = joinTokens(tokens, toIndex + 1, count);
+            return createStatement("FOR", variable + "=" + startValue + " TO " + endValue, "");
+        }
+    }
+    if (cmd == "NEXT" && count >= 2) {
+        var variable = tokens[1];
+        return createStatement("NEXT", variable, "");
+    }
+    if (cmd == "WHILE" && count >= 2) {
+        var condition = joinTokens(tokens, 1, count);
+        return createStatement("WHILE", condition, "");
+    }
+    if (cmd == "WEND") {
+        return createStatement("WEND", "", "");
+    }
     return createStatement("UNKNOWN", line, "");
 }
 
@@ -52,7 +122,26 @@ function executeStatement(statement, variables) {
     var cmd = statement[0];
 
     if (cmd == "PRINT") {
-        print(statement[1]);
+        var output = evaluateExpression(statement[1], variables);
+        print(output);
+        return;
+    }
+
+    if (cmd == "LET") {
+        var varName = statement[1];
+        var value = evaluateExpression(statement[2], variables);
+        setVariable(variables, varName, value);
+        return;
+    }
+
+    if (cmd == "IF") {
+        var condition = statement[1];
+        var thenStatement = statement[2];
+        
+        if (evaluateCondition(condition, variables)) {
+            var innerStatement = parseBASICStatement(thenStatement);
+            executeStatement(innerStatement, variables);
+        }
         return;
     }
 
@@ -85,6 +174,91 @@ function executeStatement(statement, variables) {
     print("Unknown statement: " + statement[1]);
 }
 
+function getBlockType(line) {
+    var tokens = tokenizeBASIC(line);
+    if (array.getLength(tokens) > 0) {
+        var cmd = tokens[0];
+        if (cmd == "FOR" || cmd == "WHILE") {
+            return cmd;
+        }
+    }
+    return "";
+}
+
+function isBlockEnd(line, blockType) {
+    var tokens = tokenizeBASIC(line);
+    if (array.getLength(tokens) > 0) {
+        var cmd = tokens[0];
+        if (blockType == "FOR" && cmd == "NEXT") {
+            return true;
+        }
+        if (blockType == "WHILE" && cmd == "WEND") {
+            return true;
+        }
+    }
+    return false;
+}
+
+function executeMultiLineBlock(lines, variables) {
+    var lineCount = array.getLength(lines);
+    if (lineCount < 2) {
+        print("Error: Invalid block");
+        return;
+    }
+    
+    var firstLine = lines[0];
+    var tokens = tokenizeBASIC(firstLine);
+    var blockType = tokens[0];
+    
+    if (blockType == "FOR") {
+        executeForLoop(lines, variables);
+    } else if (blockType == "WHILE") {
+        executeWhileLoop(lines, variables);
+    }
+}
+
+function executeForLoop(lines, variables) {
+    var firstLine = lines[0];
+    var tokens = tokenizeBASIC(firstLine);
+    
+    ## Parse FOR variable = start TO end
+    var toIndex = findToken(tokens, "TO");
+    if (toIndex > 3 && tokens[2] == "=") {
+        var variable = tokens[1];
+        var startValue = evaluateExpression(tokens[3], variables);
+        var endValue = evaluateExpression(joinTokens(tokens, toIndex + 1, array.getLength(tokens)), variables);
+        
+        var start = Double.toDouble(startValue);
+        var end = Double.toDouble(endValue);
+        
+        ## Execute loop body for each iteration using a different variable name
+        for (var loopCounter = start; loopCounter <= end; loopCounter = loopCounter + 1) {
+            setVariable(variables, variable, formatNumber(loopCounter));
+            executeBlockBody(lines, variables);
+        }
+    }
+}
+
+function executeWhileLoop(lines, variables) {
+    var firstLine = lines[0];
+    var tokens = tokenizeBASIC(firstLine);
+    var condition = joinTokens(tokens, 1, array.getLength(tokens));
+    
+    while (evaluateCondition(condition, variables)) {
+        executeBlockBody(lines, variables);
+    }
+}
+
+function executeBlockBody(lines, variables) {
+    var lineCount = array.getLength(lines);
+    ## Skip first and last line (FOR/WHILE and NEXT/WEND)
+    for (var i = 1; i < lineCount - 1; i = i + 1) {
+        var line = lines[i];
+        var statement = parseBASICStatement(line);
+        executeStatement(statement, variables);
+    }
+}
+
 function tokenizeBASIC(line) {
     var pattern = "[^\\s]+";
     var tokens = regex.findAll(line, pattern);
@@ -105,6 +279,205 @@ function joinTokens(tokens, start, end) {
         result = result + tokens[i];
     }
     return result;
+}
+
+function findToken(tokens, target) {
+    var count = array.getLength(tokens);
+    for (var i = 0; i < count; i = i + 1) {
+        if (tokens[i] == target) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+function setVariable(variables, name, value) {
+    var lowerName = toLowerCase(name);
+    var count = array.getLength(variables);
+    for (var i = 0; i < count; i = i + 2) {
+        if (toLowerCase(variables[i]) == lowerName) {
+            variables[i + 1] = value;
+            return;
+        }
+    }
+    ## Variable not found, add new one
+    array.push(variables, lowerName);
+    array.push(variables, value);
+}
+
+function getVariable(variables, name) {
+    var lowerName = toLowerCase(name);
+    var count = array.getLength(variables);
+    for (var i = 0; i < count; i = i + 2) {
+        if (toLowerCase(variables[i]) == lowerName) {
+            return variables[i + 1];
+        }
+    }
+    return "0"; ## Default value if variable not found
+}
+
+function hasVariable(variables, name) {
+    var lowerName = toLowerCase(name);
+    var count = array.getLength(variables);
+    for (var i = 0; i < count; i = i + 2) {
+        if (toLowerCase(variables[i]) == lowerName) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function toLowerCase(str) {
+    ## Convert string to lowercase using regex replacements
+    var result = str;
+    result = regex.replaceAll(result, "A", "a");
+    result = regex.replaceAll(result, "B", "b");
+    result = regex.replaceAll(result, "C", "c");
+    result = regex.replaceAll(result, "D", "d");
+    result = regex.replaceAll(result, "E", "e");
+    result = regex.replaceAll(result, "F", "f");
+    result = regex.replaceAll(result, "G", "g");
+    result = regex.replaceAll(result, "H", "h");
+    result = regex.replaceAll(result, "I", "i");
+    result = regex.replaceAll(result, "J", "j");
+    result = regex.replaceAll(result, "K", "k");
+    result = regex.replaceAll(result, "L", "l");
+    result = regex.replaceAll(result, "M", "m");
+    result = regex.replaceAll(result, "N", "n");
+    result = regex.replaceAll(result, "O", "o");
+    result = regex.replaceAll(result, "P", "p");
+    result = regex.replaceAll(result, "Q", "q");
+    result = regex.replaceAll(result, "R", "r");
+    result = regex.replaceAll(result, "S", "s");
+    result = regex.replaceAll(result, "T", "t");
+    result = regex.replaceAll(result, "U", "u");
+    result = regex.replaceAll(result, "V", "v");
+    result = regex.replaceAll(result, "W", "w");
+    result = regex.replaceAll(result, "X", "x");
+    result = regex.replaceAll(result, "Y", "y");
+    result = regex.replaceAll(result, "Z", "z");
+    return result;
+}
+
+function isNumeric(str) {
+    ## Check if string represents a valid number
+    ## Use regex to check if it matches a number pattern
+    var pattern = "^-?\\d+(\\.\\d+)?$";
+    var matches = regex.findAll(str, pattern);
+    var matchCount = array.getLength(matches);
+    return matchCount > 0;
+}
+
+function formatNumber(num) {
+    ## Convert number to string, removing unnecessary decimal places
+    var str = num + "";
+    ## Use regex to remove .0 at the end
+    var pattern = "\\.0$";
+    return regex.replaceAll(str, pattern, "");
+}
+
+function evaluateArithmetic(expr, variables) {
+    var tokens = tokenizeBASIC(expr);
+    var count = array.getLength(tokens);
+    
+    ## Handle simple binary operations: operand1 operator operand2
+    if (count == 3) {
+        var left = evaluateOperand(tokens[0], variables);
+        var operator = tokens[1];
+        var right = evaluateOperand(tokens[2], variables);
+        
+        var leftNum = Double.toDouble(left);
+        var rightNum = Double.toDouble(right);
+        
+        if (operator == "+") {
+            var sum = leftNum + rightNum;
+            return formatNumber(sum);
+        } else if (operator == "-") {
+            var diff = leftNum - rightNum;
+            return formatNumber(diff);
+        } else if (operator == "*") {
+            var product = leftNum * rightNum;
+            return formatNumber(product);
+        } else if (operator == "/") {
+            if (rightNum == 0) {
+                return "ERROR: Division by zero";
+            }
+            var quotient = leftNum / rightNum;
+            return formatNumber(quotient);
+        }
+    }
+    
+    ## If not a recognized arithmetic expression, return as-is
+    return expr;
+}
+
+function evaluateOperand(operand, variables) {
+    ## Check if it's a number
+    if (isNumeric(operand)) {
+        return operand;
+    }
+    
+    ## Check if it's a variable
+    if (hasVariable(variables, operand)) {
+        return getVariable(variables, operand);
+    }
+    
+    ## Return as-is if not recognized
+    return operand;
+}
+
+function evaluateExpression(expr, variables) {
+    ## First check if it's a valid number
+    if (isNumeric(expr)) {
+        return expr;
+    }
+    
+    ## Check if it's a variable
+    if (hasVariable(variables, expr)) {
+        var value = getVariable(variables, expr);
+        return value;
+    }
+    
+    ## Check if it's an arithmetic expression
+    var result = evaluateArithmetic(expr, variables);
+    if (result != expr) {
+        return result;
+    }
+    
+    ## Return the expression as-is if it's not a number, variable, or arithmetic
+    return expr;
+}
+
+function evaluateCondition(condition, variables) {
+    var tokens = tokenizeBASIC(condition);
+    var count = array.getLength(tokens);
+    
+    if (count < 3) {
+        return false;
+    }
+    
+    var left = evaluateExpression(tokens[0], variables);
+    var operator = tokens[1];
+    var right = evaluateExpression(tokens[2], variables);
+    
+    var leftNum = Double.toDouble(left);
+    var rightNum = Double.toDouble(right);
+    
+    if (operator == "==") {
+        return leftNum == rightNum;
+    } else if (operator == "!=") {
+        return leftNum != rightNum;
+    } else if (operator == ">") {
+        return leftNum > rightNum;
+    } else if (operator == "<") {
+        return leftNum < rightNum;
+    } else if (operator == ">=") {
+        return leftNum >= rightNum;
+    } else if (operator == "<=") {
+        return leftNum <= rightNum;
+    }
+    
+    return false;
 }
 
 main();
