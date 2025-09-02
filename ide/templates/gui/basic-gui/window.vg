@@ -1,0 +1,33 @@
+// Window management for GUI application
+
+import GUI;
+import IO;
+
+func createMainWindow() {
+    var window = GUI.createWindow("VG GUI Application", 800, 600);
+    
+    // Create UI elements
+    var label = GUI.createLabel("Welcome to VG Language GUI!");
+    var button = GUI.createButton("Click Me!");
+    var textInput = GUI.createTextInput("Enter text here...");
+    
+    // Set up event handlers
+    button.onClick = func() {
+        var text = textInput.getText();
+        if (text != "") {
+            GUI.showMessage("Hello", "You entered: " + text);
+        } else {
+            GUI.showMessage("Info", "Please enter some text first!");
+        }
+    };
+    
+    // Layout the UI elements
+    var layout = GUI.createVerticalLayout();
+    layout.addWidget(label);
+    layout.addWidget(textInput);
+    layout.addWidget(button);
+    
+    window.setLayout(layout);
+    
+    return window;
+}

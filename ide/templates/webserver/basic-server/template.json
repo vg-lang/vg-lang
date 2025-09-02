@@ -1,0 +1,24 @@
+{
+    "name": "Web Server",
+    "description": "A web server application with HTTP request handling",
+    "icon": "🌐",
+    "category": "Web Servers",
+    "files": [
+        {
+            "name": "server.vg",
+            "content_file": "server.vg"
+        },
+        {
+            "name": "routes.vg",
+            "content_file": "routes.vg"
+        },
+        {
+            "name": "static/index.html",
+            "content_file": "index.html"
+        },
+        {
+            "name": "README.md",
+            "content_file": "README.md"
+        }
+    ]
+}

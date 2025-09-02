@@ -1,0 +1,3 @@
+import Guilibrary.window;
+var w = window.create("hello",300,300);
+window.launch(w);

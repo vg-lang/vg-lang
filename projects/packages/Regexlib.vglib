@@ -1,0 +1,57 @@
+library RegexLib {
+    /## The regex namespace contains functions for working with regular expressions.
+    # This namespace provides functionality for pattern matching, validation, and
+    # string manipulation using regular expressions.
+    ##/
+    namespace regex {
+        /## Finds all matches of a pattern in a string.
+        # This function returns an array of all substrings that match the specified pattern.
+        #
+        # @param input The string to search in
+        # @param pattern The regular expression pattern to search for
+        # @return An array containing all matching substrings
+        # @author Hussein Abdul-Ameer
+        ##/
+        function findAll(input, pattern) {
+            var pat = VgSystemCall("java.util.regex.Pattern", "compile", pattern);
+            var matcher = VgSystemCall("java.util.regex.Pattern", "matcher", pat, input);
+
+            var results = [];
+            while (VgSystemCall("java.util.regex.Matcher", "find", matcher)) {
+                var match = VgSystemCall("java.util.regex.Matcher", "group", matcher);
+                VgSystemCall("components.ArrayUtils", "push", results, match);
+            }
+            return results;
+        }
+
+        /## Checks if a string matches a pattern.
+        # This function tests whether the entire input string matches the specified pattern.
+        #
+        # @param input The string to test
+        # @param pattern The regular expression pattern to match against
+        # @return True if the entire input string matches the pattern, false otherwise
+        # @author Hussein Abdul-Ameer
+        ##/
+        function matches(input, pattern) {
+            var pat = VgSystemCall("java.util.regex.Pattern", "compile", pattern);
+            var matcher = VgSystemCall("java.util.regex.Pattern", "matcher", pat, input);
+            return VgSystemCall("java.util.regex.Matcher", "matches", matcher);
+        }
+
+        /## Replaces all occurrences of a pattern in a string.
+        # This function replaces each substring of the input that matches the pattern
+        # with the specified replacement string.
+        #
+        # @param input The string to modify
+        # @param pattern The regular expression pattern to search for
+        # @param replacement The string to replace each match with
+        # @return The modified string with all replacements made
+        # @author Hussein Abdul-Ameer
+        ##/
+        function replaceAll(input, pattern, replacement) {
+            var pat = VgSystemCall("java.util.regex.Pattern", "compile", pattern);
+            var matcher = VgSystemCall("java.util.regex.Pattern", "matcher", pat, input);
+            return VgSystemCall("java.util.regex.Matcher", "replaceAll", matcher, replacement);
+        }
+    }
+}

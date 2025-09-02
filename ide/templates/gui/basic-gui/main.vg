@@ -1,0 +1,17 @@
+// VG Language GUI Application
+// Main entry point for the GUI application
+
+import GUI;
+import "window.vg";
+
+func main() {
+    // Initialize the GUI system
+    GUI.init();
+    
+    // Create and show the main window
+    var window = createMainWindow();
+    window.show();
+    
+    // Start the GUI event loop
+    GUI.run();
+}

@@ -1,0 +1,23 @@
+##Language Console Application
+## This is a basic console application template
+
+import IO.Prompt;
+
+function main() {
+    print("Welcome to VG Language!");
+    print("Enter your name:");
+    
+    var name = Prompt.input("write your name");
+    
+    print("Hello, " + name + "!");
+    print("This is your first VG Language console application.");
+    
+    ## Example of basic operations
+    var num1 = 10;
+    var num2 = 20;
+    var sum = num1 + num2;
+    
+    print("Example calculation: " + num1 + " + " + num2 + " = " + sum);
+}
+
+main();

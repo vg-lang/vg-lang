@@ -1,0 +1,20 @@
+{
+    "name": "Calculator Application",
+    "description": "A command-line calculator with basic arithmetic operations",
+    "icon": "🧮",
+    "category": "Console Applications",
+    "files": [
+        {
+            "name": "main.vg",
+            "content_file": "main.vg"
+        },
+        {
+            "name": "calculator.vg",
+            "content_file": "calculator.vg"
+        },
+        {
+            "name": "README.md",
+            "content_file": "README.md"
+        }
+    ]
+}

@@ -1,0 +1,86 @@
+// Calculator logic and operations
+
+import IO;
+import Mathlib;
+
+struct Calculator {
+    var memory;
+    var lastResult;
+}
+
+func Calculator.create() {
+    var calc = Calculator {
+        memory: 0,
+        lastResult: 0
+    };
+    return calc;
+}
+
+func Calculator.clear() {
+    this.memory = 0;
+    this.lastResult = 0;
+}
+
+func Calculator.evaluate(expression) {
+    try {
+        // Parse the expression
+        var tokens = parseExpression(expression);
+        if (tokens.length < 3) {
+            IO.println("Error: Invalid expression. Use format: number operator number");
+            return null;
+        }
+        
+        var num1 = parseFloat(tokens[0]);
+        var operator = tokens[1];
+        var num2 = parseFloat(tokens[2]);
+        
+        if (num1 == null || num2 == null) {
+            IO.println("Error: Invalid numbers in expression");
+            return null;
+        }
+        
+        var result = performOperation(num1, operator, num2);
+        if (result != null) {
+            this.lastResult = result;
+            return result;
+        }
+        
+    } catch (error) {
+        IO.println("Error: " + error.message);
+    }
+    
+    return null;
+}
+
+func parseExpression(expr) {
+    // Simple tokenization by spaces
+    return expr.split(" ");
+}
+
+func parseFloat(str) {
+    try {
+        return Mathlib.parseFloat(str.trim());
+    } catch (error) {
+        return null;
+    }
+}
+
+func performOperation(a, op, b) {
+    switch (op) {
+        case "+":
+            return a + b;
+        case "-":
+            return a - b;
+        case "*":
+            return a * b;
+        case "/":
+            if (b == 0) {
+                IO.println("Error: Division by zero");
+                return null;
+            }
+            return a / b;
+        default:
+            IO.println("Error: Unknown operator '" + op + "'");
+            return null;
+    }
+}

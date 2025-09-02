@@ -1,0 +1,16 @@
+{
+    "name": "Console Application",
+    "description": "A basic command-line application with user input and output",
+    "icon": "💻",
+    "category": "Console Applications",
+    "files": [
+        {
+            "name": "main.vg",
+            "content_file": "main.vg"
+        },
+        {
+            "name": "README.md",
+            "content_file": "README.md"
+        }
+    ]
+}
