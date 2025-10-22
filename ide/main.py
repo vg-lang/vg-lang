@@ -2,18 +2,38 @@ import sys
 import subprocess
 import threading
 import json
+import socket
 import os
 import re
 import difflib
 import queue
+from collections import deque
+from datetime import datetime
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QTextEdit, QVBoxLayout,
                              QHBoxLayout, QWidget, QPushButton, QToolBar, QSplitter,
                              QListWidget, QLabel, QStatusBar, QMessageBox, QFileDialog,
                              QPlainTextEdit, QAction, QListWidgetItem, QDialog, QLineEdit,
                              QFormLayout, QDialogButtonBox, QCheckBox, QComboBox, QSpinBox,
-                             QTabWidget, QColorDialog, QFontDialog)
+                             QTabWidget, QColorDialog, QFontDialog, QMenu)
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QSize
 from PyQt5.QtGui import QColor, QFont, QPainter, QPen, QTextFormat, QTextCursor
+from draggable_tabs import DraggableTabWidget
+
+# Matplotlib imports for performance graphing
+try:
+    import matplotlib
+    matplotlib.use('Qt5Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+    from matplotlib.figure import Figure
+    import matplotlib.dates as mdates
+    MATPLOTLIB_AVAILABLE = True
+except ImportError as e:
+    MATPLOTLIB_AVAILABLE = False
+    print(f"Warning: matplotlib not available ({e}), performance graphs disabled")
+except Exception as e:
+    MATPLOTLIB_AVAILABLE = False
+    print(f"Warning: matplotlib initialization failed ({e}), performance graphs disabled")
 
 
 class InteractiveConsole(QTextEdit):
@@ -649,10 +669,10 @@ class DebugThread(QThread):
         
     def run(self):
         try:
-            # Use VG_EXECUTABLE_PATH environment variable to locate vg.exe
-            vg_executable = os.getenv("VG_EXECUTABLE_PATH", "vg.exe")
+            # Use the Java interpreter with integrated profiling
+            interpreter_path = os.path.join(os.path.dirname(__file__), "..", "interpreter", "target", "vg.jar")
             abs_file_path = os.path.abspath(self.file_path)
-            cmd = [vg_executable, "--debug", abs_file_path]
+            cmd = ["java", "-jar", interpreter_path, "--debug", abs_file_path]
             if self.breakpoints:
                 bp_string = ",".join(map(str, sorted(self.breakpoints)))
                 cmd.append(bp_string)
@@ -660,6 +680,9 @@ class DebugThread(QThread):
             else:
                 cmd.append("4")
                 print("IDE: No breakpoints set, using default line 4")
+            
+            # Add profiling port parameter
+            cmd.extend(["--profile-port", "8888"])
             print(f"IDE: Starting debug with command: {' '.join(cmd)}")
 
             self.process = subprocess.Popen(
@@ -732,7 +755,9 @@ class VGEditor(QMainWindow):
                 'selection_background': '#3399ff',
                 'current_line_highlight': '#ffffcc',
                 'ui_text_color': '#000000',
-                'panel_background': '#f0f0f0'
+                'panel_background': '#f0f0f0',
+                'button_text_color': '#000000',
+                'button_background_color': '#ffffff'
             },
             'text': {
                 'font_family': 'Consolas',
@@ -778,6 +803,11 @@ class VGEditor(QMainWindow):
             # Connect file explorer double-click to open files
             self.file_explorer.itemDoubleClicked.connect(self.open_project_file)
             
+            # Refresh library configuration for the new project
+            self.refresh_library_display()
+            
+            self.status_bar.showMessage(f"Loaded project: {os.path.basename(project_path)}")
+            
         except Exception as e:
             self.status_bar.showMessage(f"Error loading project: {e}")
             
@@ -792,18 +822,26 @@ class VGEditor(QMainWindow):
                 self.current_file = file_path
                 self.setWindowTitle(f"VG Language IDE - {os.path.basename(file_path)}")
                 self.status_bar.showMessage(f"Opened: {file_path}")
+                # Auto-lint the opened file if it's a VG file
+                if file_path.lower().endswith('.vg'):
+                    self.auto_lint_content()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Could not open file: {e}")
         
     def setup_ui(self):
-        # Create central widget and layout
+        # Create central widget and main vertical layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        main_layout = QHBoxLayout(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Splitter: left file explorer | editor | right panels
-        splitter = QSplitter()
-        main_layout.addWidget(splitter)
+        # Create vertical splitter: top (horizontal editor area) | bottom (tabbed panels)
+        main_splitter = QSplitter(Qt.Vertical)
+        main_layout.addWidget(main_splitter)
+
+        # Top horizontal splitter: left explorer | center editor | right panels
+        top_splitter = QSplitter(Qt.Horizontal)
+        main_splitter.addWidget(top_splitter)
 
         # Left: File explorer
         explorer_panel = QWidget()
@@ -812,7 +850,7 @@ class VGEditor(QMainWindow):
         self.file_explorer = QListWidget()
         self.file_explorer.setMaximumWidth(300)
         explorer_layout.addWidget(self.file_explorer)
-        splitter.addWidget(explorer_panel)
+        top_splitter.addWidget(explorer_panel)
 
         # Middle: editor panel
         editor_panel = QWidget()
@@ -827,34 +865,39 @@ class VGEditor(QMainWindow):
         self.editor.main_window = self  # Give editor reference to main window for breakpoints
         self.editor.setFont(QFont("Consolas", 10))
         
+        # Connect the editor's textChanged signal to the main window's on_text_changed method
+        self.editor.textChanged.connect(self.on_text_changed)
+        
         editor_layout.addWidget(self.editor)
 
-        splitter.addWidget(editor_panel)
+        top_splitter.addWidget(editor_panel)
 
         # Right: output / variables / breakpoints
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
 
-        right_layout.addWidget(QLabel("Output:"))
-        
-        # Create console container
-        console_container = QWidget()
-        console_layout = QVBoxLayout(console_container)
-        console_layout.setContentsMargins(0, 0, 0, 0)
-        
-        # Console (will be read-only unless running IO programs)
-        self.console = InteractiveConsole(self)
-        self.console.setMaximumHeight(200)
-        self.console.setReadOnly(True)
-        console_layout.addWidget(self.console)
-        
-        console_layout.addWidget(QLabel(""))  # Small spacer
-        right_layout.addWidget(console_container)
-
+        # Variables panel (keep in right sidebar)
         right_layout.addWidget(QLabel("Variables:"))
         self.variables_list = QListWidget()
         self.variables_list.setMaximumHeight(150)
         right_layout.addWidget(self.variables_list)
+
+        # Breakpoints panel (keep in right sidebar)  
+        right_layout.addWidget(QLabel("Breakpoints:"))
+        self.breakpoints_list = QListWidget()
+        self.breakpoints_list.setMaximumHeight(150)
+        right_layout.addWidget(self.breakpoints_list)
+        
+        right_layout.addStretch()
+        
+        # Initialize profiling state
+        self.profiling_active = False
+        self.profiling_timer = QTimer()
+        self.profiling_timer.timeout.connect(self.update_profiling_data)
+        self.profiling_port = 8888
+        
+        # Initialize performance graph data
+        self.init_graph_data()
 
         # Debug controls are available via keyboard shortcuts (menu actions).
         # Shortcuts: F6 Start, F8 Continue, F11 Step Into, F10 Step Over,
@@ -866,13 +909,150 @@ class VGEditor(QMainWindow):
         right_layout.addWidget(dbg_shortcuts_label)
 
 
-        right_layout.addWidget(QLabel("Breakpoints:"))
-        self.breakpoints_list = QListWidget()
-        self.breakpoints_list.setMaximumHeight(100)
-        right_layout.addWidget(self.breakpoints_list)
+        
+        right_layout.addStretch()
 
-        splitter.addWidget(right_panel)
-        splitter.setSizes([200, 800, 400])
+        top_splitter.addWidget(right_panel)
+        top_splitter.setSizes([200, 800, 400])
+
+        # Bottom tabbed panel (VS Code style with draggable tabs)
+        self.bottom_tabs = DraggableTabWidget()
+        self.bottom_tabs.setTabPosition(QTabWidget.North)
+        self.bottom_tabs.setMinimumHeight(200)  # Minimum height for graphs
+        # Remove maximum height restriction to allow resizing for better graph visibility
+        
+        # Style the tab widget - this will be updated by apply_bottom_tabs_styling()
+        self.apply_bottom_tabs_styling()
+        
+        # Output tab
+        self.console = InteractiveConsole(self)
+        self.console.setReadOnly(True)
+        self.console.setPlaceholderText("Program output will appear here...")
+        self.bottom_tabs.addTab(self.console, "📄 Output")
+        
+        # Debug Console tab
+        self.debug_console = QTextEdit()
+        self.debug_console.setPlaceholderText("Debug session output will appear here...")
+        self.debug_console.setReadOnly(True)
+        self.bottom_tabs.addTab(self.debug_console, "🐛 Debug Console")
+        
+        # Linter tab
+        self.linter_tab_widget = QWidget()
+        linter_tab_layout = QVBoxLayout(self.linter_tab_widget)
+        linter_tab_layout.setContentsMargins(5, 5, 5, 5)
+        
+        # Linter controls
+        linter_controls = QHBoxLayout()
+        self.lint_button = QPushButton("🔍 Analyze Code")
+        self.lint_button.setToolTip("Analyze code for issues and style problems")
+        self.lint_button.clicked.connect(self.run_linter)
+        linter_controls.addWidget(self.lint_button)
+        
+        self.auto_lint_checkbox = QCheckBox("Auto-lint")
+        self.auto_lint_checkbox.setToolTip("Automatically lint code while typing")
+        self.auto_lint_checkbox.setChecked(True)
+        self.auto_lint_checkbox.toggled.connect(self.on_auto_lint_toggled)
+        linter_controls.addWidget(self.auto_lint_checkbox)
+        linter_controls.addStretch()
+        
+        linter_tab_layout.addLayout(linter_controls)
+        
+        # Linter summary
+        self.linter_summary = QLabel("Ready to analyze code")
+        self.linter_summary.setStyleSheet("color: #666; font-style: italic; padding: 5px;")
+        linter_tab_layout.addWidget(self.linter_summary)
+        
+        # Linter issues list
+        self.linter_list = QListWidget()
+        self.linter_list.itemDoubleClicked.connect(self.goto_lint_issue)
+        linter_tab_layout.addWidget(self.linter_list)
+        
+        self.bottom_tabs.addTab(self.linter_tab_widget, "🔍 Code Analysis")
+        
+        # Profiler tab
+        self.profiler_tab_widget = QWidget()
+        profiler_tab_layout = QVBoxLayout(self.profiler_tab_widget)
+        profiler_tab_layout.setContentsMargins(5, 5, 5, 5)
+        
+        profiling_info = QLabel("Performance profiling is automatically enabled during debugging.")
+        profiling_info.setWordWrap(True)
+        profiling_info.setStyleSheet("color: #666; font-style: italic; padding: 5px;")
+        profiler_tab_layout.addWidget(profiling_info)
+        
+        # Create horizontal layout for metrics and graph
+        metrics_and_graph_layout = QHBoxLayout()
+        
+        # Left side - Performance metrics (text)
+        metrics_widget = QWidget()
+        metrics_layout = QVBoxLayout(metrics_widget)
+        metrics_layout.setContentsMargins(0, 0, 10, 0)
+        
+        self.memory_label = QLabel("Memory: N/A")
+        self.memory_label.setStyleSheet("padding: 3px; font-family: monospace;")
+        metrics_layout.addWidget(self.memory_label)
+        
+        self.cpu_label = QLabel("CPU: N/A")
+        self.cpu_label.setStyleSheet("padding: 3px; font-family: monospace;")
+        metrics_layout.addWidget(self.cpu_label)
+        
+        self.thread_label = QLabel("Threads: N/A")
+        self.thread_label.setStyleSheet("padding: 3px; font-family: monospace;")
+        metrics_layout.addWidget(self.thread_label)
+        
+        self.gc_label = QLabel("GC: N/A")
+        self.gc_label.setStyleSheet("padding: 3px; font-family: monospace;")
+        metrics_layout.addWidget(self.gc_label)
+        
+        metrics_layout.addStretch()
+        metrics_widget.setMaximumWidth(300)
+        
+        # Right side - Performance graph
+        self.setup_performance_graph()
+        
+        # Add both to horizontal layout
+        metrics_and_graph_layout.addWidget(metrics_widget)
+        metrics_and_graph_layout.addWidget(self.graph_widget)
+        
+        profiler_tab_layout.addLayout(metrics_and_graph_layout)
+        
+        self.bottom_tabs.addTab(self.profiler_tab_widget, "⚡ Performance")
+        
+        # Add bottom panel to the main splitter
+        main_splitter.addWidget(self.bottom_tabs)
+        
+        # Set initial sizes: 60% for editor area, 40% for bottom panel (more space for graphs)
+        main_splitter.setSizes([600, 400])
+        
+        # Make splitter handle more visible and easier to grab
+        main_splitter.setHandleWidth(8)
+        main_splitter.setStyleSheet("""
+            QSplitter::handle:vertical {
+                background-color: #555;
+                border: 1px solid #777;
+                height: 8px;
+                margin: 0 2px;
+            }
+            QSplitter::handle:vertical:hover {
+                background-color: #777;
+            }
+            QSplitter::handle:vertical:pressed {
+                background-color: #999;
+            }
+        """)
+        
+        # Allow the bottom panel to be collapsed but ensure minimum size
+        main_splitter.setCollapsible(1, True)  # Bottom panel can be collapsed
+        main_splitter.setStretchFactor(0, 1)   # Editor area is stretchable
+        main_splitter.setStretchFactor(1, 0)   # Bottom panel has fixed stretch
+        
+        # Add keyboard shortcuts for tab navigation
+        self.setup_tab_shortcuts()
+        
+        # Initialize profiling state
+        self.profiling_active = False
+        self.profiling_timer = QTimer()
+        self.profiling_timer.timeout.connect(self.update_profiling_data)
+        self.profiling_port = 8888
 
         # Status bar and menu
         self.status_bar = QStatusBar()
@@ -901,18 +1081,59 @@ class VGEditor(QMainWindow):
         toolbar.addSeparator()
 
         # Run and Debug quick buttons (minimal)
-        self.run_button = QPushButton("Run")
+        self.run_button = QPushButton("▶ Run")
+        self.run_button.setStyleSheet("QPushButton { color: #2e7d32; font-weight: bold; }")
         self.run_button.clicked.connect(self.run_code)
         toolbar.addWidget(self.run_button)
 
-        self.debug_button = QPushButton("Debug")
+        self.debug_button = QPushButton("🐛 Debug")
+        self.debug_button.setStyleSheet("QPushButton { color: #e65100; font-weight: bold; }")
         self.debug_button.clicked.connect(self.start_debug)
         toolbar.addWidget(self.debug_button)
 
         toolbar.addSeparator()
 
+        # Debug controls toolbar
+        self.continue_button = QPushButton("▶▶")
+        self.continue_button.setToolTip("Continue (F8)")
+        self.continue_button.setStyleSheet("QPushButton { color: #2e7d32; font-weight: bold; }")
+        self.continue_button.clicked.connect(self.debug_continue)
+        self.continue_button.setEnabled(False)
+        toolbar.addWidget(self.continue_button)
+
+        self.step_into_button = QPushButton("⤋")
+        self.step_into_button.setToolTip("Step Into (F11)")
+        self.step_into_button.setStyleSheet("QPushButton { color: #1976d2; font-weight: bold; }")
+        self.step_into_button.clicked.connect(self.debug_step_into)
+        self.step_into_button.setEnabled(False)
+        toolbar.addWidget(self.step_into_button)
+
+        self.step_over_button = QPushButton("⤴")
+        self.step_over_button.setToolTip("Step Over (F10)")
+        self.step_over_button.setStyleSheet("QPushButton { color: #1976d2; font-weight: bold; }")
+        self.step_over_button.clicked.connect(self.debug_step_over)
+        self.step_over_button.setEnabled(False)
+        toolbar.addWidget(self.step_over_button)
+
+        self.step_out_button = QPushButton("⤴⤴")
+        self.step_out_button.setToolTip("Step Out (Shift+F11)")
+        self.step_out_button.setStyleSheet("QPushButton { color: #1976d2; font-weight: bold; }")
+        self.step_out_button.clicked.connect(self.debug_step_out)
+        self.step_out_button.setEnabled(False)
+        toolbar.addWidget(self.step_out_button)
+
+        self.stop_button = QPushButton("⏹")
+        self.stop_button.setToolTip("Stop Debug (Shift+F5)")
+        self.stop_button.setStyleSheet("QPushButton { color: #d32f2f; font-weight: bold; }")
+        self.stop_button.clicked.connect(self.stop_debug)
+        self.stop_button.setEnabled(False)
+        toolbar.addWidget(self.stop_button)
+
+        toolbar.addSeparator()
+
         # Breakpoint toggle kept in toolbar for quick access
-        self.breakpoint_button = QPushButton("Toggle Breakpoint")
+        self.breakpoint_button = QPushButton("⬤ Breakpoint")
+        self.breakpoint_button.setStyleSheet("QPushButton { color: #d32f2f; font-weight: bold; }")
         self.breakpoint_button.clicked.connect(self.toggle_breakpoint)
         toolbar.addWidget(self.breakpoint_button)
 
@@ -970,56 +1191,56 @@ class VGEditor(QMainWindow):
         # Debug menu
         debug_menu = menubar.addMenu('Debug')
 
-        start_debug_act = QAction('Start Debug (F6)', self)
+        start_debug_act = QAction('🐛 Start Debug (F6)', self)
         start_debug_act.setShortcut('F6')
         start_debug_act.triggered.connect(self.start_debug)
         debug_menu.addAction(start_debug_act)
         self.start_debug_action = start_debug_act
 
-        continue_act = QAction('Continue (F8)', self)
+        continue_act = QAction('▶▶ Continue (F8)', self)
         continue_act.setShortcut('F8')
         continue_act.triggered.connect(self.debug_continue)
         debug_menu.addAction(continue_act)
         self.continue_action = continue_act
 
-        step_into_act = QAction('Step Into (F11)', self)
+        step_into_act = QAction('⤋ Step Into (F11)', self)
         step_into_act.setShortcut('F11')
         step_into_act.triggered.connect(self.debug_step_into)
         debug_menu.addAction(step_into_act)
         self.step_into_action = step_into_act
 
-        step_over_act = QAction('Step Over (F10)', self)
+        step_over_act = QAction('⤴ Step Over (F10)', self)
         step_over_act.setShortcut('F10')
         step_over_act.triggered.connect(self.debug_step_over)
         debug_menu.addAction(step_over_act)
         self.step_over_action = step_over_act
 
-        step_out_act = QAction('Step Out (Shift+F11)', self)
+        step_out_act = QAction('⤴⤴ Step Out (Shift+F11)', self)
         step_out_act.setShortcut('Shift+F11')
         step_out_act.triggered.connect(self.debug_step_out)
         debug_menu.addAction(step_out_act)
         self.step_out_action = step_out_act
 
-        stop_debug_act = QAction('Stop Debug (Shift+F5)', self)
+        stop_debug_act = QAction('⏹ Stop Debug (Shift+F5)', self)
         stop_debug_act.setShortcut('Shift+F5')
         stop_debug_act.triggered.connect(self.stop_debug)
         debug_menu.addAction(stop_debug_act)
         self.stop_debug_action = stop_debug_act
 
-        vars_act = QAction('Show Variables', self)
+        vars_act = QAction('📊 Show Variables', self)
         vars_act.triggered.connect(self.debug_variables)
         debug_menu.addAction(vars_act)
         self.vars_action = vars_act
 
         debug_menu.addSeparator()
-        addbreak_act = QAction('Add Breakpoint at Cursor', self)
+        addbreak_act = QAction('⬤ Add Breakpoint at Cursor', self)
         addbreak_act.triggered.connect(self.toggle_breakpoint)
         debug_menu.addAction(addbreak_act)
 
         # View menu: toggle panels
         view_menu = menubar.addMenu('View')
-        toggle_output_act = QAction('Toggle Output Panel', self)
-        toggle_output_act.triggered.connect(lambda: self.console.setVisible(not self.console.isVisible()))
+        toggle_output_act = QAction('Toggle Bottom Panel (Ctrl+`)', self)
+        toggle_output_act.triggered.connect(self.toggle_bottom_panel)
         view_menu.addAction(toggle_output_act)
 
         toggle_variables_act = QAction('Toggle Variables Panel', self)
@@ -1030,6 +1251,39 @@ class VGEditor(QMainWindow):
         toggle_breakpoints_act.triggered.connect(lambda: self.breakpoints_list.setVisible(not self.breakpoints_list.isVisible()))
         view_menu.addAction(toggle_breakpoints_act)
 
+        view_menu.addSeparator()
+        
+        # Quick tab switching
+        output_tab_action = QAction('📄 Show Output Tab (Ctrl+1)', self)
+        output_tab_action.triggered.connect(lambda: self.switch_to_tab('output'))
+        view_menu.addAction(output_tab_action)
+        
+        debug_tab_action = QAction('🐛 Show Debug Console Tab (Ctrl+2)', self)
+        debug_tab_action.triggered.connect(lambda: self.switch_to_tab('debug'))
+        view_menu.addAction(debug_tab_action)
+        
+        linter_tab_action = QAction('🔍 Show Code Analysis Tab (Ctrl+3)', self)
+        linter_tab_action.triggered.connect(lambda: self.switch_to_tab('linter'))
+        view_menu.addAction(linter_tab_action)
+        
+        performance_tab_action = QAction('⚡ Show Performance Tab (Ctrl+4)', self)
+        performance_tab_action.triggered.connect(lambda: self.switch_to_tab('performance'))
+        view_menu.addAction(performance_tab_action)
+        
+        view_menu.addSeparator()
+        
+        # Panel management
+        maximize_editor_action = QAction('Maximize Editor', self)
+        maximize_editor_action.triggered.connect(lambda: self.toggle_bottom_panel() if not hasattr(self, 'bottom_panel_collapsed') or not self.bottom_panel_collapsed else None)
+        view_menu.addAction(maximize_editor_action)
+        
+        view_menu.addSeparator()
+        
+        lint_action = QAction('🔍 Analyze Code', self)
+        lint_action.setShortcut('Ctrl+L')
+        lint_action.triggered.connect(self.run_linter)
+        view_menu.addAction(lint_action)
+
         # Package Manager menu
         pkg_menu = menubar.addMenu('Package Manager')
         pkg_install_act = QAction('Install Package', self)
@@ -1038,6 +1292,19 @@ class VGEditor(QMainWindow):
         pkg_remove_act = QAction('Remove Package', self)
         pkg_remove_act.triggered.connect(self.show_package_remove_dialog)
         pkg_menu.addAction(pkg_remove_act)
+        
+        # Library Manager menu - Comprehensive library management
+        lib_menu = menubar.addMenu('Libraries')
+        lib_manage_act = QAction('⚙️ Manage Libraries', self)
+        lib_manage_act.triggered.connect(self.show_library_manager)
+        lib_menu.addAction(lib_manage_act)
+        lib_menu.addSeparator()
+        lib_view_act = QAction('📋 View Imported Libraries', self)
+        lib_view_act.triggered.connect(self.show_library_viewer)
+        lib_menu.addAction(lib_view_act)
+        lib_test_act = QAction('🧪 Test Import Statements', self)
+        lib_test_act.triggered.connect(self.show_import_test_only)
+        lib_menu.addAction(lib_test_act)
 
         # Settings menu
         settings_menu = menubar.addMenu('Settings')
@@ -1301,6 +1568,28 @@ class VGEditor(QMainWindow):
         panel_bg_layout.addStretch()
         theme_form.addRow("Panel Background:", panel_bg_layout)
         
+        # Button Text Color
+        button_text_layout = QHBoxLayout()
+        self.button_text_color = QLabel(self.current_settings['theme']['button_text_color'])
+        self.button_text_color.setStyleSheet(f"background-color: white; color: {self.current_settings['theme']['button_text_color']}; border: 1px solid gray; padding: 5px;")
+        button_text_btn = QPushButton("Choose Color")
+        button_text_btn.clicked.connect(lambda: self.choose_color(self.button_text_color, "button_text"))
+        button_text_layout.addWidget(self.button_text_color)
+        button_text_layout.addWidget(button_text_btn)
+        button_text_layout.addStretch()
+        theme_form.addRow("Button Text Color:", button_text_layout)
+        
+        # Button Background Color
+        button_bg_layout = QHBoxLayout()
+        self.button_bg_color = QLabel(self.current_settings['theme']['button_background_color'])
+        self.button_bg_color.setStyleSheet(f"background-color: {self.current_settings['theme']['button_background_color']}; border: 1px solid gray; padding: 5px;")
+        button_bg_btn = QPushButton("Choose Color")
+        button_bg_btn.clicked.connect(lambda: self.choose_color(self.button_bg_color, "button_bg"))
+        button_bg_layout.addWidget(self.button_bg_color)
+        button_bg_layout.addWidget(button_bg_btn)
+        button_bg_layout.addStretch()
+        theme_form.addRow("Button Background:", button_bg_layout)
+        
         theme_layout.addLayout(theme_form)
         theme_layout.addStretch()
         content_widget.addTab(theme_widget, "Theme")
@@ -1402,7 +1691,7 @@ class VGEditor(QMainWindow):
         """Open color chooser and update the label."""
         color = QColorDialog.getColor()
         if color.isValid():
-            if color_type == "text_color":
+            if color_type == "text_color" or color_type == "button_text":
                 # For text color, show it with white background for better visibility
                 label_widget.setStyleSheet(f"background-color: white; color: {color.name()}; border: 1px solid gray; padding: 5px;")
             else:
@@ -1427,6 +1716,49 @@ class VGEditor(QMainWindow):
             self.font_family_combo.setCurrentText(font.family())
             self.font_size_spin.setValue(font.pointSize())
             self.update_font_preview()
+
+    def apply_bottom_tabs_styling(self, panel_bg=None, button_bg_color=None, button_text_color=None, selection_bg=None):
+        """Apply styling to the bottom tabs widget using current theme colors."""
+        # Get current theme colors
+        if panel_bg is None:
+            if hasattr(self, 'current_settings'):
+                panel_bg = self.current_settings['theme']['panel_background']
+                button_bg_color = self.current_settings['theme']['button_background_color']
+                button_text_color = self.current_settings['theme']['button_text_color']
+                selection_bg = self.current_settings['theme']['selection_background']
+            else:
+                # Use default colors if settings not loaded yet
+                panel_bg = '#f0f0f0'
+                button_bg_color = '#ffffff'
+                button_text_color = '#000000'
+                selection_bg = '#3399ff'
+        
+        self.bottom_tabs.setStyleSheet(f"""
+            QTabWidget::pane {{
+                border: 1px solid gray;
+                background-color: {panel_bg};
+            }}
+            QTabBar::tab {{
+                background-color: {button_bg_color};
+                color: {button_text_color};
+                padding: 8px 16px;
+                border: none;
+                border-right: 1px solid gray;
+                margin-right: 2px;
+            }}
+            QTabBar::tab:selected {{
+                background-color: {selection_bg};
+                color: white;
+                border-bottom: 2px solid {selection_bg};
+            }}
+            QTabBar::tab:hover {{
+                background-color: {selection_bg};
+                color: white;
+            }}
+            QTabBar::tab:!selected {{
+                margin-top: 2px;
+            }}
+        """)
 
     def apply_settings(self, dialog):
         """Apply the current settings."""
@@ -1494,6 +1826,8 @@ class VGEditor(QMainWindow):
             selection_bg = self.selection_bg_color.text() if hasattr(self, 'selection_bg_color') else '#3399ff'
             ui_text_color = self.ui_text_color.text() if hasattr(self, 'ui_text_color') else '#000000'
             panel_bg = self.panel_bg_color.text() if hasattr(self, 'panel_bg_color') else '#f0f0f0'
+            button_text_color = self.button_text_color.text() if hasattr(self, 'button_text_color') else '#000000'
+            button_bg_color = self.button_bg_color.text() if hasattr(self, 'button_bg_color') else '#ffffff'
             
             if color.startswith('#'):
                 self.setStyleSheet(f"""
@@ -1527,8 +1861,8 @@ class VGEditor(QMainWindow):
                         color: {ui_text_color};
                     }}
                     QPushButton {{
-                        background-color: white;
-                        color: black;
+                        background-color: {button_bg_color};
+                        color: {button_text_color};
                         border: none;
                         padding: 6px 12px;
                         border-radius: 3px;
@@ -1539,6 +1873,18 @@ class VGEditor(QMainWindow):
                     }}
                     QPushButton:pressed {{
                         background-color: {selection_bg};
+                    }}
+                    QDialogButtonBox QPushButton {{
+                        background-color: {button_bg_color};
+                        color: {button_text_color};
+                        border: none;
+                        padding: 6px 12px;
+                        border-radius: 3px;
+                        min-width: 60px;
+                    }}
+                    QDialogButtonBox QPushButton:hover {{
+                        background-color: {selection_bg};
+                        color: white;
                     }}
                     QMenuBar {{
                         background-color: {panel_bg};
@@ -1562,8 +1908,8 @@ class VGEditor(QMainWindow):
                         spacing: 2px;
                     }}
                     QToolBar QPushButton {{
-                        background-color: white;
-                        color: black;
+                        background-color: {button_bg_color};
+                        color: {button_text_color};
                         border: none;
                         padding: 8px 12px;
                         margin: 2px;
@@ -1573,13 +1919,30 @@ class VGEditor(QMainWindow):
                         background-color: {selection_bg};
                         color: white;
                     }}
-                    QStatusBar {{
-                        background-color: {panel_bg};
-                        color: {ui_text_color};
-                    }}
-                """)
-        
-        # Apply word wrap
+                QStatusBar {{
+                    background-color: {panel_bg};
+                    color: {ui_text_color};
+                }}
+                QTabWidget::pane {{
+                    border: 1px solid gray;
+                    background-color: {panel_bg};
+                }}
+                QTabBar::tab {{
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
+                    border: 1px solid gray;
+                    padding: 6px 12px;
+                    margin-right: 2px;
+                }}
+                QTabBar::tab:selected {{
+                    background-color: {selection_bg};
+                    color: white;
+                }}
+                QTabBar::tab:hover {{
+                    background-color: {selection_bg};
+                    color: white;
+                }}
+                """)        # Apply word wrap
         if hasattr(self, 'word_wrap'):
             if self.word_wrap.isChecked():
                 self.editor.setLineWrapMode(QPlainTextEdit.WidgetWidth)
@@ -1601,6 +1964,17 @@ class VGEditor(QMainWindow):
         if hasattr(self, 'current_line_color'):
             current_line_color = self.current_line_color.text()
             self.apply_current_line_highlight(current_line_color)
+        
+        # Update bottom tabs styling with new colors from dialog
+        if hasattr(self, 'panel_bg_color') and hasattr(self, 'button_bg_color') and hasattr(self, 'button_text_color') and hasattr(self, 'selection_bg_color'):
+            self.apply_bottom_tabs_styling(
+                panel_bg=self.panel_bg_color.text(),
+                button_bg_color=self.button_bg_color.text(),
+                button_text_color=self.button_text_color.text(),
+                selection_bg=self.selection_bg_color.text()
+            )
+        else:
+            self.apply_bottom_tabs_styling()
         
         self.status_bar.showMessage("Settings applied")
         # Save settings to file
@@ -1700,6 +2074,10 @@ class VGEditor(QMainWindow):
                 self.current_settings['theme']['ui_text_color'] = self.ui_text_color.text()
             if hasattr(self, 'panel_bg_color'):
                 self.current_settings['theme']['panel_background'] = self.panel_bg_color.text()
+            if hasattr(self, 'button_text_color'):
+                self.current_settings['theme']['button_text_color'] = self.button_text_color.text()
+            if hasattr(self, 'button_bg_color'):
+                self.current_settings['theme']['button_background_color'] = self.button_bg_color.text()
             
             # Add recent projects to settings
             if hasattr(self, 'recent_projects'):
@@ -1776,6 +2154,8 @@ class VGEditor(QMainWindow):
             ide_bg = self.current_settings['theme']['ide_background']
             ui_text_color = self.current_settings['theme'].get('ui_text_color', '#000000')
             panel_bg = self.current_settings['theme'].get('panel_background', '#f0f0f0')
+            button_text_color = self.current_settings['theme'].get('button_text_color', '#000000')
+            button_bg_color = self.current_settings['theme'].get('button_background_color', '#ffffff')
             
             # Comprehensive stylesheet for all UI elements
             self.setStyleSheet(f"""
@@ -1809,8 +2189,8 @@ class VGEditor(QMainWindow):
                     color: {ui_text_color};
                 }}
                 QPushButton {{
-                    background-color: white;
-                    color: black;
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
                     border: none;
                     padding: 6px 12px;
                     border-radius: 3px;
@@ -1821,6 +2201,66 @@ class VGEditor(QMainWindow):
                 }}
                 QPushButton:pressed {{
                     background-color: {selection_bg};
+                }}
+                QDialogButtonBox QPushButton {{
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
+                    border: none;
+                    padding: 6px 12px;
+                    border-radius: 3px;
+                    min-width: 60px;
+                }}
+                QDialogButtonBox QPushButton:hover {{
+                    background-color: {selection_bg};
+                    color: white;
+                }}
+                QComboBox {{
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
+                    border: 1px solid gray;
+                    padding: 3px;
+                    border-radius: 3px;
+                }}
+                QLineEdit {{
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
+                    border: 1px solid gray;
+                    padding: 3px;
+                    border-radius: 3px;
+                }}
+                QSpinBox {{
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
+                    border: 1px solid gray;
+                    padding: 3px;
+                    border-radius: 3px;
+                }}
+                QCheckBox {{
+                    color: {ui_text_color};
+                }}
+                QComboBox {{
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
+                    border: 1px solid gray;
+                    padding: 3px;
+                    border-radius: 3px;
+                }}
+                QLineEdit {{
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
+                    border: 1px solid gray;
+                    padding: 3px;
+                    border-radius: 3px;
+                }}
+                QSpinBox {{
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
+                    border: 1px solid gray;
+                    padding: 3px;
+                    border-radius: 3px;
+                }}
+                QCheckBox {{
+                    color: {ui_text_color};
                 }}
                 QMenuBar {{
                     background-color: {panel_bg};
@@ -1844,8 +2284,8 @@ class VGEditor(QMainWindow):
                     spacing: 2px;
                 }}
                 QToolBar QPushButton {{
-                    background-color: white;
-                    color: black;
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
                     border: none;
                     padding: 8px 12px;
                     margin: 2px;
@@ -1859,8 +2299,30 @@ class VGEditor(QMainWindow):
                     background-color: {panel_bg};
                     color: {ui_text_color};
                 }}
+                QTabWidget::pane {{
+                    border: 1px solid gray;
+                    background-color: {panel_bg};
+                }}
+                QTabBar::tab {{
+                    background-color: {button_bg_color};
+                    color: {button_text_color};
+                    border: 1px solid gray;
+                    padding: 6px 12px;
+                    margin-right: 2px;
+                }}
+                QTabBar::tab:selected {{
+                    background-color: {selection_bg};
+                    color: white;
+                }}
+                QTabBar::tab:hover {{
+                    background-color: {selection_bg};
+                    color: white;
+                }}
             """)
             print(f"Applied IDE background: {ide_bg}, UI text: {ui_text_color}, Panel background: {panel_bg}")
+            
+            # Update bottom tabs styling with loaded colors
+            self.apply_bottom_tabs_styling()
             
             # Force update
             if hasattr(self, 'editor'):
@@ -1958,11 +2420,48 @@ class VGEditor(QMainWindow):
                     self.editor.setPlainText(content)
                     self.current_file = file_path
                     self.setWindowTitle(f"VG Language IDE - {os.path.basename(file_path)}")
+                    
+                    # Auto-detect project directory if not already set
+                    if not self.current_project_path:
+                        self.auto_detect_project_directory(file_path)
+                    
                     self.status_bar.showMessage(f"Opened: {file_path}")
                     # update explorer to show files in this directory
                     self.update_file_explorer()
+                    # Auto-lint the opened file if it's a VG file
+                    if file_path.lower().endswith('.vg'):
+                        self.auto_lint_content()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Could not open file: {e}")
+    
+    def auto_detect_project_directory(self, file_path):
+        """Auto-detect project directory based on opened file location."""
+        if not file_path:
+            return
+            
+        # Look for project config file in the file's directory and parent directories
+        file_dir = os.path.dirname(file_path)
+        search_dir = file_dir
+        max_levels = 4  # Don't search too far up
+        level = 0
+        
+        while level < max_levels:
+            config_path = os.path.join(search_dir, 'vg_project_libraries.json')
+            
+            if os.path.exists(config_path):
+                print(f"IDE: Auto-detected project directory: {search_dir}")
+                self.load_project(search_dir)
+                return
+            
+            parent = os.path.dirname(search_dir)
+            if parent == search_dir:  # Reached root
+                break
+            search_dir = parent
+            level += 1
+        
+        print(f"IDE: No project config found, using file directory: {file_dir}")
+        # If no project config found, at least set the directory for relative operations
+        self.current_project_path = file_dir
 
     def save_file(self):
         if self.current_file:
@@ -1997,12 +2496,14 @@ class VGEditor(QMainWindow):
             QMessageBox.warning(self, "Warning", "Please save the file before running")
             return
 
+        # Clear console and switch to output tab
         self.console.clear()
+        self.switch_to_tab('output')
         self.status_bar.showMessage("Running...")
 
         try:
             # Check if the program uses IO to determine if console should be interactive
-            with open(self.current_file, 'r') as file:
+            with open(self.current_file, 'r', encoding='utf-8') as file:
                 file_content = file.read()
             
             # Check for IO usage patterns
@@ -2013,14 +2514,35 @@ class VGEditor(QMainWindow):
                 'input',
                 'readLine',
                 'Scanner',
-                'BufferedReader'
+                'BufferedReader',
+                'Prompt.input'
             ])
             
-            # Make console interactive if program uses IO
+            # Check if it's a GUI application
+            is_gui_app = any(pattern in file_content for pattern in [
+                'Guilibrary.window',
+                'window.create',
+                'window.launch',
+                'Pane.createPane',
+                'Label.createLabel',
+                'Button.createButton'
+            ])
+            
+            # Store for later use
+            self.current_app_is_gui = is_gui_app
+            
+            # Make console interactive if program uses IO, even for GUI apps
             if uses_io:
                 self.console.setReadOnly(False)
                 self.console.setPlaceholderText("Program is waiting for input. Type here and press Enter...")
-                self.console.append("🟢 Interactive console enabled - Program can receive input")
+                if is_gui_app:
+                    self.console.append("🟢 GUI application with console input enabled")
+                else:
+                    self.console.append("🟢 Interactive console enabled - Program can receive input")
+            elif is_gui_app:
+                self.console.setReadOnly(True)
+                self.console.setPlaceholderText("")
+                self.console.append("🔹 GUI application detected - Check for windows/dialogs")
             else:
                 self.console.setReadOnly(True)
                 self.console.setPlaceholderText("")
@@ -2047,30 +2569,50 @@ class VGEditor(QMainWindow):
 
             cmd = [vg_executable, abs_file_path]
             print(f"IDE: Running command: {' '.join(cmd)}")
+            print(f"IDE: Working directory: {os.getcwd()}")
+            print(f"IDE: File exists: {os.path.exists(abs_file_path)}")
+            print(f"IDE: File size: {os.path.getsize(abs_file_path) if os.path.exists(abs_file_path) else 'N/A'} bytes")
 
             # Start process with stdin support for interactive programs
-            self.current_process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,  # Separate stderr to capture errors
-                stdin=subprocess.PIPE,
-                universal_newlines=False,  # Use binary mode
-                bufsize=0  # Unbuffered
-            )
+            try:
+                self.current_process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,  # Redirect stderr to stdout to simplify handling
+                    stdin=subprocess.PIPE,
+                    universal_newlines=False,  # Use binary mode
+                    bufsize=0,  # Unbuffered
+                    encoding=None,  # Don't let subprocess handle encoding
+                    errors=None,   # Don't let subprocess handle errors
+                    text=False,    # Ensure binary mode
+                    creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0  # Hide console window on Windows
+                )
+                print(f"IDE: Process created successfully with PID: {self.current_process.pid}")
+            except Exception as proc_error:
+                print(f"IDE: Failed to create process: {proc_error}")
+                self.console.append(f"Failed to start process: {proc_error}")
+                self.status_bar.showMessage("Failed to start process")
+                return
             
             print(f"IDE: Process started with PID: {self.current_process.pid}")
 
             self.console.append("\n--- Program Output ---")
             
-            # Handle program output in real-time
-            self.read_program_output()
+            # For GUI applications, still monitor output but with more tolerance
+            if hasattr(self, 'current_app_is_gui') and self.current_app_is_gui:
+                self.console.append("🔹 GUI application detected - monitoring for console output...")
+                # Read output but with shorter timeouts and more error tolerance
+                self.read_program_output(gui_mode=True)
+            else:
+                # Handle program output in real-time for console apps
+                self.read_program_output(gui_mode=False)
             
         except Exception as e:
             print(f"IDE: Error occurred: {e}")
             self.console.setPlainText(f"Error running code: {e}")
             self.status_bar.showMessage("Execution failed")
             
-    def read_program_output(self):
+    def read_program_output(self, gui_mode=False):
         """Read program output in real-time while allowing input."""
         if hasattr(self, 'current_process') and self.current_process:
             try:
@@ -2082,48 +2624,78 @@ class VGEditor(QMainWindow):
                 
                 def read_stdout():
                     try:
-                        while True:
-                            # Read a chunk of data
-                            data = self.current_process.stdout.read(1024)
-                            if not data:
-                                break
-                            # Decode and put in queue
+                        while self.current_process and self.current_process.poll() is None:
+                            # Read smaller chunks and check process status more frequently
                             try:
-                                text = data.decode('utf-8', errors='replace')
-                                self.output_queue.put(('output', text))
-                            except Exception as e:
-                                self.output_queue.put(('error', f"Decode error: {e}"))
+                                # For GUI apps, use non-blocking read with timeout
+                                if gui_mode:
+                                    # Use smaller chunks and more frequent checks for GUI apps
+                                    data = self.current_process.stdout.read(64)
+                                else:
+                                    data = self.current_process.stdout.read(256)
+                                    
+                                if not data:
+                                    if gui_mode:
+                                        # For GUI apps, brief pause before checking again
+                                        import time
+                                        time.sleep(0.1)
+                                        continue
+                                    else:
+                                        break
+                                
+                                # Decode with better error handling for Windows
+                                try:
+                                    # Try UTF-8 first
+                                    text = data.decode('utf-8')
+                                except UnicodeDecodeError:
+                                    try:
+                                        # Try Windows-1252 (common Windows encoding)
+                                        text = data.decode('windows-1252')
+                                    except UnicodeDecodeError:
+                                        try:
+                                            # Try latin1 (handles all byte values)
+                                            text = data.decode('latin1')
+                                        except UnicodeDecodeError:
+                                            # Final fallback: replace problematic characters
+                                            text = data.decode('utf-8', errors='replace')
+                                
+                                if text:
+                                    self.output_queue.put(('output', text))
+                                    
+                            except Exception as read_error:
+                                if gui_mode:
+                                    # For GUI apps, be more tolerant of read errors
+                                    print(f"GUI app read error (ignored): {read_error}")
+                                    import time
+                                    time.sleep(0.1)
+                                    continue
+                                else:
+                                    self.output_queue.put(('error', f"Read error: {read_error}"))
+                                    break
+                                
                     except Exception as e:
-                        self.output_queue.put(('error', f"Read error: {e}"))
+                        if not gui_mode:  # Only report thread errors for console apps
+                            self.output_queue.put(('error', f"Thread error: {e}"))
                 
-                def read_stderr():
-                    try:
-                        while True:
-                            # Read stderr if available (though we're redirecting to stdout)
-                            data = self.current_process.stderr.read(1024) if self.current_process.stderr else b''
-                            if not data:
-                                break
-                            try:
-                                text = data.decode('utf-8', errors='replace')
-                                self.output_queue.put(('error', text))
-                            except Exception as e:
-                                self.output_queue.put(('error', f"Stderr decode error: {e}"))
-                    except Exception as e:
-                        self.output_queue.put(('error', f"Stderr read error: {e}"))
-                
-                # Start output reading threads
+                # Start output reading thread
                 self.stdout_thread = threading.Thread(target=read_stdout, daemon=True)
                 self.stdout_thread.start()
                 
                 # Create a timer to check the queue periodically
                 self.output_timer = QTimer()
                 self.output_timer.timeout.connect(self.process_output_queue)
-                self.output_timer.start(50)  # Check every 50ms
+                if gui_mode:
+                    self.output_timer.start(100)  # Check every 100ms for GUI apps
+                else:
+                    self.output_timer.start(50)   # Check every 50ms for console apps
                 
                 # Check process status periodically
                 self.check_process_timer = QTimer()
                 self.check_process_timer.timeout.connect(self.check_process_status)
-                self.check_process_timer.start(100)  # Check every 100ms
+                if gui_mode:
+                    self.check_process_timer.start(200)  # Check every 200ms for GUI apps
+                else:
+                    self.check_process_timer.start(100)  # Check every 100ms for console apps
                 
             except Exception as e:
                 print(f"IDE: Error setting up output reading: {e}")
@@ -2191,20 +2763,47 @@ class VGEditor(QMainWindow):
         """Check if the running process has finished."""
         try:
             if hasattr(self, 'current_process') and self.current_process:
-                if self.current_process.poll() is not None:
+                poll_result = self.current_process.poll()
+                if poll_result is not None:
                     # Process has finished
-                    self.check_process_timer.stop()
+                    if hasattr(self, 'check_process_timer'):
+                        self.check_process_timer.stop()
+                    if hasattr(self, 'output_timer'):
+                        self.output_timer.stop()
+                    
                     return_code = self.current_process.returncode
-                    self.console.append(f"\n--- Program finished (exit code: {return_code}) ---")
+                    
+                    # Read any remaining output
+                    if hasattr(self, 'output_queue'):
+                        while not self.output_queue.empty():
+                            try:
+                                msg_type, text = self.output_queue.get_nowait()
+                                if msg_type == 'output':
+                                    self.append_program_text(text)
+                                elif msg_type == 'error':
+                                    self.append_program_text(f"[ERROR] {text}")
+                            except:
+                                break
+                    
+                    # Show completion message
+                    if return_code == 0:
+                        self.console.append(f"\n--- Program finished successfully (exit code: {return_code}) ---")
+                    else:
+                        self.console.append(f"\n--- Program finished with error (exit code: {return_code}) ---")
+                    
                     # Make console read-only again when program finishes
                     self.console.setReadOnly(True)
                     self.console.setPlaceholderText("")
-                    self.status_bar.showMessage("Execution completed")
+                    self.status_bar.showMessage(f"Execution completed (exit code: {return_code})")
                     self.current_process = None
+                    
+                    print(f"IDE: Process finished with exit code {return_code}")
         except Exception as e:
             print(f"IDE: Error checking process status: {e}")
             if hasattr(self, 'check_process_timer'):
                 self.check_process_timer.stop()
+            if hasattr(self, 'output_timer'):
+                self.output_timer.stop()
 
     # Debug operations
     def start_debug(self):
@@ -2215,8 +2814,14 @@ class VGEditor(QMainWindow):
         if self.is_debugging:
             return
             
+        # Clear both consoles and switch to debug console
         self.console.clear()
-        self.status_bar.showMessage("Starting debug session...")
+        self.debug_console.clear()
+        self.switch_to_tab('debug')
+        self.status_bar.showMessage("Starting debug session with profiling...")
+        
+        # Start profiling automatically when debugging
+        self.start_profiling_for_debug()
         
         self.debug_thread = DebugThread(self.current_file, self.breakpoints.copy())
         self.debug_thread.output_received.connect(self.on_debug_output)
@@ -2259,7 +2864,13 @@ class VGEditor(QMainWindow):
             self.status_bar.showMessage("Debug session stopped")
 
     def on_debug_output(self, output):
-        self.console.append(output)
+        # Send debug output to the debug console tab
+        self.debug_console.append(output)
+        
+        # Also switch to the debug console tab when debug output arrives
+        debug_tab_index = self.bottom_tabs.indexOf(self.debug_console)
+        if debug_tab_index >= 0:
+            self.bottom_tabs.setCurrentIndex(debug_tab_index)
         
         # Debug: print what we're parsing
         if "DEBUG_" in output:
@@ -2349,6 +2960,10 @@ class VGEditor(QMainWindow):
         self.is_debugging = False
         self.enable_debug_controls(False)
         self.status_bar.showMessage("Debug session ended")
+        
+        # Stop profiling when debug session ends
+        if self.profiling_active:
+            self.stop_profiling()
 
     def enable_debug_controls(self, enabled):
         # Widgets: some may not exist depending on UI state; guard attribute access
@@ -2402,6 +3017,9 @@ class VGEditor(QMainWindow):
         if hasattr(self, 'highlight_timer'):
             self.highlight_timer.stop()  # Stop any pending highlight
             self.highlight_timer.start(200)  # Start with 200ms delay
+        
+        # Auto-lint if enabled
+        self.auto_lint_content()
 
     # Breakpoint operations
     def toggle_breakpoint(self):
@@ -2485,6 +3103,589 @@ class VGEditor(QMainWindow):
         # Combine current line highlight with breakpoint highlights
         all_selections = non_breakpoint_selections + selections
         self.editor.setExtraSelections(all_selections)
+
+    def start_profiling_for_debug(self):
+        """Start profiling for debug session (automatic, no user interaction needed)"""
+        if not self.current_file or not self.current_file.endswith('.vg'):
+            return
+            
+        self.profiling_port = 8888  # Fixed port for debug profiling
+        
+        # Don't start a separate profiling process - debug mode will handle profiling
+        self.profiling_active = True
+        
+        # Give the debug process time to start and initialize profiling server
+        print(f"IDE: Starting profiling data collection on port {self.profiling_port}")
+        
+        # Start timer to collect profiling data with a delay to let server start
+        QTimer.singleShot(2000, self.start_profiling_timer)  # Wait 2 seconds before starting
+        
+    def start_profiling_timer(self):
+        """Start the profiling timer after debug process has had time to initialize"""
+        if self.profiling_active:
+            print("IDE: Starting profiling timer")
+            self.profiling_timer.start(1000)  # Update every second
+
+    def stop_profiling(self):
+        """Stop profiling"""
+        self.profiling_active = False
+        self.profiling_timer.stop()
+        self.status_bar.showMessage("Profiling stopped")
+        
+        # Reset profiling display
+        self.memory_label.setText("Memory: N/A")
+        self.cpu_label.setText("CPU: N/A")
+        self.thread_label.setText("Threads: N/A")
+        self.gc_label.setText("GC: N/A")
+        
+        # Clear graph data
+        self.clear_graph_data()
+
+    def update_profiling_data(self):
+        """Fetch and update profiling data from the server"""
+        if not self.profiling_active:
+            return
+            
+        try:
+            import socket
+            import json
+            
+            # Connect to profiling server
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2.0)  # 2 second timeout
+            
+            print(f"IDE: Attempting to connect to profiling server on port {self.profiling_port}")
+            sock.connect(('localhost', self.profiling_port))
+            print(f"IDE: Successfully connected to profiling server")
+            
+            # Request current profile data
+            sock.sendall(b'GET_PROFILE_DATA\n')
+            print(f"IDE: Sent request for profile data")
+            
+            # Receive complete response (JSON could be large)
+            response_parts = []
+            while True:
+                try:
+                    part = sock.recv(4096).decode('utf-8')
+                    if not part:
+                        break
+                    response_parts.append(part)
+                    # Check if we have a complete JSON response
+                    full_response = ''.join(response_parts)
+                    if full_response.endswith('}'):
+                        break
+                except socket.timeout:
+                    break
+            
+            sock.close()
+            response = ''.join(response_parts)
+            
+            if response:
+                print(f"IDE: Received response: {response[:200]}...")
+                print(f"IDE: Full response length: {len(response)} characters")
+                # Print the end to see if CPU data is there
+                if len(response) > 400:
+                    print(f"IDE: Response end: ...{response[-200:]}")
+                data = json.loads(response)
+                self.update_profiling_display(data)
+                print(f"IDE: Successfully updated profiling display")
+            else:
+                print("IDE: No response from profiling server")
+                self.reset_profiling_display_to_na()
+                
+        except ConnectionRefusedError:
+            print(f"IDE: Profiling server not available on port {self.profiling_port} - connection refused")
+            self.reset_profiling_display_to_na()
+        except socket.timeout:
+            print(f"IDE: Timeout connecting to profiling server on port {self.profiling_port}")
+            self.reset_profiling_display_to_na()
+        except json.JSONDecodeError as e:
+            print(f"IDE: Invalid JSON response from profiling server: {e}")
+            print(f"IDE: Raw response was: {response}")
+            self.reset_profiling_display_to_na()
+        except Exception as e:
+            print(f"IDE: Error fetching profiling data: {e}")
+            self.reset_profiling_display_to_na()
+
+    def reset_profiling_display_to_na(self):
+        """Reset profiling display to N/A when connection fails"""
+        self.memory_label.setText("Memory: N/A")
+        self.cpu_label.setText("CPU: N/A") 
+        self.thread_label.setText("Threads: N/A")
+        self.gc_label.setText("GC: N/A")
+
+    def init_graph_data(self):
+        """Initialize data structures for performance graphing"""
+        global MATPLOTLIB_AVAILABLE
+        
+        try:
+            self.max_data_points = 60  # Keep last 60 seconds of data
+            self.graph_data = {
+                'timestamps': deque(maxlen=self.max_data_points),
+                'memory_used': deque(maxlen=self.max_data_points),
+                'memory_percent': deque(maxlen=self.max_data_points),
+                'cpu_usage': deque(maxlen=self.max_data_points),
+                'thread_count': deque(maxlen=self.max_data_points),
+                'gc_time': deque(maxlen=self.max_data_points)
+            }
+        except Exception as e:
+            print(f"Error initializing graph data: {e}")
+            # Fallback - disable graphing
+            MATPLOTLIB_AVAILABLE = False
+
+    def setup_performance_graph(self):
+        """Setup the matplotlib performance graph widget"""
+        if not MATPLOTLIB_AVAILABLE:
+            self.graph_widget = QLabel("Performance graphs not available\n(matplotlib not installed)")
+            self.graph_widget.setStyleSheet("color: #666; text-align: center; padding: 20px;")
+            self.graph_widget.setMinimumSize(400, 300)
+            return
+
+        try:
+            # Create matplotlib figure and canvas
+            self.graph_figure = Figure(figsize=(8, 6), facecolor='white')
+            self.graph_canvas = FigureCanvas(self.graph_figure)
+            self.graph_widget = self.graph_canvas
+            self.graph_widget.setMinimumSize(400, 300)
+            
+            # Create subplots for different metrics
+            self.ax_memory = self.graph_figure.add_subplot(2, 2, 1)
+            self.ax_cpu = self.graph_figure.add_subplot(2, 2, 2) 
+            self.ax_threads = self.graph_figure.add_subplot(2, 2, 3)
+            self.ax_gc = self.graph_figure.add_subplot(2, 2, 4)
+            
+            # Configure subplots
+            self.ax_memory.set_title('Memory Usage (MB)', fontsize=9)
+            self.ax_memory.set_ylabel('MB', fontsize=8)
+            self.ax_memory.grid(True, alpha=0.3)
+            self.ax_memory.tick_params(labelsize=7)
+            
+            self.ax_cpu.set_title('CPU Usage (%)', fontsize=9)
+            self.ax_cpu.set_ylabel('%', fontsize=8)
+            self.ax_cpu.grid(True, alpha=0.3)
+            self.ax_cpu.tick_params(labelsize=7)
+            
+            self.ax_threads.set_title('Thread Count', fontsize=9)
+            self.ax_threads.set_ylabel('Threads', fontsize=8)
+            self.ax_threads.grid(True, alpha=0.3)
+            self.ax_threads.tick_params(labelsize=7)
+            
+            self.ax_gc.set_title('GC Time (ms)', fontsize=9)
+            self.ax_gc.set_ylabel('ms', fontsize=8)
+            self.ax_gc.grid(True, alpha=0.3)
+            self.ax_gc.tick_params(labelsize=7)
+            
+            # Adjust layout
+            self.graph_figure.tight_layout(pad=1.5)
+            
+            # Initialize empty plots
+            self.memory_line, = self.ax_memory.plot([], [], 'b-', linewidth=1.5)
+            self.cpu_line, = self.ax_cpu.plot([], [], 'r-', linewidth=1.5)
+            self.threads_line, = self.ax_threads.plot([], [], 'g-', linewidth=1.5)
+            self.gc_line, = self.ax_gc.plot([], [], 'm-', linewidth=1.5)
+            
+        except Exception as e:
+            print(f"Error setting up performance graph: {e}")
+            self.graph_widget = QLabel(f"Performance graphs error:\n{str(e)}")
+            self.graph_widget.setStyleSheet("color: #666; text-align: center; padding: 20px;")
+            self.graph_widget.setMinimumSize(400, 300)
+
+    def update_graph_data(self, data):
+        """Update graph data with new profiling information"""
+        if not MATPLOTLIB_AVAILABLE:
+            return
+            
+        try:
+            current_time = datetime.now()
+            self.graph_data['timestamps'].append(current_time)
+            
+            # Memory data (convert to MB)
+            memory_used_mb = data.get('heapUsed', 0) / (1024 * 1024)
+            memory_max_mb = data.get('heapMax', 1) / (1024 * 1024)
+            memory_percent = (data.get('heapUsed', 0) / data.get('heapMax', 1)) * 100 if data.get('heapMax', 0) > 0 else 0
+            
+            self.graph_data['memory_used'].append(memory_used_mb)
+            self.graph_data['memory_percent'].append(memory_percent)
+            
+            # CPU data - use system CPU usage for more meaningful graphs
+            process_cpu = data.get('cpuUsage', 0)
+            system_cpu = data.get('systemCpuUsage', 0)
+            
+            # For graphing, prefer system CPU if available, fall back to process CPU
+            if system_cpu > 0:
+                cpu_for_graph = system_cpu
+                cpu_source = "system"
+            elif process_cpu > 0:
+                cpu_for_graph = process_cpu
+                cpu_source = "process"
+            else:
+                cpu_for_graph = 0
+                cpu_source = "none"
+            
+            # Clamp between 0-100%
+            cpu_for_graph = min(max(float(cpu_for_graph), 0), 100)
+            self.graph_data['cpu_usage'].append(cpu_for_graph)
+            
+            # Debug: Print the actual CPU value being added to the graph
+            print(f"DEBUG: Adding CPU value to graph: {cpu_for_graph:.1f}% ({cpu_source} CPU) (process: {process_cpu}, system: {system_cpu})")
+            
+            # Thread data
+            thread_count = data.get('threadCount', 0)
+            self.graph_data['thread_count'].append(thread_count)
+            
+            # GC data - handle delta time correctly
+            gc_time_delta = data.get('gcTimeDelta', 0)
+            try:
+                if isinstance(gc_time_delta, (int, float)):
+                    gc_time = max(0, float(gc_time_delta))  # Ensure non-negative
+                else:
+                    gc_time = 0
+            except (ValueError, TypeError):
+                gc_time = 0
+                
+            self.graph_data['gc_time'].append(gc_time)
+            
+            # Debug: Print the actual GC value being added to the graph
+            print(f"DEBUG: Adding GC value to graph: {gc_time}ms (raw: {gc_time_delta})")
+            
+            # Keep only last 100 data points to prevent memory growth
+            max_points = 100
+            for key in self.graph_data:
+                if len(self.graph_data[key]) > max_points:
+                    self.graph_data[key] = self.graph_data[key][-max_points:]
+            
+            # Update the plots
+            self.update_graph_display()
+        except Exception as e:
+            print(f"Error updating graph data: {e}")
+
+    def update_graph_display(self):
+        """Update the actual graph display"""
+        global MATPLOTLIB_AVAILABLE
+        
+        if not MATPLOTLIB_AVAILABLE or len(self.graph_data['timestamps']) == 0:
+            return
+            
+        try:
+            # Use simple numeric x-axis instead of datetime to avoid matplotlib date issues
+            x_values = list(range(len(self.graph_data['timestamps'])))
+            
+            # Update memory plot
+            self.memory_line.set_data(x_values, list(self.graph_data['memory_used']))
+            self.ax_memory.relim()
+            self.ax_memory.autoscale_view()
+            
+            # Update CPU plot
+            self.cpu_line.set_data(x_values, list(self.graph_data['cpu_usage']))
+            self.ax_cpu.relim()
+            self.ax_cpu.autoscale_view()
+            self.ax_cpu.set_ylim(0, 100)  # CPU percentage from 0-100%
+            
+            # Update threads plot
+            self.threads_line.set_data(x_values, list(self.graph_data['thread_count']))
+            self.ax_threads.relim()
+            self.ax_threads.autoscale_view()
+            
+            # Update GC plot
+            self.gc_line.set_data(x_values, list(self.graph_data['gc_time']))
+            self.ax_gc.relim()
+            self.ax_gc.autoscale_view()
+            
+            # Simple x-axis labeling (just show "seconds ago")
+            if len(x_values) > 0:
+                for ax in [self.ax_memory, self.ax_cpu, self.ax_threads, self.ax_gc]:
+                    ax.set_xlabel('Seconds (latest on right)', fontsize=8)
+                    # Limit number of x-ticks to avoid crowding
+                    if len(x_values) > 10:
+                        step = max(1, len(x_values) // 5)
+                        tick_positions = x_values[::step]
+                        ax.set_xticks(tick_positions)
+                    
+            # Redraw the canvas
+            self.graph_canvas.draw()
+            
+        except Exception as e:
+            print(f"Error updating graph display: {e}")
+            # If there's an error with the graph, disable it to prevent further crashes
+            MATPLOTLIB_AVAILABLE = False
+
+    def clear_graph_data(self):
+        """Clear all graph data"""
+        if not MATPLOTLIB_AVAILABLE:
+            return
+            
+        for key in self.graph_data:
+            self.graph_data[key].clear()
+        self.update_graph_display()
+
+    def update_profiling_display(self, data):
+        """Update the profiling display with new data"""
+        try:
+            # Format memory info (convert bytes to MB)
+            heap_used_mb = data.get('heapUsed', 0) / (1024 * 1024)
+            heap_max_mb = data.get('heapMax', 0) / (1024 * 1024)
+            heap_percent = (data.get('heapUsed', 0) / data.get('heapMax', 1)) * 100 if data.get('heapMax', 0) > 0 else 0
+            
+            self.memory_label.setText(f"Memory: {heap_used_mb:.1f}MB / {heap_max_mb:.1f}MB ({heap_percent:.1f}%)")
+            
+            # Format CPU info with better handling of unavailable data
+            cpu_usage = data.get('cpuUsage', -1)
+            system_cpu = data.get('systemCpuUsage', -1)
+            
+            if cpu_usage < 0 and system_cpu < 0:
+                self.cpu_label.setText("CPU: Monitoring unavailable")
+            elif cpu_usage < 0:
+                self.cpu_label.setText(f"CPU: Process N/A | System {system_cpu:.1f}%")
+            elif system_cpu < 0:
+                self.cpu_label.setText(f"CPU: Process {cpu_usage:.1f}% | System N/A")
+            else:
+                self.cpu_label.setText(f"CPU: Process {cpu_usage:.1f}% | System {system_cpu:.1f}%")
+            
+            # Format thread info
+            thread_count = data.get('threadCount', 0)
+            peak_threads = data.get('peakThreadCount', 0)
+            daemon_threads = data.get('daemonThreadCount', 0)
+            self.thread_label.setText(f"Threads: {thread_count} (Peak: {peak_threads}, Daemon: {daemon_threads})")
+            
+            # Format GC info
+            gc_time = data.get('gcTime', 0)
+            gc_collections = data.get('gcCollections', 0)
+            gc_time_delta = data.get('gcTimeDelta', 0)
+            self.gc_label.setText(f"GC: {gc_collections} collections, {gc_time}ms total (+{gc_time_delta}ms)")
+            
+            # Update the performance graph
+            self.update_graph_data(data)
+            
+        except Exception as e:
+            print(f"Error updating profiling display: {e}")
+
+    def run_linter(self):
+        """Run the linter on the current file"""
+        # Switch to linter tab when running analysis
+        self.switch_to_tab('linter')
+        
+        if not self.current_file:
+            # Lint current editor content
+            self.lint_current_content()
+        else:
+            # Lint saved file
+            self.lint_file(self.current_file)
+    
+    def lint_file(self, filepath):
+        """Lint a specific file"""
+        try:
+            # Only lint VG Language files
+            if not filepath.lower().endswith('.vg'):
+                self.linter_summary.setText("Linter only supports VG Language files (.vg)")
+                self.linter_list.clear()
+                return
+                
+            from vg_linter import VGLinter
+            
+            linter = VGLinter()
+            
+            # Load project-specific libraries if we have a project path
+            if hasattr(self, 'current_project_path') and self.current_project_path:
+                linter._load_project_libraries_config(self.current_project_path)
+                print(f"IDE: Linter loaded project libraries: {list(linter.user_libraries.keys())}")
+            
+            messages = linter.lint_file(filepath)
+            self.display_lint_results(messages, linter.get_summary())
+            
+        except Exception as e:
+            self.linter_summary.setText(f"Linter error: {str(e)}")
+            self.linter_list.clear()
+    
+    def lint_current_content(self):
+        """Lint the current editor content"""
+        try:
+            # Only lint VG Language files
+            if self.current_file and not self.current_file.lower().endswith('.vg'):
+                self.linter_summary.setText("Linter only supports VG Language files (.vg)")
+                self.linter_list.clear()
+                return
+                
+            from vg_linter import VGLinter
+            
+            content = self.editor.toPlainText()
+            lines = content.split('\n')
+            
+            linter = VGLinter()
+            
+            # Load project-specific libraries if we have a project path
+            if hasattr(self, 'current_project_path') and self.current_project_path:
+                linter._load_project_libraries_config(self.current_project_path)
+                print(f"IDE: Linter loaded project libraries: {list(linter.user_libraries.keys())}")
+            
+            messages = linter.lint_content(lines, self.current_file or '<current file>')
+            self.display_lint_results(messages, linter.get_summary())
+            
+        except Exception as e:
+            self.linter_summary.setText(f"Linter error: {str(e)}")
+            self.linter_list.clear()
+    
+    def display_lint_results(self, messages, summary):
+        """Display linter results in the UI"""
+        self.linter_summary.setText(summary)
+        self.linter_list.clear()
+        
+        # Group messages by severity
+        errors = []
+        warnings = []
+        info = []
+        
+        for msg in messages:
+            if msg.severity == 'error':
+                errors.append(msg)
+            elif msg.severity == 'warning':
+                warnings.append(msg)
+            else:
+                info.append(msg)
+        
+        # Add messages to list with icons and colors
+        for msg in errors:
+            item = QListWidgetItem(f"❌ Line {msg.line}: {msg.message}")
+            item.setData(Qt.UserRole, msg)
+            item.setForeground(QColor('#ff4444'))
+            self.linter_list.addItem(item)
+        
+        for msg in warnings:
+            item = QListWidgetItem(f"⚠️ Line {msg.line}: {msg.message}")
+            item.setData(Qt.UserRole, msg)
+            item.setForeground(QColor('#ff8800'))
+            self.linter_list.addItem(item)
+        
+        for msg in info:
+            item = QListWidgetItem(f"ℹ️ Line {msg.line}: {msg.message}")
+            item.setData(Qt.UserRole, msg)
+            item.setForeground(QColor('#4488ff'))
+            self.linter_list.addItem(item)
+    
+    def goto_lint_issue(self, item):
+        """Jump to the line with a lint issue"""
+        msg = item.data(Qt.UserRole)
+        if msg:
+            # Move cursor to the specified line
+            cursor = self.editor.textCursor()
+            cursor.movePosition(cursor.Start)
+            cursor.movePosition(cursor.Down, cursor.MoveAnchor, msg.line - 1)
+            cursor.movePosition(cursor.StartOfLine)
+            self.editor.setTextCursor(cursor)
+            self.editor.ensureCursorVisible()
+            self.editor.setFocus()
+    
+    def auto_lint_content(self):
+        """Auto-lint content while typing (if enabled)"""
+        if hasattr(self, 'auto_lint_checkbox') and self.auto_lint_checkbox.isChecked():
+            # Only auto-lint if we have content and it's not too frequent
+            if hasattr(self, 'auto_lint_timer'):
+                self.auto_lint_timer.stop()
+            else:
+                self.auto_lint_timer = QTimer()
+                self.auto_lint_timer.setSingleShot(True)
+                self.auto_lint_timer.timeout.connect(self.lint_current_content)
+            
+            # Delay auto-lint to avoid too frequent updates - much shorter delay for real-time feel
+            self.auto_lint_timer.start(500)  # 0.5 second delay
+    
+    def on_auto_lint_toggled(self, checked):
+        """Handle auto-lint checkbox toggle"""
+        if checked:
+            # If auto-lint is enabled, run linting immediately
+            self.lint_current_content()
+        else:
+            # If auto-lint is disabled, clear any pending auto-lint timer
+            if hasattr(self, 'auto_lint_timer'):
+                self.auto_lint_timer.stop()
+    
+    def switch_to_tab(self, tab_name):
+        """Switch to a specific bottom panel tab"""
+        tab_map = {
+            'output': self.console,
+            'debug': self.debug_console,
+            'linter': self.linter_tab_widget,
+            'performance': self.profiler_tab_widget
+        }
+        
+        if tab_name in tab_map:
+            widget = tab_map[tab_name]
+            tab_index = self.bottom_tabs.indexOf(widget)
+            if tab_index >= 0:
+                self.bottom_tabs.setCurrentIndex(tab_index)
+                # Make sure the bottom tabs are visible
+                self.bottom_tabs.setVisible(True)
+    
+    def setup_tab_shortcuts(self):
+        """Setup keyboard shortcuts for tab navigation"""
+        # Ctrl+1, Ctrl+2, etc. to switch to specific tabs
+        for i in range(1, 5):  # Support up to 4 tabs
+            shortcut = QAction(self)
+            shortcut.setShortcut(f'Ctrl+{i}')
+            shortcut.triggered.connect(lambda checked, index=i-1: self.switch_to_tab_by_index(index))
+            self.addAction(shortcut)
+        
+        # Ctrl+Tab to cycle through tabs
+        next_tab_shortcut = QAction(self)
+        next_tab_shortcut.setShortcut('Ctrl+Tab')
+        next_tab_shortcut.triggered.connect(self.next_tab)
+        self.addAction(next_tab_shortcut)
+        
+        # Ctrl+Shift+Tab to cycle backwards
+        prev_tab_shortcut = QAction(self)
+        prev_tab_shortcut.setShortcut('Ctrl+Shift+Tab')
+        prev_tab_shortcut.triggered.connect(self.prev_tab)
+        self.addAction(prev_tab_shortcut)
+        
+        # Ctrl+W to close current tab (hide panel)
+        close_tab_shortcut = QAction(self)
+        close_tab_shortcut.setShortcut('Ctrl+W')
+        close_tab_shortcut.triggered.connect(self.toggle_bottom_panel)
+        self.addAction(close_tab_shortcut)
+        
+        # Ctrl+` (backtick) to toggle bottom panel like VS Code
+        toggle_panel_shortcut = QAction(self)
+        toggle_panel_shortcut.setShortcut('Ctrl+`')
+        toggle_panel_shortcut.triggered.connect(self.toggle_bottom_panel)
+        self.addAction(toggle_panel_shortcut)
+    
+    def switch_to_tab_by_index(self, index):
+        """Switch to tab by index"""
+        if 0 <= index < self.bottom_tabs.count():
+            self.bottom_tabs.setCurrentIndex(index)
+            self.bottom_tabs.setVisible(True)
+    
+    def next_tab(self):
+        """Switch to next tab"""
+        current = self.bottom_tabs.currentIndex()
+        next_index = (current + 1) % self.bottom_tabs.count()
+        self.bottom_tabs.setCurrentIndex(next_index)
+        self.bottom_tabs.setVisible(True)
+    
+    def prev_tab(self):
+        """Switch to previous tab"""
+        current = self.bottom_tabs.currentIndex()
+        prev_index = (current - 1) % self.bottom_tabs.count()
+        self.bottom_tabs.setCurrentIndex(prev_index)
+        self.bottom_tabs.setVisible(True)
+    
+    def toggle_bottom_panel(self):
+        """Toggle the bottom panel visibility with splitter resizing (like Ctrl+` in VS Code)"""
+        if not hasattr(self, 'bottom_panel_collapsed'):
+            self.bottom_panel_collapsed = False
+        
+        # Get the main splitter (find it by traversing up from bottom_tabs)
+        main_splitter = self.bottom_tabs.parent()
+        
+        if self.bottom_panel_collapsed:
+            # Restore panel to normal size
+            main_splitter.setSizes([700, 300])
+            self.bottom_panel_collapsed = False
+            self.status_bar.showMessage("Bottom panel expanded", 2000)
+        else:
+            # Collapse panel (make it very small but not completely hidden)
+            main_splitter.setSizes([950, 50])
+            self.bottom_panel_collapsed = True
+            self.status_bar.showMessage("Bottom panel collapsed", 2000)
 
     def show_package_install_dialog(self):
         ensure_qapplication()
@@ -2749,6 +3950,1140 @@ class VGEditor(QMainWindow):
         except Exception:
             pass
         return packages_dir
+
+    def show_library_create_dialog(self):
+        """Show dialog to create a new library."""
+        if not self.current_project_path:
+            QMessageBox.warning(self, "No Project", "Please open a project first.")
+            return
+            
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Create New Library")
+        dialog.setModal(True)
+        dialog.resize(400, 300)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Library details form
+        form_layout = QFormLayout()
+        
+        name_input = QLineEdit()
+        name_input.setPlaceholderText("e.g., MyGameLib")
+        form_layout.addRow("Library Name:", name_input)
+        
+        desc_input = QLineEdit()
+        desc_input.setPlaceholderText("Brief description of the library")
+        form_layout.addRow("Description:", desc_input)
+        
+        layout.addLayout(form_layout)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_btn)
+        
+        create_btn = QPushButton("Create Library")
+        create_btn.clicked.connect(lambda: self.create_library(dialog, name_input.text().strip(), desc_input.text().strip()))
+        create_btn.setDefault(True)
+        button_layout.addWidget(create_btn)
+        
+        layout.addLayout(button_layout)
+        
+        dialog.exec_()
+        
+    def create_library(self, dialog, name, description):
+        """Create a new library using the library manager API."""
+        if not name:
+            QMessageBox.warning(self, "Error", "Please enter a library name.")
+            return
+            
+        try:
+            # Import and use the library manager
+            import sys
+            sys.path.append('.')
+            from vg_library_manager import VGLibraryManager
+            
+            manager = VGLibraryManager(self.current_project_path or '.')
+            success = manager.create_library(name, description)
+            
+            if success:
+                QMessageBox.information(self, "Success", f"Library '{name}' created successfully!")
+                dialog.accept()
+                self.refresh_library_display()
+            else:
+                QMessageBox.warning(self, "Error", f"Library '{name}' already exists.")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to create library: {str(e)}")
+            
+    def show_library_manager_dialog(self):
+        """Show the library management dialog."""
+        if not self.current_project_path:
+            QMessageBox.warning(self, "No Project", "Please open a project first.")
+            return
+            
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Library Manager")
+        dialog.setModal(True)
+        dialog.resize(800, 600)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Split layout: libraries list on left, namespace details on right
+        splitter = QSplitter(Qt.Horizontal)
+        
+        # Left side: Libraries list
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        
+        left_layout.addWidget(QLabel("Project Libraries:"))
+        
+        self.library_list = QListWidget()
+        self.library_list.itemSelectionChanged.connect(self.on_library_selected)
+        left_layout.addWidget(self.library_list)
+        
+        # Library management buttons
+        lib_button_layout = QHBoxLayout()
+        
+        add_lib_btn = QPushButton("Add Library")
+        add_lib_btn.clicked.connect(self.show_library_create_dialog)
+        lib_button_layout.addWidget(add_lib_btn)
+        
+        remove_lib_btn = QPushButton("Remove Library")
+        remove_lib_btn.clicked.connect(self.remove_selected_library)
+        lib_button_layout.addWidget(remove_lib_btn)
+        
+        left_layout.addLayout(lib_button_layout)
+        
+        splitter.addWidget(left_widget)
+        
+        # Right side: Namespace details
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+        
+        right_layout.addWidget(QLabel("Namespaces:"))
+        
+        self.namespace_list = QListWidget()
+        self.namespace_list.itemSelectionChanged.connect(self.on_namespace_selected)
+        right_layout.addWidget(self.namespace_list)
+        
+        # Namespace management
+        ns_button_layout = QHBoxLayout()
+        
+        add_ns_btn = QPushButton("Add Namespace")
+        add_ns_btn.clicked.connect(self.show_add_namespace_dialog)
+        ns_button_layout.addWidget(add_ns_btn)
+        
+        remove_ns_btn = QPushButton("Remove Namespace")
+        remove_ns_btn.clicked.connect(self.remove_selected_namespace)
+        ns_button_layout.addWidget(remove_ns_btn)
+        
+        right_layout.addLayout(ns_button_layout)
+        
+        # Functions in selected namespace
+        right_layout.addWidget(QLabel("Functions:"))
+        
+        self.function_list = QListWidget()
+        right_layout.addWidget(self.function_list)
+        
+        # Function management
+        func_button_layout = QHBoxLayout()
+        
+        add_func_btn = QPushButton("Add Function")
+        add_func_btn.clicked.connect(self.show_add_function_dialog)
+        func_button_layout.addWidget(add_func_btn)
+        
+        remove_func_btn = QPushButton("Remove Function")
+        remove_func_btn.clicked.connect(self.remove_selected_function)
+        func_button_layout.addWidget(remove_func_btn)
+        
+        right_layout.addLayout(func_button_layout)
+        
+        splitter.addWidget(right_widget)
+        
+        layout.addWidget(splitter)
+        
+        # Dialog buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        button_layout.addWidget(close_btn)
+        
+        layout.addLayout(button_layout)
+        
+        # Load libraries
+        self.refresh_library_list()
+        
+        dialog.exec_()
+        
+    def refresh_library_list(self):
+        """Refresh the library list in the manager dialog."""
+        if not hasattr(self, 'library_list'):
+            return
+            
+        try:
+            import sys
+            sys.path.append('.')
+            from vg_library_manager import VGLibraryManager
+            
+            manager = VGLibraryManager(self.current_project_path or '.')
+            libraries = manager.get_all_libraries()
+            
+            self.library_list.clear()
+            self.current_libraries = libraries['user']
+            
+            for lib_name in libraries['user'].keys():
+                self.library_list.addItem(lib_name)
+                
+        except Exception as e:
+            print(f"Error refreshing library list: {e}")
+            
+    def on_library_selected(self):
+        """Handle library selection in the manager dialog."""
+        if not hasattr(self, 'library_list') or not hasattr(self, 'namespace_list'):
+            return
+            
+        current_item = self.library_list.currentItem()
+        if not current_item:
+            self.namespace_list.clear()
+            self.function_list.clear()
+            return
+            
+        lib_name = current_item.text()
+        self.selected_library = lib_name
+        
+        # Load namespaces for this library
+        if hasattr(self, 'current_libraries') and lib_name in self.current_libraries:
+            self.namespace_list.clear()
+            for namespace in self.current_libraries[lib_name].keys():
+                self.namespace_list.addItem(namespace)
+                
+    def on_namespace_selected(self):
+        """Handle namespace selection in the manager dialog."""
+        if not hasattr(self, 'namespace_list') or not hasattr(self, 'function_list'):
+            return
+            
+        current_item = self.namespace_list.currentItem()
+        if not current_item:
+            self.function_list.clear()
+            return
+            
+        namespace = current_item.text()
+        self.selected_namespace = namespace
+        
+        # Load functions for this namespace
+        if (hasattr(self, 'current_libraries') and 
+            hasattr(self, 'selected_library') and 
+            self.selected_library in self.current_libraries and
+            namespace in self.current_libraries[self.selected_library]):
+            
+            self.function_list.clear()
+            functions = self.current_libraries[self.selected_library][namespace]
+            for func in functions:
+                self.function_list.addItem(func)
+                
+    def show_add_namespace_dialog(self):
+        """Show dialog to add a namespace to the selected library."""
+        if not hasattr(self, 'selected_library'):
+            QMessageBox.warning(self, "No Library Selected", "Please select a library first.")
+            return
+            
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Add Namespace")
+        dialog.setModal(True)
+        dialog.resize(400, 200)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Namespace details
+        form_layout = QFormLayout()
+        
+        name_input = QLineEdit()
+        name_input.setPlaceholderText("e.g., utils, graphics, audio")
+        form_layout.addRow("Namespace Name:", name_input)
+        
+        layout.addLayout(form_layout)
+        
+        # Functions input
+        layout.addWidget(QLabel("Functions (one per line):"))
+        functions_input = QTextEdit()
+        functions_input.setPlaceholderText("function1\nfunction2\nfunction3")
+        functions_input.setMaximumHeight(100)
+        layout.addWidget(functions_input)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_btn)
+        
+        add_btn = QPushButton("Add Namespace")
+        add_btn.clicked.connect(lambda: self.add_namespace(dialog, name_input.text().strip(), functions_input.toPlainText()))
+        add_btn.setDefault(True)
+        button_layout.addWidget(add_btn)
+        
+        layout.addLayout(button_layout)
+        
+        dialog.exec_()
+        
+    def add_namespace(self, dialog, namespace_name, functions_text):
+        """Add a namespace to the selected library."""
+        if not namespace_name:
+            QMessageBox.warning(self, "Error", "Please enter a namespace name.")
+            return
+            
+        # Parse functions
+        functions = [f.strip() for f in functions_text.split('\n') if f.strip()]
+        if not functions:
+            QMessageBox.warning(self, "Error", "Please enter at least one function.")
+            return
+            
+        try:
+            import sys
+            sys.path.append('.')
+            from vg_library_manager import VGLibraryManager
+            
+            manager = VGLibraryManager(self.current_project_path or '.')
+            success = manager.add_namespace_to_library(self.selected_library, namespace_name, functions)
+            
+            if success:
+                QMessageBox.information(self, "Success", f"Namespace '{namespace_name}' added successfully!")
+                dialog.accept()
+                self.refresh_library_list()
+                # Reselect the library to refresh the view
+                for i in range(self.library_list.count()):
+                    if self.library_list.item(i).text() == self.selected_library:
+                        self.library_list.setCurrentRow(i)
+                        break
+            else:
+                QMessageBox.warning(self, "Error", f"Failed to add namespace '{namespace_name}'.")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to add namespace: {str(e)}")
+            
+    def show_add_function_dialog(self):
+        """Show dialog to add a function to the selected namespace."""
+        if not hasattr(self, 'selected_library') or not hasattr(self, 'selected_namespace'):
+            QMessageBox.warning(self, "No Namespace Selected", "Please select a namespace first.")
+            return
+            
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Add Function")
+        dialog.setModal(True)
+        dialog.resize(300, 150)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Function name input
+        form_layout = QFormLayout()
+        
+        name_input = QLineEdit()
+        name_input.setPlaceholderText("e.g., calculateScore, playSound")
+        form_layout.addRow("Function Name:", name_input)
+        
+        layout.addLayout(form_layout)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_btn)
+        
+        add_btn = QPushButton("Add Function")
+        add_btn.clicked.connect(lambda: self.add_function(dialog, name_input.text().strip()))
+        add_btn.setDefault(True)
+        button_layout.addWidget(add_btn)
+        
+        layout.addLayout(button_layout)
+        
+        dialog.exec_()
+        
+    def add_function(self, dialog, function_name):
+        """Add a function to the selected namespace."""
+        if not function_name:
+            QMessageBox.warning(self, "Error", "Please enter a function name.")
+            return
+            
+        try:
+            import sys
+            sys.path.append('.')
+            from vg_library_manager import VGLibraryManager
+            
+            manager = VGLibraryManager(self.current_project_path or '.')
+            
+            # Get current functions
+            libraries = manager.get_all_libraries()
+            current_functions = libraries['user'][self.selected_library][self.selected_namespace]
+            
+            # Add new function
+            new_functions = current_functions + [function_name]
+            success = manager.add_namespace_to_library(self.selected_library, self.selected_namespace, new_functions)
+            
+            if success:
+                QMessageBox.information(self, "Success", f"Function '{function_name}' added successfully!")
+                dialog.accept()
+                self.refresh_library_list()
+                # Reselect to refresh view
+                for i in range(self.library_list.count()):
+                    if self.library_list.item(i).text() == self.selected_library:
+                        self.library_list.setCurrentRow(i)
+                        break
+                for i in range(self.namespace_list.count()):
+                    if self.namespace_list.item(i).text() == self.selected_namespace:
+                        self.namespace_list.setCurrentRow(i)
+                        break
+            else:
+                QMessageBox.warning(self, "Error", f"Failed to add function '{function_name}'.")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to add function: {str(e)}")
+            
+    def remove_selected_library(self):
+        """Remove the selected library."""
+        if not hasattr(self, 'library_list') or not self.library_list.currentItem():
+            QMessageBox.warning(self, "No Library Selected", "Please select a library first.")
+            return
+            
+        lib_name = self.library_list.currentItem().text()
+        
+        reply = QMessageBox.question(self, "Confirm Delete", 
+                                   f"Are you sure you want to delete library '{lib_name}'?",
+                                   QMessageBox.Yes | QMessageBox.No)
+        
+        if reply == QMessageBox.Yes:
+            try:
+                import sys
+                sys.path.append('.')
+                from vg_library_manager import VGLibraryManager
+                
+                manager = VGLibraryManager(self.current_project_path or '.')
+                success = manager.remove_library(lib_name)
+                
+                if success:
+                    QMessageBox.information(self, "Success", f"Library '{lib_name}' removed successfully!")
+                    self.refresh_library_list()
+                else:
+                    QMessageBox.warning(self, "Error", f"Failed to remove library '{lib_name}'.")
+                    
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to remove library: {str(e)}")
+                
+    def remove_selected_namespace(self):
+        """Remove the selected namespace."""
+        if not hasattr(self, 'namespace_list') or not self.namespace_list.currentItem():
+            QMessageBox.warning(self, "No Namespace Selected", "Please select a namespace first.")
+            return
+            
+        namespace = self.namespace_list.currentItem().text()
+        
+        reply = QMessageBox.question(self, "Confirm Delete", 
+                                   f"Are you sure you want to delete namespace '{namespace}'?",
+                                   QMessageBox.Yes | QMessageBox.No)
+        
+        if reply == QMessageBox.Yes:
+            try:
+                import sys
+                sys.path.append('.')
+                from vg_library_manager import VGLibraryManager
+                
+                manager = VGLibraryManager(self.current_project_path or '.')
+                success = manager.remove_namespace_from_library(self.selected_library, namespace)
+                
+                if success:
+                    QMessageBox.information(self, "Success", f"Namespace '{namespace}' removed successfully!")
+                    self.refresh_library_list()
+                    # Reselect library to refresh view
+                    for i in range(self.library_list.count()):
+                        if self.library_list.item(i).text() == self.selected_library:
+                            self.library_list.setCurrentRow(i)
+                            break
+                else:
+                    QMessageBox.warning(self, "Error", f"Failed to remove namespace '{namespace}'.")
+                    
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to remove namespace: {str(e)}")
+                
+    def remove_selected_function(self):
+        """Remove the selected function."""
+        if not hasattr(self, 'function_list') or not self.function_list.currentItem():
+            QMessageBox.warning(self, "No Function Selected", "Please select a function first.")
+            return
+            
+        function = self.function_list.currentItem().text()
+        
+        reply = QMessageBox.question(self, "Confirm Delete", 
+                                   f"Are you sure you want to delete function '{function}'?",
+                                   QMessageBox.Yes | QMessageBox.No)
+        
+        if reply == QMessageBox.Yes:
+            try:
+                import sys
+                sys.path.append('.')
+                from vg_library_manager import VGLibraryManager
+                
+                manager = VGLibraryManager(self.current_project_path or '.')
+                
+                # Get current functions and remove the selected one
+                libraries = manager.get_all_libraries()
+                current_functions = libraries['user'][self.selected_library][self.selected_namespace]
+                new_functions = [f for f in current_functions if f != function]
+                
+                success = manager.add_namespace_to_library(self.selected_library, self.selected_namespace, new_functions)
+                
+                if success:
+                    QMessageBox.information(self, "Success", f"Function '{function}' removed successfully!")
+                    self.refresh_library_list()
+                    # Reselect to refresh view
+                    for i in range(self.library_list.count()):
+                        if self.library_list.item(i).text() == self.selected_library:
+                            self.library_list.setCurrentRow(i)
+                            break
+                    for i in range(self.namespace_list.count()):
+                        if self.namespace_list.item(i).text() == self.selected_namespace:
+                            self.namespace_list.setCurrentRow(i)
+                            break
+                else:
+                    QMessageBox.warning(self, "Error", f"Failed to remove function '{function}'.")
+                    
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to remove function: {str(e)}")
+                
+    def show_library_import_dialog(self):
+        """Show unified dialog for library import/test with both manual testing and .vglib file import."""
+        if not self.current_project_path:
+            QMessageBox.warning(self, "No Project", "Please open a project first.")
+            return
+            
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Import & Test Libraries")
+        dialog.setModal(True)
+        dialog.resize(600, 500)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Tab widget for different import methods
+        tab_widget = QTabWidget()
+        
+        # === Tab 1: Import .vglib File ===
+        import_tab = QWidget()
+        import_layout = QVBoxLayout(import_tab)
+        
+        import_layout.addWidget(QLabel("Automatically import .vglib library files:"))
+        
+        # File selection area
+        file_layout = QHBoxLayout()
+        
+        self.selected_file_label = QLabel("No file selected")
+        self.selected_file_label.setStyleSheet("QLabel { background-color: #f0f0f0; padding: 8px; border: 1px solid #ccc; }")
+        file_layout.addWidget(self.selected_file_label)
+        
+        browse_btn = QPushButton("Browse .vglib File")
+        browse_btn.clicked.connect(self.browse_vglib_file)
+        browse_btn.setStyleSheet("QPushButton { background-color: #2196F3; color: white; font-weight: bold; padding: 8px 16px; }")
+        file_layout.addWidget(browse_btn)
+        
+        import_layout.addLayout(file_layout)
+        
+        # Preview area
+        import_layout.addWidget(QLabel("Library Preview:"))
+        
+        self.library_preview = QTextEdit()
+        self.library_preview.setReadOnly(True)
+        self.library_preview.setPlaceholderText("Select a .vglib file to see its structure...")
+        self.library_preview.setMaximumHeight(200)
+        import_layout.addWidget(self.library_preview)
+        
+        # Import options
+        options_layout = QVBoxLayout()
+        
+        self.overwrite_checkbox = QCheckBox("Overwrite if library already exists")
+        self.overwrite_checkbox.setChecked(False)
+        options_layout.addWidget(self.overwrite_checkbox)
+        
+        self.copy_file_checkbox = QCheckBox("Copy .vglib file to project packages folder")
+        self.copy_file_checkbox.setChecked(True)
+        options_layout.addWidget(self.copy_file_checkbox)
+        
+        import_layout.addLayout(options_layout)
+        
+        # Import button
+        import_btn_layout = QHBoxLayout()
+        import_btn_layout.addStretch()
+        
+        self.import_library_btn = QPushButton("Import Library")
+        self.import_library_btn.clicked.connect(self.import_selected_vglib)
+        self.import_library_btn.setEnabled(False)
+        self.import_library_btn.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 8px 16px; }")
+        import_btn_layout.addWidget(self.import_library_btn)
+        
+        import_layout.addLayout(import_btn_layout)
+        import_layout.addStretch()
+        
+        tab_widget.addTab(import_tab, "📁 Import .vglib File")
+        
+        # === Tab 2: Test Import Statements ===
+        test_tab = QWidget()
+        test_layout = QVBoxLayout(test_tab)
+        
+        test_layout.addWidget(QLabel("Test import statements manually:"))
+        
+        # Import statement input
+        self.import_input = QTextEdit()
+        self.import_input.setPlaceholderText("import MyLibrary.namespace.*;\nimport AnotherLib.utils.*;")
+        self.import_input.setMaximumHeight(100)
+        test_layout.addWidget(self.import_input)
+        
+        # Test button
+        test_btn = QPushButton("Test Imports")
+        test_btn.clicked.connect(self.test_imports)
+        test_btn.setStyleSheet("QPushButton { background-color: #FF9800; color: white; font-weight: bold; padding: 8px 16px; }")
+        test_layout.addWidget(test_btn)
+        
+        # Results area
+        test_layout.addWidget(QLabel("Results:"))
+        self.import_results = QTextEdit()
+        self.import_results.setReadOnly(True)
+        test_layout.addWidget(self.import_results)
+        
+        tab_widget.addTab(test_tab, "🧪 Test Imports")
+        
+        layout.addWidget(tab_widget)
+        
+        # Dialog buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        button_layout.addWidget(close_btn)
+        
+        layout.addLayout(button_layout)
+        
+        # Store reference for parsing
+        self.current_vglib_data = None
+        
+        dialog.exec_()
+        
+    def browse_vglib_file(self):
+        """Browse for a .vglib file and preview its structure."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, 
+            "Select .vglib File to Import", 
+            "", 
+            "VG Library Files (*.vglib);;All Files (*)"
+        )
+        
+        if not file_path:
+            return
+            
+        try:
+            # Import the parser
+            import sys
+            sys.path.append('.')
+            from vg_library_parser import VGLibraryParser
+            
+            # Parse the .vglib file
+            parser = VGLibraryParser()
+            library_data = parser.parse_vglib_file(file_path)
+            
+            if not library_data:
+                self.selected_file_label.setText("❌ Failed to parse file")
+                self.library_preview.setText("Error: Could not parse the .vglib file. Please check the file format.")
+                self.import_library_btn.setEnabled(False)
+                return
+                
+            # Validate the structure
+            valid, message = parser.validate_library_structure(library_data)
+            if not valid:
+                self.selected_file_label.setText("❌ Invalid library structure")
+                self.library_preview.setText(f"Validation Error: {message}")
+                self.import_library_btn.setEnabled(False)
+                return
+            
+            # Update UI with parsed data
+            self.selected_file_label.setText(f"✅ {os.path.basename(file_path)}")
+            
+            # Generate preview
+            preview_content = []
+            preview_content.append(f"📚 Library: {library_data['library_name']}")
+            preview_content.append(f"📁 Namespaces: {len(library_data['namespaces'])}")
+            
+            total_functions = sum(len(funcs) for funcs in library_data['namespaces'].values())
+            preview_content.append(f"⚙️  Total Functions: {total_functions}")
+            preview_content.append("")
+            preview_content.append("Structure:")
+            
+            for namespace, functions in library_data['namespaces'].items():
+                preview_content.append(f"  └─ {namespace} ({len(functions)} functions)")
+                func_preview = ', '.join(functions[:4])
+                if len(functions) > 4:
+                    func_preview += f", ... (+{len(functions)-4} more)"
+                preview_content.append(f"     {func_preview}")
+                
+            self.library_preview.setText('\n'.join(preview_content))
+            
+            # Store data for import
+            self.current_vglib_data = library_data
+            self.current_vglib_file = file_path
+            self.import_library_btn.setEnabled(True)
+            
+        except Exception as e:
+            self.selected_file_label.setText("❌ Error reading file")
+            self.library_preview.setText(f"Error: {str(e)}")
+            self.import_library_btn.setEnabled(False)
+            
+    def import_selected_vglib(self):
+        """Import the selected and parsed .vglib file."""
+        if not self.current_vglib_data:
+            QMessageBox.warning(self, "No File", "Please select a .vglib file first.")
+            return
+            
+        try:
+            import sys
+            import shutil
+            sys.path.append('.')
+            from vg_library_manager import VGLibraryManager
+            
+            manager = VGLibraryManager(self.current_project_path or '.')
+            library_name = self.current_vglib_data['library_name']
+            
+            # Check if library exists
+            existing_libraries = manager.get_all_libraries()
+            if library_name in existing_libraries['user'] and not self.overwrite_checkbox.isChecked():
+                reply = QMessageBox.question(
+                    self, 
+                    "Library Exists", 
+                    f"Library '{library_name}' already exists. Do you want to overwrite it?",
+                    QMessageBox.Yes | QMessageBox.No
+                )
+                if reply != QMessageBox.Yes:
+                    return
+            
+            # Copy the .vglib file if requested
+            if self.copy_file_checkbox.isChecked():
+                packages_dir = os.path.join(self.current_project_path, 'packages')
+                os.makedirs(packages_dir, exist_ok=True)
+                
+                dest_file = os.path.join(packages_dir, f"{library_name}.vglib")
+                shutil.copy2(self.current_vglib_file, dest_file)
+                print(f"Copied .vglib file to: {dest_file}")
+            
+            # Create the library
+            success = manager.create_library(library_name, f"Imported from {os.path.basename(self.current_vglib_file)}")
+            if not success and library_name not in existing_libraries['user']:
+                QMessageBox.critical(self, "Error", f"Failed to create library '{library_name}'.")
+                return
+            
+            # Add all namespaces and functions
+            import_count = 0
+            for namespace, functions in self.current_vglib_data['namespaces'].items():
+                success = manager.add_namespace_to_library(library_name, namespace, functions)
+                if success:
+                    import_count += len(functions)
+                else:
+                    print(f"Warning: Failed to add namespace '{namespace}' to library '{library_name}'")
+            
+            # Show success message
+            QMessageBox.information(
+                self, 
+                "Import Successful", 
+                f"✅ Successfully imported library '{library_name}'!\n\n"
+                f"📁 {len(self.current_vglib_data['namespaces'])} namespaces\n"
+                f"⚙️  {import_count} functions\n"
+                f"📋 File copied: {'Yes' if self.copy_file_checkbox.isChecked() else 'No'}\n\n"
+                f"You can now use:\nimport {library_name}.namespace.*;"
+            )
+            
+            self.refresh_library_display()
+            
+            # Reset the form
+            self.selected_file_label.setText("No file selected")
+            self.library_preview.clear()
+            self.import_library_btn.setEnabled(False)
+            self.current_vglib_data = None
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Import Error", f"Failed to import library: {str(e)}")
+        
+    def test_imports(self):
+        """Test the import statements."""
+        if not hasattr(self, 'import_input') or not hasattr(self, 'import_results'):
+            return
+            
+        import_text = self.import_input.toPlainText()
+        if not import_text.strip():
+            self.import_results.setText("Please enter some import statements to test.")
+            return
+            
+        try:
+            import sys
+            sys.path.append('.')
+            from vg_library_manager import VGLibraryManager
+            
+            manager = VGLibraryManager(self.current_project_path or '.')
+            
+            results = []
+            for line in import_text.split('\n'):
+                line = line.strip()
+                if line and line.startswith('import'):
+                    valid, message = manager.validate_library_import(line)
+                    status = "✅ VALID" if valid else "❌ INVALID"
+                    results.append(f"{status}: {line}")
+                    results.append(f"   → {message}")
+                    results.append("")
+                    
+            if not results:
+                results = ["No valid import statements found."]
+                
+            self.import_results.setText('\n'.join(results))
+            
+        except Exception as e:
+            self.import_results.setText(f"Error testing imports: {str(e)}")
+            
+    def show_library_viewer(self):
+        """Simple viewer for imported libraries - no manual editing."""
+        if not self.current_project_path:
+            QMessageBox.warning(self, "No Project", "Please open a project first.")
+            return
+            
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Imported Libraries")
+        dialog.setModal(True)
+        dialog.resize(600, 400)
+        
+        layout = QVBoxLayout(dialog)
+        
+        info_label = QLabel("Libraries imported into this project (read-only view):")
+        info_label.setStyleSheet("font-weight: bold; margin-bottom: 10px;")
+        layout.addWidget(info_label)
+        
+        # Library tree view
+        library_tree = QTextEdit()
+        library_tree.setReadOnly(True)
+        
+        try:
+            import sys
+            sys.path.append('.')
+            from vg_library_manager import VGLibraryManager
+            
+            manager = VGLibraryManager(self.current_project_path)
+            
+            # Only show libraries that have been explicitly imported into this project
+            project_libraries = manager.linter.user_libraries
+            
+            content = []
+            if project_libraries:
+                content.append("� PROJECT LIBRARIES:")
+                for lib_name, namespaces in project_libraries.items():
+                    content.append(f"  {lib_name}")
+                    for ns_name, functions in namespaces.items():
+                        if isinstance(functions, list):
+                            content.append(f"    └─ {ns_name}: {', '.join(functions)}")
+                        else:
+                            content.append(f"    └─ {ns_name}: {len(functions)} functions")
+            else:
+                content.append("📁 PROJECT LIBRARIES:")
+                content.append("  (None - use '📁 Import .vglib File' to add libraries)")
+                
+            content.append("")
+            content.append("💡 To modify libraries: Edit the .vglib files directly, then re-import them.")
+                
+            library_tree.setText('\n'.join(content))
+            
+        except Exception as e:
+            library_tree.setText(f"Error loading libraries: {str(e)}")
+            
+        layout.addWidget(library_tree)
+        
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        
+        dialog.exec_()
+        
+    def show_import_test_only(self):
+        """Simple import statement tester."""
+        if not self.current_project_path:
+            QMessageBox.warning(self, "No Project", "Please open a project first.")
+            return
+            
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Test Import Statements")
+        dialog.setModal(True)
+        dialog.resize(500, 300)
+        
+        layout = QVBoxLayout(dialog)
+        
+        layout.addWidget(QLabel("Test your import statements:"))
+        
+        # Import input
+        import_input = QTextEdit()
+        import_input.setPlaceholderText("import MyLibrary.namespace.*;\nimport IO.File.*;")
+        import_input.setMaximumHeight(80)
+        layout.addWidget(import_input)
+        
+        # Test button
+        def test_imports():
+            try:
+                import sys
+                sys.path.append('.')
+                from vg_library_manager import VGLibraryManager
+                
+                manager = VGLibraryManager(self.current_project_path)
+                
+                results = []
+                for line in import_input.toPlainText().split('\n'):
+                    line = line.strip()
+                    if line and line.startswith('import'):
+                        valid, message = manager.validate_library_import(line)
+                        status = "✅" if valid else "❌"
+                        results.append(f"{status} {line}")
+                        results.append(f"   → {message}")
+                        results.append("")
+                        
+                if not results:
+                    results = ["No import statements found."]
+                    
+                results_display.setText('\n'.join(results))
+                
+            except Exception as e:
+                results_display.setText(f"Error: {str(e)}")
+        
+        test_btn = QPushButton("Test Imports")
+        test_btn.clicked.connect(test_imports)
+        layout.addWidget(test_btn)
+        
+        # Results
+        layout.addWidget(QLabel("Results:"))
+        results_display = QTextEdit()
+        results_display.setReadOnly(True)
+        layout.addWidget(results_display)
+        
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        
+        dialog.exec_()
+
+    def show_library_manager(self):
+        """Show library management dialog for adding and removing libraries."""
+        if not self.current_project_path:
+            QMessageBox.warning(self, "No Project", "Please open a project first.")
+            return
+            
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Library Manager")
+        dialog.setModal(True)
+        dialog.resize(700, 500)
+        
+        layout = QVBoxLayout(dialog)
+        
+        # Header
+        header_label = QLabel("📚 Project Library Management")
+        header_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
+        layout.addWidget(header_label)
+        
+        # Main content area with tabs
+        tab_widget = QTabWidget()
+        
+        # === Tab 1: Manage Libraries ===
+        manage_tab = QWidget()
+        manage_layout = QVBoxLayout(manage_tab)
+        
+        # Current libraries section
+        current_label = QLabel("Currently Imported Libraries:")
+        current_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
+        manage_layout.addWidget(current_label)
+        
+        # Libraries list
+        self.libraries_list = QListWidget()
+        self.libraries_list.setMaximumHeight(200)
+        manage_layout.addWidget(self.libraries_list)
+        
+        # Action buttons
+        button_layout = QHBoxLayout()
+        
+        add_btn = QPushButton("➕ Add Library")
+        add_btn.clicked.connect(lambda: self.add_library_to_project(dialog))
+        button_layout.addWidget(add_btn)
+        
+        remove_btn = QPushButton("➖ Remove Selected")
+        remove_btn.clicked.connect(lambda: self.remove_library_from_project(dialog))
+        button_layout.addWidget(remove_btn)
+        
+        button_layout.addStretch()
+        manage_layout.addLayout(button_layout)
+        
+        # Library details section
+        details_label = QLabel("Library Details:")
+        details_label.setStyleSheet("font-weight: bold; margin-top: 15px;")
+        manage_layout.addWidget(details_label)
+        
+        self.library_details = QTextEdit()
+        self.library_details.setReadOnly(True)
+        self.library_details.setMaximumHeight(150)
+        manage_layout.addWidget(self.library_details)
+        
+        tab_widget.addTab(manage_tab, "⚙️ Manage")
+        
+        layout.addWidget(tab_widget)
+        
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        
+        # Connect selection change to show details
+        self.libraries_list.itemSelectionChanged.connect(self.show_library_details)
+        
+        # Populate the list
+        self.refresh_library_lists()
+        
+        dialog.exec_()
+    
+    def refresh_library_lists(self):
+        """Refresh the imported library list."""
+        # Clear list
+        self.libraries_list.clear()
+        self.library_details.clear()
+        
+        try:
+            from vg_library_manager import VGLibraryManager
+            manager = VGLibraryManager(self.current_project_path)
+            
+            # Populate imported libraries
+            imported_libs = manager.linter.user_libraries
+            for lib_name in imported_libs.keys():
+                self.libraries_list.addItem(lib_name)
+                
+        except Exception as e:
+            self.library_details.setText(f"Error loading libraries: {str(e)}")
+    
+    def show_library_details(self):
+        """Show details for the selected library."""
+        selected_items = self.libraries_list.selectedItems()
+        if not selected_items:
+            self.library_details.clear()
+            return
+            
+        lib_name = selected_items[0].text()
+        
+        try:
+            from vg_library_manager import VGLibraryManager
+            manager = VGLibraryManager(self.current_project_path)
+            
+            if lib_name in manager.linter.user_libraries:
+                namespaces = manager.linter.user_libraries[lib_name]
+                
+                details = [f"Library: {lib_name}", ""]
+                for ns_name, functions in namespaces.items():
+                    if isinstance(functions, list):
+                        details.append(f"📁 {ns_name}: {len(functions)} functions")
+                        details.extend([f"  • {func}" for func in functions[:10]])  # Show first 10
+                        if len(functions) > 10:
+                            details.append(f"  ... and {len(functions) - 10} more")
+                    details.append("")
+                
+                self.library_details.setText('\n'.join(details))
+            else:
+                self.library_details.setText(f"Library '{lib_name}' not found in imported libraries.")
+                
+        except Exception as e:
+            self.library_details.setText(f"Error loading library details: {str(e)}")
+    
+    def add_library_to_project(self, parent_dialog):
+        """Add a new library to the project."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            parent_dialog,
+            "Select .vglib Library File",
+            "",
+            "VG Library Files (*.vglib);;All Files (*)"
+        )
+        
+        if file_path:
+            self.import_library_file(file_path, parent_dialog)
+            self.refresh_library_lists()
+    
+    def remove_library_from_project(self, parent_dialog):
+        """Remove selected library from the project."""
+        selected_items = self.libraries_list.selectedItems()
+        if not selected_items:
+            QMessageBox.information(parent_dialog, "No Selection", "Please select a library to remove.")
+            return
+            
+        lib_name = selected_items[0].text()
+        
+        reply = QMessageBox.question(
+            parent_dialog, 
+            "Confirm Removal", 
+            f"Are you sure you want to remove library '{lib_name}' from this project?\n\nThis will not delete the .vglib file, just remove it from the project.",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            try:
+                from vg_library_manager import VGLibraryManager
+                manager = VGLibraryManager(self.current_project_path)
+                
+                success = manager.remove_library(lib_name)
+                if success:
+                    QMessageBox.information(parent_dialog, "Success", f"Library '{lib_name}' removed from project.")
+                    self.refresh_library_lists()
+                else:
+                    QMessageBox.warning(parent_dialog, "Error", f"Failed to remove library '{lib_name}'.")
+                    
+            except Exception as e:
+                QMessageBox.critical(parent_dialog, "Error", f"Error removing library: {str(e)}")
+    
+    def import_library_file(self, file_path, parent_dialog):
+        """Import a library file into the project."""
+        try:
+            from vg_library_manager import VGLibraryManager
+            manager = VGLibraryManager(self.current_project_path)
+            
+            success, message = manager.import_from_vglib(file_path)
+            if success:
+                QMessageBox.information(parent_dialog, "Success", message)
+            else:
+                QMessageBox.warning(parent_dialog, "Import Failed", message)
+                
+        except Exception as e:
+            QMessageBox.critical(parent_dialog, "Error", f"Error importing library: {str(e)}")
+
+    def refresh_library_display(self):
+        """Refresh any library displays in the IDE."""
+        # Reload the linter's library configuration if we have a current project
+        if hasattr(self, 'current_project_path') and self.current_project_path:
+            try:
+                # Create a new linter instance to ensure clean state
+                from vg_linter import VGLinter
+                new_linter = VGLinter()
+                new_linter._load_project_libraries_config(self.current_project_path)
+                
+                # Update any existing linter references
+                # This ensures the Library Manager's linter is up to date
+                if hasattr(self, '_library_manager_linter'):
+                    self._library_manager_linter = new_linter
+                
+                print(f"IDE: Refreshed linter with libraries: {list(new_linter.user_libraries.keys())}")
+                
+            except Exception as e:
+                print(f"IDE: Error refreshing linter: {e}")
+        
+        # Run auto-lint if enabled to show updated results
+        if hasattr(self, 'auto_lint_checkbox') and self.auto_lint_checkbox.isChecked():
+            self.run_linter()
 
     def _fix_installed_filename(self, cmd_name):
         # After install, try to find and rename the installed file to the canonical name.

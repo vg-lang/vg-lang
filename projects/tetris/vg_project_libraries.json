@@ -1,0 +1,12 @@
+{
+  "project_libraries": {
+    "TetrisLib": {
+      "game": [
+        "spawnPiece",
+        "rotatePiece",
+        "clearLines"
+      ]
+    },
+    "TetrisUtils": {}
+  }
+}

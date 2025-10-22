@@ -1,0 +1,728 @@
+library Guilibrary {
+
+    /## The window namespace contains functions for creating and managing application windows.
+    # This namespace provides the core functionality for creating, displaying, and
+    # configuring application windows in VG applications.
+    ##/
+    namespace window {
+        /## Creates a new window with the specified title and dimensions.
+        # This function initializes a new window object that can be used as the main
+        # container for your application's user interface.
+        #
+        # @param title The title to display in the window's title bar
+        # @param width The width of the window in pixels
+        # @param height The height of the window in pixels
+        # @return A window object that can be used with other window functions
+        # @author Hussein Abdul-Ameer
+        ##/
+        function create(title, width, height) {
+            ## Creates a new window instance using the MyGUI constructor
+            return VgSystemCall("components.MyGUI", "<init>", title, width, height);
+        }
+
+        /## Displays the window to the user.
+        # This function makes the window visible on screen. It should be called
+        # after you've configured the window and added all necessary components.
+        #
+        # @author Hussein Abdul-Ameer
+        # @param window The window object to display
+        ##/
+        function launch(window) {
+            ## Launches the given window (makes it visible)
+            return VgSystemCall("components.MyGUI", "launch", window);
+        }
+
+
+        /## Closes and disposes of a window.
+        # This function closes the window and frees up any resources associated with it.
+        # Use this when you're done with a window to prevent memory leaks.
+        #
+        # @author Hussein Abdul-Ameer
+        # @param window The window object to dispose
+        ##/
+        function dispose(window) {
+            ## Disposes of the window
+            return VgSystemCall("components.MyGUI", "dispose", window);
+        }
+
+        /## Sets the icon for the window.
+        # This function changes the icon displayed in the window's title bar and taskbar.
+        #
+        # @param window The window object to modify
+        # @param iconName Path to the icon file
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setIcon(window, iconName) {
+            ## Sets the window icon
+            return VgSystemCall("components.MyGUI", "setWindowIcon", window, iconName);
+        }
+
+        /## Adds a component to the window.
+        # This function adds UI components like buttons, images, or panes to the window.
+        #
+        # @param window The window object to add the component to
+        # @param component The UI component to add to the window
+        # @return Success status of the operation
+        # @author Hussein Abdul-Ameer
+        ##/
+        function addComponentToWindow(window, component) {
+            ## Adds a component to the window
+            return VgSystemCall("components.MyGUI", "addComponentToWindow", window, window, component);
+        }
+
+        /## Sets the background color of a window.
+        # This function changes the background color of the window's content area.
+        #
+        # @param window The window object to modify
+        # @param colorCode The color to set as background (hex format: "#RRGGBB")
+        # @return Success status of the operation
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setBackgroundColor(window, colorCode) {
+            var color = VgSystemCall("java.awt.Color", "decode", colorCode);
+            return VgSystemCall("components.MyGUI", "setWindowBackgroundColor", window, color);
+        }
+
+        /## Removes a component from the window.
+        # This function removes a UI component from the window.
+        #
+        # @param window The window object to remove the component from
+        # @param component The UI component to remove
+        # @return Success status of the operation
+        # @author Hussein Abdul-Ameer
+        ##/
+        function removeComponentFromWindow(window, component) {
+            ## Removes a component from the window
+            return VgSystemCall("components.MyGUI", "removeComponent", window, component);
+        }
+    }
+
+    /## The popup namespace contains functions for creating dialog boxes and notifications.
+    # This namespace provides functions for displaying various types of popup dialogs
+    # to show information, warnings, or errors to the user.
+    ##/
+    namespace popup {
+        /## Displays an information dialog with the specified message.
+        # This function shows a dialog box with an information icon.
+        #
+        # @param window The parent window for this dialog
+        # @param message The message to display
+        # @param title The title for the dialog box
+        # @author Hussein Abdul-Ameer
+        # @return User's response to the dialog
+        ##/
+        function info(window, message, title) {
+            return VgSystemCall("components.MyGUI", "showInfoPopup", window, message, title);
+        }
+
+        /## Displays a warning dialog with the specified message.
+        # This function shows a dialog box with a warning icon.
+        #
+        # @param window The parent window for this dialog
+        # @param message The warning message to display
+        # @param title The title for the dialog box
+        # @author Hussein Abdul-Ameer
+        # @return User's response to the dialog
+        ##/
+        function warning(window, message, title) {
+            return VgSystemCall("components.MyGUI", "showWarningPopup", window, message, title);
+        }
+
+        /## Displays an error dialog with the specified message.
+        # This function shows a dialog box with an error icon.
+        #
+        # @param window The parent window for this dialog
+        # @param message The error message to display
+        # @param title The title for the dialog box
+        # @author Hussein Abdul-Ameer
+        # @return User's response to the dialog
+        ##/
+        function error(window, message, title) {
+            return VgSystemCall("components.MyGUI", "showErrorPopup", window, message, title);
+        }
+    }
+
+    /## The Callbacks namespace contains functions for handling various events.
+    # This namespace provides utility functions for event handling in GUI applications.
+    ##/
+    namespace Callbacks {
+        /## Handles key press events.
+        # This is a default implementation that can be overridden.
+        #
+        # @param msg The message associated with the key event
+        # @param code The key code of the pressed key
+        # @author Hussein Abdul-Ameer
+        ##/
+        function onKey(msg, code) {
+            print("Callbacks.onKey => msg: " + msg + ", code: " + code);
+        }
+    }
+
+    /## The Button namespace contains functions for creating and managing buttons.
+    # This namespace provides functionality for creating interactive buttons
+    # that users can click to trigger actions in your application.
+    ##/
+    namespace Button {
+        /## Creates a button with the specified text and position.
+        # This function creates a clickable button with the given text and position.
+        #
+        # @param text The text to display on the button
+        # @param x The x-coordinate of the button
+        # @param y The y-coordinate of the button
+        # @param width The width of the button in pixels
+        # @param height The height of the button in pixels
+        # @author Hussein Abdul-Ameer
+        # @return A button object that can be used with other button functions
+        ##/
+        function createButton(text, x, y, width, height) {
+            return VgSystemCall("components.MyGUI$MyButton", "<init>", text, x, y, width, height);
+        }
+
+        /## Sets the color of a button.
+        # This function changes the background color of a button.
+        #
+        # @param button The button object to modify
+        # @param colorCode The color to set (hex format: "#RRGGBB")
+        # @author Hussein Abdul-Ameer
+        # @return Success status of the operation
+        ##/
+        function setButtonColor(button, colorCode) {
+            var color = VgSystemCall("java.awt.Color", "decode", colorCode);
+            return VgSystemCall("components.MyGUI$MyButton", "setButtonColor", button, color);
+        }
+    }
+
+    /## The IOEvents namespace contains functions for handling user input events.
+    # This namespace provides functions for registering event handlers for
+    # keyboard and mouse interactions with your application.
+    ##/
+    namespace IOEvents {
+        /## Sets a callback function for key press events.
+        # This function registers a handler that will be called when a key is pressed.
+        #
+        # @param window The window to attach the key press handler to
+        # @param method The function to call when a key is pressed
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setOnKeyPress(window, method) {
+            return VgSystemCall("components.MyGUI", "setOnKeyPress", window, method);
+        }
+
+        /## Sets a callback function for key release events.
+        # This function registers a handler that will be called when a key is released.
+        #
+        # @param window The window to attach the key release handler to
+        # @param method The function to call when a key is released
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setOnKeyRelease(window, method) {
+            return VgSystemCall("components.MyGUI", "setOnKeyReleased", window, method);
+        }
+
+        /## Sets a callback function for button click events.
+        # This function registers a handler that will be called when a button is clicked.
+        #
+        # @param button The button to attach the click handler to
+        # @param method The function to call when the button is clicked
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setOnClick(button, method) {
+            return VgSystemCall("components.MyGUI$MyButton", "setOnClick", button, method);
+        }
+
+        /## Sets a callback function for mouse press events.
+        # This function registers a handler that will be called when a mouse button is pressed.
+        # The handler function will receive the x and y coordinates of the mouse cursor and
+        # the button that was pressed.
+        #
+        # @param window The window to attach the event to
+        # @param callbackFunction The function to call when mouse is pressed
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setOnMousePress(window, callbackFunction) {
+            return VgSystemCall("components.MyGUI", "setOnMousePress", window, callbackFunction);
+        }
+
+        /## Sets a callback function for mouse drag events.
+        # This function registers a handler that will be called when the mouse is dragged.
+        # The handler function will receive the x and y coordinates of the mouse cursor and
+        # the button that is being held down.
+        #
+        # @param window The window to attach the event to
+        # @param callbackFunction The function to call when mouse is dragged
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setOnMouseDrag(window, callbackFunction) {
+            return VgSystemCall("components.MyGUI", "setOnMouseDrag", window, callbackFunction);
+        }
+
+        /## Sets a callback function for mouse release events.
+        # This function registers a handler that will be called when a mouse button is released.
+        # The handler function will receive the x and y coordinates of the mouse cursor and
+        # the button that was released.
+        #
+        # @param window The window to attach the event to
+        # @param callbackFunction The function to call when mouse is released
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setOnMouseRelease(window, callbackFunction) {
+            return VgSystemCall("components.MyGUI", "setOnMouseRelease", window, callbackFunction);
+        }
+    }
+
+    /## The Image namespace contains functions for creating and manipulating images.
+    # This namespace provides functionality for displaying and manipulating images
+    # in your application's user interface.
+    ##/
+    namespace Image {
+        /## Creates an image component with the specified properties.
+        # This function creates an image component that can be added to a window or pane.
+        #
+        # @param imagePath Path to the image file
+        # @param x The x-coordinate of the image
+        # @param y The y-coordinate of the image
+        # @param width The width of the image in pixels
+        # @param height The height of the image in pixels
+        # @return An image component that can be added to a window or pane
+        # @author Hussein Abdul-Ameer
+        ##/
+        function createImage(imagePath, x, y, width, height) {
+            return VgSystemCall("components.MyGUI$MyImage", "<init>", imagePath, x, y, width, height);
+        }
+
+        /## Changes the image displayed in an image component.
+        # This function updates an existing image component to display a different image.
+        #
+        # @param imageComponent The image component to modify
+        # @param imagePath Path to the new image file
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setImage(imageComponent, imagePath) {
+            return VgSystemCall("components.MyGUI$MyImage", "setImage", imageComponent, imagePath);
+        }
+
+        /## Moves an image component to a new position.
+        # This function changes the position of an image component on the screen.
+        #
+        # @param imageComponent The image component to move
+        # @param x The new x-coordinate
+        # @param y The new y-coordinate
+        # @author Hussein Abdul-Ameer
+        ##/
+        function moveImage(imageComponent, x, y) {
+            return VgSystemCall("components.MyGUI$MyImage", "moveImage", imageComponent, x, y);
+        }
+
+        /## Resizes an image component.
+        # This function changes the dimensions of an image component.
+        #
+        # @param imageComponent The image component to resize
+        # @param width The new width in pixels
+        # @param height The new height in pixels
+        # @author Hussein Abdul-Ameer
+        ##/
+        function resizeImage(imageComponent, width, height) {
+            return VgSystemCall("components.MyGUI$MyImage", "resizeImage", imageComponent, width, height);
+        }
+
+        /## Adds an image component to a window.
+        # This function adds an image component directly to a window.
+        #
+        # @param window The window to add the image to
+        # @param imageComponent The image component to add
+        # @author Hussein Abdul-Ameer
+        ##/
+        function addImageToWindow(window, imageComponent) {
+            return VgSystemCall("components.MyGUI", "add", window, imageComponent);
+        }
+    }
+
+    /## The Pane namespace contains functions for creating and managing panes (containers).
+    # This namespace provides functionality for creating container elements that can
+    # hold and organize other UI components.
+    ##/
+    namespace Pane {
+        /## Creates a pane with the specified position and dimensions.
+        # This function creates a rectangular container that can hold other UI components.
+        #
+        # @param x The x-coordinate of the pane
+        # @param y The y-coordinate of the pane
+        # @param width The width of the pane in pixels
+        # @param height The height of the pane in pixels
+        # @return A pane object that can be used with other pane functions
+        # @author Hussein Abdul-Ameer
+        ##/
+        function createPane(x, y, width, height) {
+            return VgSystemCall("components.MyGUI$MyPane", "<init>", x, y, width, height);
+        }
+
+        /## Sets the background color of a pane.
+        # This function changes the background color of a pane.
+        #
+        # @param pane The pane object to modify
+        # @param colorCode The color to set (hex format: "#RRGGBB")
+        # @return Success status of the operation
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setPaneColor(pane, colorCode) {
+            var color = VgSystemCall("java.awt.Color", "decode", colorCode);
+            return VgSystemCall("components.MyGUI$MyPane", "setPaneColor", pane, color);
+        }
+
+        /## Adds a component to a pane.
+        # This function adds a UI component like a button or image to a pane.
+        #
+        # @param pane The pane to add the component to
+        # @param component The UI component to add
+        # @author Hussein Abdul-Ameer
+        ##/
+        function addComponentToPane(pane, component) {
+            return VgSystemCall("components.MyGUI$MyPane", "add", pane, component);
+        }
+
+        /## Sets the position and size of a pane.
+        # This function changes the position and dimensions of a pane.
+        #
+        # @param pane The pane to modify
+        # @param x The new x-coordinate
+        # @param y The new y-coordinate
+        # @param width The new width in pixels
+        # @param height The new height in pixels
+        # @author Hussein Abdul-Ameer
+        ##/
+       function setPaneBounds(pane, x, y, width, height) {
+           return VgSystemCall("components.MyGUI$MyPane", "setBounds", pane, x, y, width, height);
+       }
+
+        /## Sets a background image for a pane.
+        # This function sets an image as the background of a pane.
+        #
+        # @param images The image to use as background
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setPaneBackgroundImage(images) {
+            return VgSystemCall("components.MyGUI$MyPane", "setPaneBackgroundImage", images);
+        }
+
+        /## Sets a border for a pane.
+        # This function adds a colored border around a pane with the specified thickness.
+        #
+        # @param pane The pane to modify
+        # @param colorCode The border color (hex format: "#RRGGBB")
+        # @param thickness The border thickness in pixels
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setPaneBorder(pane, colorCode, thickness) {
+            var color = VgSystemCall("java.awt.Color", "decode", colorCode);
+            return VgSystemCall("components.MyGUI$MyPane", "setPaneBorder", pane, color, thickness);
+        }
+    }
+
+    /## The Sound namespace contains functions for playing and managing sounds.
+    # This namespace provides functionality for adding audio to your applications,
+    # including playing sound effects and controlling volume.
+    ##/
+    namespace Sound {
+        /## Plays a sound from a file.
+        # This function plays an audio file once.
+        #
+        # @param filePath Path to the sound file
+        # @author Hussein Abdul-Ameer
+        ##/
+        function playSound(filePath) {
+            return VgSystemCall("components.MyGUI$MySoundManager", "playSound", filePath);
+        }
+
+        /## Stops all currently playing sounds.
+        # This function immediately stops all sounds that are currently playing.
+        # @author Hussein Abdul-Ameer
+        ##/
+        function stopAllSounds() {
+            return VgSystemCall("components.MyGUI$MySoundManager", "stopAllSounds");
+        }
+
+        /## Plays a sound looped a specified number of times.
+        # This function plays an audio file repeatedly for the specified number of loops.
+        #
+        # @param filePath Path to the sound file
+        # @param loopCount Number of times to loop the sound
+        # @author Hussein Abdul-Ameer
+        ##/
+        function playSoundLoop(filePath, loopCount) {
+            return VgSystemCall("components.MyGUI$MySoundManager", "playSoundLoop", filePath, loopCount);
+        }
+
+        /## Sets the volume level for sounds.
+        # This function adjusts the volume for all sounds played by the application.
+        #
+        # @param volumeLevel Volume level (0.0 to 1.0)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setVolume(volumeLevel) {
+            return VgSystemCall("components.MyGUI$MySoundManager", "setVolume", volumeLevel);
+        }
+    }
+
+    /## The Label namespace contains functions for creating and managing text labels.
+    # This namespace provides functionality for displaying text in your application's UI.
+    ##/
+    namespace Label {
+        /## Creates a text label with the specified properties.
+        # This function creates a label component that displays text.
+        #
+        # @param text The text to display on the label
+        # @param x The x-coordinate of the label
+        # @param y The y-coordinate of the label
+        # @param width The width of the label in pixels
+        # @param height The height of the label in pixels
+        # @return A label object that can be used with other label functions
+        # @author Hussein Abdul-Ameer
+        ##/
+        function createLabel(text, x, y, width, height) {
+            return VgSystemCall("components.MyGUI$MyLabel", "<init>", text, x, y, width, height);
+        }
+
+        /## Sets the text color of a label.
+        # This function changes the color of the text displayed on a label.
+        #
+        # @param label The label object to modify
+        # @param colorCode The color to set (hex format: "#RRGGBB")
+        # @return Success status of the operation
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setLabelTextColor(label, colorCode) {
+            var color = VgSystemCall("java.awt.Color", "decode", colorCode);
+            return VgSystemCall("components.MyGUI$MyLabel", "setTextColor", label, color);
+        }
+
+        /## Sets the text of a label.
+        # This function changes the text displayed on a label.
+        #
+        # @param label The label object to modify
+        # @param newText The new text to display
+        # @return Success status of the operation
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setLabelText(label, newText) {
+            return VgSystemCall("components.MyGUI$MyLabel", "setText", label, newText);
+        }
+    }
+
+    /## The Timer namespace contains functions for creating and managing timers.
+    # This namespace provides functionality for scheduling repeated actions
+    # and creating time-based animations or updates.
+    ##/
+    namespace Timer {
+        /## Creates a timer that fires at the specified frames per second.
+        # This function creates a timer that calls the specified method at regular intervals.
+        #
+        # @param fps The frames per second (determines how often the timer fires)
+        # @param method The function to call when the timer fires
+        # @return A timer object that can be used with other timer functions
+        # @author Hussein Abdul-Ameer
+        ##/
+        function createTimer(fps, method) {
+            return VgSystemCall("javax.swing.Timer", "<init>", fps, method);
+        }
+
+        /## Starts a timer.
+        # This function activates a timer so it begins firing events.
+        #
+        # @param t The timer object to start
+        # @author Hussein Abdul-Ameer
+        ##/
+        function startTimer(t) {
+            return VgSystemCall("javax.swing.Timer", "start", t);
+        }
+
+        /## Stops a timer.
+        # This function deactivates a timer so it stops firing events.
+        #
+        # @param t The timer object to stop
+        # @author Hussein Abdul-Ameer
+        ##/
+        function stopTimer(t) {
+            return VgSystemCall("javax.swing.Timer", "stop", t);
+        }
+
+        /## Pauses execution for the specified number of milliseconds.
+        # This function creates a delay in the program execution.
+        #
+        # @param milliseconds The number of milliseconds to pause
+        # @author Hussein Abdul-Ameer
+        ##/
+        function sleep(milliseconds) {
+            return VgSystemCall("components.Util", "sleep", milliseconds);
+        }
+    }
+
+    /## The Animation namespace contains functions for creating and managing animations.
+    # This namespace provides functionality for animating UI components, including
+    # movement animations and sprite animations.
+    ##/
+    namespace Animation {
+        /## Creates a movement animator for a component.
+        # This function creates an animator that will move a component from its current position
+        # to a target position over a specified duration.
+        #
+        # @param component The component to animate
+        # @param targetX The target x-coordinate
+        # @param targetY The target y-coordinate
+        # @param duration The duration of the animation in milliseconds
+        # @return An animator object that can be used with start and stop functions
+        # @author Hussein Abdul-Ameer
+        ##/
+        function createMovementAnimator(component, targetX, targetY, duration) {
+            return VgSystemCall("components.MyGUI$MyAnimator", "<init>", component, targetX, targetY, duration);
+        }
+
+
+        /## Starts an animation.
+        # This function activates an animator to begin the animation.
+        #
+        # @param animator The animator object to start
+        # @author Hussein Abdul-Ameer
+        ##/
+        function start(animator) {
+            return VgSystemCall("components.MyGUI$MyAnimator", "start", animator);
+        }
+
+        /## Stops an animation.
+        # This function deactivates an animator to stop the animation.
+        #
+        # @param animator The animator object to stop
+        # @author Hussein Abdul-Ameer
+        ##/
+        function stop(animator) {
+            return VgSystemCall("components.MyGUI$MyAnimator", "stop", animator);
+        }
+
+        /## Sets a specific tile/frame in a sprite sheet image.
+        # This function displays a specific frame from a sprite sheet.
+        #
+        # @param imageComponent The image component to modify
+        # @param row The row of the tile in the sprite sheet
+        # @param col The column of the tile in the sprite sheet
+        # @param tileWidth The width of each tile in the sprite sheet
+        # @param tileHeight The height of each tile in the sprite sheet
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setImageTile(imageComponent, row, col, tileWidth, tileHeight) {
+            return VgSystemCall("components.MyGUI$MyImage", "setTile", imageComponent, row, col, tileWidth, tileHeight);
+        }
+
+        /## Gets a specific tile/frame from a sprite sheet image.
+        # This function retrieves a specific frame from a sprite sheet as an ImageIcon.
+        #
+        # @param imageComponent The image component to get the tile from
+        # @param row The row of the tile in the sprite sheet
+        # @param col The column of the tile in the sprite sheet
+        # @param tileWidth The width of each tile in the sprite sheet
+        # @param tileHeight The height of each tile in the sprite sheet
+        # @return An ImageIcon representing the specified tile
+        # @author Hussein Abdul-Ameer
+        ##/
+        function getImageTile(imageComponent, row, col, tileWidth, tileHeight) {
+            return VgSystemCall("components.MyGUI$MyImage", "getTile", imageComponent, row, col, tileWidth, tileHeight);
+        }
+    }
+
+    /## The TextField namespace contains functions for creating and managing text input fields.
+    # This namespace provides functionality for creating text fields, getting and setting their values,
+    # and configuring their appearance and behavior.
+    ##/
+    namespace TextField {
+        /## Creates a text field with the specified properties.
+        # This function creates a text field component that allows user input.
+        #
+        # @param defaultText The initial text to display in the field
+        # @param x The x-coordinate of the text field
+        # @param y The y-coordinate of the text field
+        # @param width The width of the text field in pixels
+        # @param height The height of the text field in pixels
+        # @return A text field object that can be used with other text field functions
+        # @author Hussein Abdul-Ameer
+        ##/
+        function createTextField(defaultText, x, y, width, height) {
+            return VgSystemCall("components.MyGUI$MyTextField", "<init>", x, y, width, height);
+        }
+
+        /## Gets the text currently entered in a text field.
+        # This function retrieves the current value of a text field.
+        #
+        # @param textField The text field object to get text from
+        # @return The text currently in the text field
+        # @author Hussein Abdul-Ameer
+        ##/
+        function getText(textField) {
+            return VgSystemCall("components.MyGUI$MyTextField", "getText", textField);
+        }
+
+        /## Sets the text in a text field.
+        # This function changes the text displayed in a text field.
+        #
+        # @param textField The text field object to modify
+        # @param text The new text to display in the field
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setText(textField, text) {
+            return VgSystemCall("components.MyGUI$MyTextField", "setText", textField, text);
+        }
+
+        /## Sets a placeholder text for a text field.
+        # This function sets hint text that appears when the field is empty.
+        #
+        # @param textField The text field object to modify
+        # @param placeholder The placeholder text to display
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setPlaceholder(textField, placeholder) {
+            return VgSystemCall("components.MyGUI$MyTextField", "setPlaceholder", textField, placeholder);
+        }
+
+        /## Sets the font family for a text field.
+        # This function changes the font used to display text in the field.
+        #
+        # @param textField The text field object to modify
+        # @param fontFamily The name of the font family to use
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setFontFamily(textField, fontFamily) {
+            return VgSystemCall("components.MyGUI$MyTextField", "setFontFamily", textField, fontFamily);
+        }
+
+        /## Sets the font style for a text field.
+        # This function changes the style of the font (normal, bold, italic).
+        #
+        # @param textField The text field object to modify
+        # @param style The style to use (0=normal, 1=bold, 2=italic, 3=bold+italic)
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setFontStyle(textField, style) {
+            return VgSystemCall("components.MyGUI$MyTextField", "setFontStyle", textField, style);
+        }
+
+        /## Sets whether a text field is editable.
+        # This function controls whether the user can modify the text in the field.
+        #
+        # @param textField The text field object to modify
+        # @param editable True to allow editing, false to make read-only
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setEditable(textField, editable) {
+            return VgSystemCall("components.MyGUI$MyTextField", "setEditable", textField, editable);
+        }
+
+        /## Sets the text in a password field.
+        # This function changes the text displayed in a password field while maintaining
+        # the password masking.
+        #
+        # @param textField The password field object to modify
+        # @param text The new password text
+        # @author Hussein Abdul-Ameer
+        ##/
+        function setPassword(textField, text) {
+            return VgSystemCall("components.MyGUI$MyTextField", "setText", textField, text);
+        }
+    }
+} 

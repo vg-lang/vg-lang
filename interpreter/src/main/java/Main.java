@@ -45,12 +45,22 @@ public class Main {
                 } else if (args[0].equals("--debug")) {
                     if (args.length < 2) {
                         System.out.println("Error: Missing file argument for debug mode.");
-                        System.out.println("Usage: vg --debug <file> [breakpoints]");
+                        System.out.println("Usage: vg --debug <file> [breakpoints] [--profile-port <port>]");
                         return;
                     }
                     
                     String filePath = args[1];
                     runWithDebug(filePath, args);
+                } else if (args[0].equals("--profile")) {
+                    if (args.length < 2) {
+                        System.out.println("Error: Missing file argument for profile mode.");
+                        System.out.println("Usage: vg --profile <file> [port]");
+                        return;
+                    }
+                    
+                    String filePath = args[1];
+                    int port = args.length > 2 ? Integer.parseInt(args[2]) : 8888;
+                    runWithProfiling(filePath, port);
                 } else {
                     String filePath = args[0];
                     File file = new File(filePath);
@@ -330,18 +340,35 @@ public class Main {
         System.out.println("  vg --help                  Show this help message");
         System.out.println("  vg --version               Show the version number");
         System.out.println("  vg --docgen <in> <out>     Generate documentation");
-        System.out.println("  vg --debug <file> [breakpoints]   Run the program in debug mode with optional breakpoints.");
+        System.out.println("  vg --debug <file> [breakpoints] [--profile-port <port>]   Run with debugging and profiling");
+        System.out.println("  vg --profile <file> [port] Run the program with profiling enabled (default port: 8888)");
         System.out.println("");
         System.out.println("Documentation Generation:");
         System.out.println("  vg --docgen <input-path> <output-directory>");
         System.out.println("    <input-path> can be a single file or a directory");
         System.out.println("    <output-directory> is where the documentation will be generated");
         System.out.println("");
+        System.out.println("Debugging & Profiling:");
+        System.out.println("  vg --debug <file> [breakpoints] [--profile-port <port>]");
+        System.out.println("    Enables debugging with integrated performance profiling");
+        System.out.println("    Breakpoints: comma-separated line numbers (e.g., 5,10,15)");
+        System.out.println("    Profiling runs automatically on port 8888 (or custom port)");
+        System.out.println("    Collects CPU usage, memory usage, GC statistics, and thread information");
+        System.out.println("");
+        System.out.println("Profiling Only:");
+        System.out.println("  vg --profile <file> [port]");
+        System.out.println("    Enables performance profiling without debugging");
+        System.out.println("    Starts a server on the specified port (default: 8888) for IDE integration");
+        System.out.println("");
         System.out.println("Examples:");
         System.out.println("  vg program.vg              Run program.vg");
         System.out.println("  vg --docgen program.vg ./docs");
         System.out.println("  vg --docgen libraries/Guilibrary.vglib ./docs");
         System.out.println("  vg --docgen . ./docs       Generate docs for entire project");
+        System.out.println("  vg --debug program.vg 5,10,15  Debug with breakpoints and profiling on port 8888");
+        System.out.println("  vg --debug program.vg 5,10 --profile-port 9999  Debug with custom profiling port");
+        System.out.println("  vg --profile program.vg    Run with profiling only on default port 8888");
+        System.out.println("  vg --profile program.vg 9999  Run with profiling only on port 9999");
     }
 
     private static void generateDocumentation(String inputPath, String outputDir) throws IOException {
@@ -450,6 +477,25 @@ public class Main {
         }
         
         ErrorHandler.setCurrentFile(filePath);
+        
+        // Initialize profiler for debug sessions (always enabled)
+        ProfilerManager profiler = ProfilerManager.getInstance();
+        int profilingPort = 8888; // Default port
+        
+        // Check if custom profiling port is specified (--debug file.vg breakpoints --profile-port port)
+        for (int i = 2; i < args.length - 1; i++) {
+            if ("--profile-port".equals(args[i]) && i + 1 < args.length) {
+                try {
+                    profilingPort = Integer.parseInt(args[i + 1]);
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid profiling port: " + args[i + 1] + ", using default 8888");
+                }
+                break;
+            }
+        }
+        
+        profiler.enableProfiling(profilingPort);
+        
         try {
             Path scriptPath = Paths.get(filePath).toAbsolutePath();
             Path projectRoot = scriptPath.getParent();
@@ -496,7 +542,11 @@ public class Main {
             }
 
             System.out.println("Starting debug session for: " + filePath);
+            System.out.println("Profiling enabled on port: " + profilingPort);
             System.out.println("Debug commands: continue (c), step (s), variables (v), help (h), quit (q)");
+            
+            // Start execution timing
+            profiler.startExecution();
             
             try {
                 interpreter.interpret(sourceCode);
@@ -511,9 +561,103 @@ public class Main {
                 }
             } catch (Exception e) {
                 System.err.println("Runtime error: " + e.getMessage());
+            } finally {
+                // End execution timing
+                profiler.endExecution();
             }
         } catch (IOException e) {
             ErrorHandler.reportError("File Error", "Error reading file: " + e.getMessage());
+        }
+    }
+
+    private static void runWithProfiling(String filePath, int port) {
+        File file = new File(filePath);
+        if (!file.exists()) {
+            ErrorHandler.reportError("File Error", "Could not find file: " + filePath);
+            return;
+        }
+
+        if (!file.canRead()) {
+            ErrorHandler.reportError("File Error", "Cannot read file: " + filePath + ". Check permissions.");
+            return;
+        }
+
+        if (!filePath.toLowerCase().endsWith(".vg")) {
+            ErrorHandler.reportError("File Error", "File must have .vg extension: " + filePath);
+            return;
+        }
+        
+        ErrorHandler.setCurrentFile(filePath);
+        
+        // Initialize profiler
+        ProfilerManager profiler = ProfilerManager.getInstance();
+        profiler.enableProfiling(port);
+        
+        try {
+            Path scriptPath = Paths.get(filePath).toAbsolutePath();
+            Path projectRoot = scriptPath.getParent();
+            Path packageFolder = projectRoot.resolve("packages");
+
+            if (!Files.exists(packageFolder)) {
+                Files.createDirectories(packageFolder);
+                System.out.println("Created packages directory: " + packageFolder);
+            }
+
+            String sourceCode = new String(Files.readAllBytes(Paths.get(filePath)));
+            Interpreter interpreter = new Interpreter(packageFolder.toString());
+
+            loadAvailableLibraries(interpreter, packageFolder.toString(), false);
+
+            String libraryFolder = System.getenv("VG_LIBRARIES_PATH");
+            if (libraryFolder != null && !libraryFolder.isEmpty()) {
+                loadAvailableLibraries(interpreter, libraryFolder, false);
+            }
+
+            Path projectsFolder = projectRoot.resolve("projects");
+            if (Files.exists(projectsFolder) && Files.isDirectory(projectsFolder)) {
+                Path projectPackagesFolder = projectsFolder.resolve("packages");
+                if (Files.exists(projectPackagesFolder)) {
+                    loadAvailableLibraries(interpreter, projectPackagesFolder.toString(), false);
+                }
+            }
+
+            System.out.println("Starting profiled execution for: " + filePath);
+            System.out.println("Profiling server running on port: " + port);
+            
+            // Start execution timing
+            profiler.startExecution();
+            
+            try {
+                interpreter.interpret(sourceCode);
+            } catch (ErrorHandler.VGException e) {
+                int line = e.getLine();
+                int column = e.getColumn();
+
+                if (line <= 0) {
+                    System.err.println("VG Error: " + e.getMessage());
+                } else {
+                    ErrorHandler.reportRuntimeError(line, column, e.getMessage());
+                }
+            } catch (Exception e) {
+                System.err.println("Runtime error: " + e.getMessage());
+            } finally {
+                // End execution timing
+                profiler.endExecution();
+            }
+            
+        } catch (IOException e) {
+            ErrorHandler.reportError("File Error", "Error reading file: " + e.getMessage());
+        } finally {
+            // Keep profiler running for IDE to collect data
+            System.out.println("Execution finished. Profiler is still running for data collection.");
+            System.out.println("Press Ctrl+C to stop profiler and exit.");
+            
+            // Keep the program alive so IDE can collect profiling data
+            try {
+                Thread.currentThread().join();
+            } catch (InterruptedException e) {
+                profiler.disableProfiling();
+            }
         }
     }
 }

@@ -1,0 +1,188 @@
+{
+  "standard_libraries": {
+    "IO": {
+      "File": [
+        "readFile",
+        "writeFile",
+        "appendToFile"
+      ],
+      "Prompt": [
+        "input"
+      ]
+    },
+    "Arrays": {
+      "array": [
+        "getLength",
+        "push",
+        "replaceAll",
+        "pop",
+        "unshift",
+        "shift"
+      ]
+    },
+    "Random": {
+      "number": [
+        "integer",
+        "float",
+        "floatRange",
+        "boolean"
+      ],
+      "arrayTools": [
+        "element",
+        "shuffle"
+      ]
+    },
+    "DateTime": {
+      "timestamp": [
+        "currentTimeMillis"
+      ],
+      "time": [
+        "getHour",
+        "getMinute",
+        "getSecond"
+      ],
+      "date": [
+        "getDay",
+        "getMonth",
+        "getYear"
+      ]
+    },
+    "Util": {
+      "Type": [
+        "getType"
+      ],
+      "Integer": [
+        "toInt"
+      ],
+      "Double": [
+        "toDouble"
+      ],
+      "String": [
+        "toString",
+        "indexOf",
+        "substring",
+        "stringLength",
+        "toUpper",
+        "fromCharCode"
+      ],
+      "Boolean": [
+        "toBoolean"
+      ]
+    },
+    "OsLib": {
+      "sys": [
+        "getEnv",
+        "getOSName",
+        "getUserHome",
+        "getUserDir"
+      ]
+    },
+    "MathLib": {
+      "constants": [
+        "pi",
+        "e"
+      ],
+      "arithmetic": [
+        "add",
+        "subtract",
+        "multiply",
+        "divide",
+        "abs",
+        "min",
+        "max",
+        "floor",
+        "ceil"
+      ],
+      "power": [
+        "pow",
+        "sqrt"
+      ],
+      "sequence": [
+        "factorial",
+        "fibonacci"
+      ],
+      "trig": [
+        "sin",
+        "cos",
+        "tan",
+        "hypot"
+      ]
+    },
+    "Guilibrary": {
+      "window": [
+        "create",
+        "launch",
+        "dispose",
+        "setIcon",
+        "setTitle",
+        "setResizable",
+        "setSize",
+        "getWidth",
+        "getHeight",
+        "center",
+        "minimize",
+        "maximize",
+        "restore",
+        "isVisible",
+        "setVisible",
+        "isMaximized",
+        "isMinimized"
+      ],
+      "button": [
+        "create",
+        "setText",
+        "getText",
+        "setEnabled",
+        "isEnabled",
+        "setVisible",
+        "isVisible",
+        "setSize",
+        "setPosition",
+        "onClick",
+        "setStyle"
+      ],
+      "label": [
+        "create",
+        "setText",
+        "getText",
+        "setVisible",
+        "isVisible",
+        "setSize",
+        "setPosition",
+        "setStyle",
+        "setAlignment"
+      ],
+      "textfield": [
+        "create",
+        "setText",
+        "getText",
+        "setEnabled",
+        "isEnabled",
+        "setVisible",
+        "isVisible",
+        "setSize",
+        "setPosition",
+        "setPlaceholder",
+        "onTextChange",
+        "setStyle"
+      ],
+      "layout": [
+        "setLayout",
+        "addComponent",
+        "removeComponent",
+        "setMargins",
+        "setPadding",
+        "setSpacing"
+      ]
+    },
+    "RegexLib": {
+      "regex": [
+        "findAll",
+        "matches",
+        "replaceAll",
+        "find",
+        "split"
+      ]
+    }
+  }
+}

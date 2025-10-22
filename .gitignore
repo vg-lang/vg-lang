@@ -219,15 +219,7 @@ public
 tmp/
 temp/
 
-### Project Specific ###
-# ANTLR generated files
-*.tokens
-*Lexer.java
-*Parser.java
-*BaseListener.java
-*BaseVisitor.java
-*Listener.java
-*Visitor.java
+
 
 # Test files and debug artifacts
 debug_input.txt

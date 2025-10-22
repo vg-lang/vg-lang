@@ -1,0 +1,14 @@
+{
+  "project_libraries": {
+    "Arrays": {
+      "array": [
+        "getLength",
+        "pop",
+        "push",
+        "replaceAll",
+        "shift",
+        "unshift"
+      ]
+    }
+  }
+}
