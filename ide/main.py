@@ -669,10 +669,10 @@ class DebugThread(QThread):
         
     def run(self):
         try:
-            # Use the Java interpreter with integrated profiling
-            interpreter_path = os.path.join(os.path.dirname(__file__), "..", "interpreter", "target", "vg.jar")
+            # Use the VG executable for debugging
+            vg_executable = os.getenv("VG_EXECUTABLE_PATH", "vg.exe")
             abs_file_path = os.path.abspath(self.file_path)
-            cmd = ["java", "-jar", interpreter_path, "--debug", abs_file_path]
+            cmd = [vg_executable, "--debug", abs_file_path]
             if self.breakpoints:
                 bp_string = ",".join(map(str, sorted(self.breakpoints)))
                 cmd.append(bp_string)
@@ -680,7 +680,70 @@ class DebugThread(QThread):
             else:
                 cmd.append("4")
                 print("IDE: No breakpoints set, using default line 4")
+
+            # Add profiling port parameter
+            cmd.extend(["--profile-port", "8888"])
+            print(f"IDE: Starting debug with command: {' '.join(cmd)}")
+
+            self.process = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                bufsize=0
+            )
+
+            self.is_debugging = True
+
+            while self.process.poll() is None:
+                output = self.process.stdout.readline()
+                if output:
+                    output = output.strip()
+                    self.output_received.emit(output)
+                    if "Debug: Paused at line" in output:
+                        self.debug_paused = True
+
+        except Exception as e:
+            self.output_received.emit(f"Debug error: {e}")
+
+        self.debug_stopped.emit()
+        
+    def stop_debug(self):
+        if self.process:
+            # It's good practice to try and close stdin before terminating
+            try:
+                self.process.stdin.close()
+            except OSError:
+                pass # Ignore if already closed or process is gone
+            self.process.terminate()
+            self.is_debugging = False
             
+    output_received = pyqtSignal(str)
+    debug_stopped = pyqtSignal()
+    
+    def __init__(self, file_path, breakpoints=None):
+        super().__init__()
+        self.file_path = file_path
+        self.process = None
+        self.is_debugging = False
+        self.debug_paused = False
+        self.breakpoints = breakpoints or set()
+        
+    def run(self):
+        try:
+            # Use the VG executable for debugging
+            vg_executable = os.getenv("VG_EXECUTABLE_PATH", "vg.exe")
+            abs_file_path = os.path.abspath(self.file_path)
+            cmd = [vg_executable, "--debug", abs_file_path]
+            if self.breakpoints:
+                bp_string = ",".join(map(str, sorted(self.breakpoints)))
+                cmd.append(bp_string)
+                print(f"IDE: Using user breakpoints: {bp_string}")
+            else:
+                cmd.append("4")
+                print("IDE: No breakpoints set, using default line 4")
+
             # Add profiling port parameter
             cmd.extend(["--profile-port", "8888"])
             print(f"IDE: Starting debug with command: {' '.join(cmd)}")
@@ -1942,7 +2005,9 @@ class VGEditor(QMainWindow):
                     background-color: {selection_bg};
                     color: white;
                 }}
-                """)        # Apply word wrap
+                """)
+
+        # Apply word wrap
         if hasattr(self, 'word_wrap'):
             if self.word_wrap.isChecked():
                 self.editor.setLineWrapMode(QPlainTextEdit.WidgetWidth)
@@ -2334,11 +2399,6 @@ class VGEditor(QMainWindow):
             print(f"Error applying loaded settings: {e}")
             import traceback
             traceback.print_exc()
-
-    def apply_settings_and_close(self, dialog):
-        """Apply settings and close the dialog."""
-        self.apply_settings(dialog)
-        dialog.accept()
 
     def setup_lsp(self):
         """Initialize LSP-related attributes and start the language server."""
@@ -3301,7 +3361,7 @@ class VGEditor(QMainWindow):
             
             # Memory data (convert to MB)
             memory_used_mb = data.get('heapUsed', 0) / (1024 * 1024)
-            memory_max_mb = data.get('heapMax', 1) / (1024 * 1024)
+            memory_max_mb = data.get('heapMax', 0) / (1024 * 1024)
             memory_percent = (data.get('heapUsed', 0) / data.get('heapMax', 1)) * 100 if data.get('heapMax', 0) > 0 else 0
             
             self.graph_data['memory_used'].append(memory_used_mb)
