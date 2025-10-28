@@ -65,4 +65,5 @@ Examples:
 - **Documentation**: [docs.vglang.com](https://docs.vglang.com) - Complete language reference and tutorials  
 - **Packages**: [packages.vglang.com](https://packages.vglang.com) - Package registry and library discovery
 
+<a href="https://deepwiki.com/Husseinabdulameer11/vg-lang"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 
