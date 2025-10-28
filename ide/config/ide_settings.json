@@ -1,0 +1,47 @@
+{
+    "shortcuts": {
+        "start_debug": "Ctrl+D",
+        "continue": "Ctrl+C",
+        "step_into": "Ctrl+I",
+        "step_over": "Ctrl+O",
+        "step_out": "Ctrl+Q",
+        "stop_debug": "Ctrl+S",
+        "toggle_breakpoint": "Ctrl+B",
+        "run": "Ctrl+R",
+        "find": "Ctrl+F",
+        "find_replace": "Ctrl+H"
+    },
+    "theme": {
+        "ide_background": "#ffffff",
+        "editor_background": "#ffaa00",
+        "text_color": "#000000",
+        "line_number_background": "#ffff00",
+        "breakpoint_color": "#ff0000",
+        "breakpoint_line_background": "#ffc8c8",
+        "selection_background": "#3399ff",
+        "current_line_highlight": "#ffffcc",
+        "ui_text_color": "#000000",
+        "panel_background": "#ffffff",
+        "button_text_color": "#000000",
+        "button_background_color": "#ffffff",
+        "debug_panel_background": "#ffffff",
+        "debug_text_color": "#000000",
+        "debug_variable_color": "#0066cc",
+        "debug_value_color": "#006600",
+        "debug_console_background": "#ffffff",
+        "debug_console_text": "#cccccc",
+        "debug_panel_text": "#cccccc"
+    },
+    "text": {
+        "font_family": "Consolas",
+        "font_size": 14,
+        "tab_size": 4,
+        "word_wrap": false,
+        "show_line_numbers": true
+    },
+    "recent_projects": [
+        "C:/Users/hodif/Desktop/test\\test",
+        "C:/Users/hodif/Downloads/vg-lang-ide-support/vg-lang-ide-support/projects/tetris",
+        "C:/Users/hodif/Desktop/ide/vg-lang/projects"
+    ]
+}

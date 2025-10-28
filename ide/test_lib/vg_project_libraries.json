@@ -1,0 +1,14 @@
+{
+  "project_libraries": {
+    "IO": {
+      "File": [
+        "appendToFile",
+        "readFile",
+        "writeFile"
+      ],
+      "Prompt": [
+        "input"
+      ]
+    }
+  }
+}

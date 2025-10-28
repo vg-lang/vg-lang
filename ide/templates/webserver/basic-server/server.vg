@@ -1,0 +1,24 @@
+// VG Language Web Server
+// Main server setup and initialization
+
+import HTTP;
+import IO;
+import "routes.vg";
+
+func main() {
+    var port = 8080;
+    
+    IO.println("Starting VG Web Server on port " + port);
+    
+    // Create HTTP server
+    var server = HTTP.createServer();
+    
+    // Set up routes
+    setupRoutes(server);
+    
+    // Start listening
+    server.listen(port, func() {
+        IO.println("Server running at http://localhost:" + port);
+        IO.println("Press Ctrl+C to stop the server");
+    });
+}

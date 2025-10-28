@@ -1,0 +1,46 @@
+// VG Language Calculator Application
+// Main entry point for the calculator
+
+import IO;
+import "calculator.vg";
+
+func main() {
+    IO.println("=== VG Language Calculator ===");
+    IO.println("Welcome to the VG Language Calculator!");
+    IO.println("Type 'help' for available commands or 'quit' to exit.");
+    
+    var calculator = Calculator.create();
+    var running = true;
+    
+    while (running) {
+        IO.println("");
+        IO.print("Calculator> ");
+        var input = IO.readLine();
+        
+        if (input == "quit" || input == "exit") {
+            running = false;
+            IO.println("Thank you for using VG Calculator!");
+        } else if (input == "help") {
+            showHelp();
+        } else if (input == "clear") {
+            calculator.clear();
+            IO.println("Calculator cleared.");
+        } else {
+            var result = calculator.evaluate(input);
+            if (result != null) {
+                IO.println("Result: " + result);
+            }
+        }
+    }
+}
+
+func showHelp() {
+    IO.println("Available operations:");
+    IO.println("  + : Addition (e.g., 5 + 3)");
+    IO.println("  - : Subtraction (e.g., 10 - 4)");
+    IO.println("  * : Multiplication (e.g., 6 * 7)");
+    IO.println("  / : Division (e.g., 15 / 3)");
+    IO.println("  clear : Clear calculator memory");
+    IO.println("  help : Show this help message");
+    IO.println("  quit : Exit the calculator");
+}

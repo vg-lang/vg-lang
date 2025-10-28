@@ -1,3 +1,105 @@
+### Python ###
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+### Java / Maven ###
+# Compiled class file
+*.class
+
+# Log files
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs
+hs_err_pid*
+replay_pid*
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle/
+build/
+!gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
 ### IntelliJ IDEA ###
 # Ignore compiled output
 out/
@@ -11,29 +113,12 @@ out/
 
 .idea/shelf/
 
-# Keep IntelliJ project/module structure
-!*.iml
-
-# Ignore IntelliJ-specific clutter
+# Keep IntelliJ project/module structure but ignore workspace files
 workspace.xml
 tasks.xml
 shelf/
 *.iws
 *.ipr
-
-### Java / Build ###
-*.log
-*.tmp
-*.bak
-*.swp
-*.jar
-.gradle/
-build/
-target/
-
-# Ignore generated .jar but keep your manual ones
-out/**/*.jar
-!libraries/**/*.jar
 
 ### Eclipse ###
 .apt_generated
@@ -60,6 +145,8 @@ nbdist/
 
 ### Windows ###
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 ### Node.js / Web Development ###
 node_modules/
@@ -71,7 +158,6 @@ yarn-error.log*
 # Next.js
 .next/
 out/
-build/
 
 # Environment variables
 .env
@@ -121,13 +207,6 @@ jspm_packages/
 .cache
 .parcel-cache
 
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
 # Gatsby files
 .cache/
 public
@@ -140,5 +219,20 @@ public
 tmp/
 temp/
 
-### Batch Files ###
+
+
+# Test files and debug artifacts
+debug_input.txt
+advanced_debug_input.txt
+all_sources.txt
+test_*.vg
+*_test.vg
+breakpoint_test.vg
+advanced_debug_test.vg
+
+# Build scripts (uncomment if you want to ignore batch files)
 *.bat
+
+# Keep important library files
+!libraries/**/*.jar
+!libraries/**/*.vglib

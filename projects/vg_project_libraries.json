@@ -1,0 +1,176 @@
+{
+  "project_libraries": {
+    "Util": {
+      "Type": [
+        "getType"
+      ],
+      "Integer": [
+        "toInt"
+      ],
+      "Double": [
+        "toDouble"
+      ],
+      "String": [
+        "fromCharCode",
+        "indexOf",
+        "stringLength",
+        "substring",
+        "toString",
+        "toUpper"
+      ],
+      "Boolean": [
+        "toBoolean"
+      ]
+    },
+    "MathLib": {
+      "constants": [
+        "e",
+        "pi"
+      ],
+      "arithmetic": [
+        "abs",
+        "add",
+        "ceil",
+        "divide",
+        "floor",
+        "max",
+        "min",
+        "multiply",
+        "subtract"
+      ],
+      "power": [
+        "pow",
+        "sqrt"
+      ],
+      "sequence": [
+        "factorial",
+        "fibonacci"
+      ],
+      "trig": [
+        "cos",
+        "hypot",
+        "sin",
+        "tan"
+      ]
+    },
+    "Guilibrary": {
+      "window": [
+        "addComponentToWindow",
+        "create",
+        "dispose",
+        "launch",
+        "removeComponentFromWindow",
+        "setBackgroundColor",
+        "setIcon"
+      ],
+      "popup": [
+        "error",
+        "info",
+        "warning"
+      ],
+      "Callbacks": [
+        "onKey"
+      ],
+      "Button": [
+        "createButton",
+        "setButtonColor"
+      ],
+      "IOEvents": [
+        "setOnClick",
+        "setOnKeyPress",
+        "setOnKeyRelease",
+        "setOnMouseDrag",
+        "setOnMousePress",
+        "setOnMouseRelease"
+      ],
+      "Image": [
+        "addImageToWindow",
+        "createImage",
+        "moveImage",
+        "resizeImage",
+        "setImage"
+      ],
+      "Pane": [
+        "addComponentToPane",
+        "createPane",
+        "setPaneBackgroundImage",
+        "setPaneBorder",
+        "setPaneBounds",
+        "setPaneColor"
+      ],
+      "Sound": [
+        "playSound",
+        "playSoundLoop",
+        "setVolume",
+        "stopAllSounds"
+      ],
+      "Label": [
+        "createLabel",
+        "setLabelText",
+        "setLabelTextColor"
+      ],
+      "Timer": [
+        "createTimer",
+        "sleep",
+        "startTimer",
+        "stopTimer"
+      ],
+      "Animation": [
+        "createMovementAnimator",
+        "getImageTile",
+        "setImageTile",
+        "start",
+        "stop"
+      ],
+      "TextField": [
+        "createTextField",
+        "getText",
+        "setEditable",
+        "setFontFamily",
+        "setFontStyle",
+        "setPassword",
+        "setPlaceholder",
+        "setText"
+      ]
+    },
+    "Random": {
+      "number": [
+        "boolean",
+        "float",
+        "floatRange",
+        "integer"
+      ],
+      "arrayTools": [
+        "element",
+        "shuffle"
+      ]
+    },
+    "Arrays": {
+      "array": [
+        "getLength",
+        "pop",
+        "push",
+        "replaceAll",
+        "shift",
+        "unshift"
+      ]
+    },
+    "RegexLib": {
+      "regex": [
+        "findAll",
+        "matches",
+        "replaceAll"
+      ]
+    },
+    "IO": {
+      "File": [
+        "appendToFile",
+        "readFile",
+        "writeFile"
+      ],
+      "Prompt": [
+        "input"
+      ]
+    }
+  }
+}

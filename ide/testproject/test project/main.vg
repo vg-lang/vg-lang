@@ -1,0 +1,21 @@
+// VG Language Console Application
+// This is a basic console application template
+
+import IO;
+
+func main() {
+    IO.println("Welcome to VG Language!");
+    IO.println("Enter your name:");
+    
+    var name = IO.readLine();
+    
+    IO.println("Hello, " + name + "!");
+    IO.println("This is your first VG Language console application.");
+    
+    // Example of basic operations
+    var num1 = 10;
+    var num2 = 20;
+    var sum = num1 + num2;
+    
+    IO.println("Example calculation: " + num1 + " + " + num2 + " = " + sum);
+}

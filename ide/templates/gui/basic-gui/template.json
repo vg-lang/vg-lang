@@ -1,0 +1,20 @@
+{
+    "name": "GUI Application",
+    "description": "A desktop application with graphical user interface",
+    "icon": "🖥️",
+    "category": "GUI Applications",
+    "files": [
+        {
+            "name": "main.vg",
+            "content_file": "main.vg"
+        },
+        {
+            "name": "window.vg",
+            "content_file": "window.vg"
+        },
+        {
+            "name": "README.md",
+            "content_file": "README.md"
+        }
+    ]
+}

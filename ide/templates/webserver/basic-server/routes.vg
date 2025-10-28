@@ -1,0 +1,42 @@
+// Route definitions for the web server
+
+import HTTP;
+import IO;
+import Files;
+
+func setupRoutes(server) {
+    // Home page route
+    server.get("/", func(request, response) {
+        var html = Files.readText("static/index.html");
+        response.setHeader("Content-Type", "text/html");
+        response.send(html);
+    });
+    
+    // API endpoint example
+    server.get("/api/hello", func(request, response) {
+        var data = {
+            "message": "Hello from VG Language Web Server!",
+            "timestamp": DateTime.now(),
+            "version": "1.0.0"
+        };
+        response.json(data);
+    });
+    
+    // POST endpoint example
+    server.post("/api/echo", func(request, response) {
+        var body = request.getBody();
+        response.json({
+            "received": body,
+            "echo": "You sent: " + body
+        });
+    });
+    
+    // Static file serving
+    server.static("/static", "static/");
+    
+    // 404 handler
+    server.notFound(func(request, response) {
+        response.status(404);
+        response.send("Page not found: " + request.getPath());
+    });
+}
