@@ -1,0 +1,71 @@
+name: Publish Homebrew asset & bump formula
+
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  bump-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout at the release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Build interpreter + package manager
+        run: mvn -pl interpreter,packagemanager -am package -DskipTests
+
+      - name: Compute version (tag without leading v)
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Package the Unix release tarball
+        run: bash scripts/make-release-tarball.sh "${{ steps.version.outputs.version }}"
+
+      - name: Upload tarball to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "dist/vg-lang-${{ steps.version.outputs.version }}.tar.gz" \
+            --clobber
+
+      - name: Compute sha256
+        id: sha
+        run: |
+          SHA256=$(sha256sum "dist/vg-lang-${{ steps.version.outputs.version }}.tar.gz" | cut -d' ' -f1)
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Update Formula/vg-lang.rb
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ github.event.release.tag_name }}"
+          SHA256="${{ steps.sha.outputs.sha256 }}"
+          sed -i "s#url \".*/releases/download/.*/vg-lang-.*\.tar\.gz\"#url \"https://github.com/${{ github.repository }}/releases/download/${TAG}/vg-lang-${VERSION}.tar.gz\"#" Formula/vg-lang.rb
+          sed -i "s#sha256 \".*\"#sha256 \"${SHA256}\"#" Formula/vg-lang.rb
+
+      - name: Commit updated formula
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${GITHUB_BASE_REF:-main}" "origin/${GITHUB_BASE_REF:-main}" 2>/dev/null || git checkout main
+          git add Formula/vg-lang.rb
+          if git diff --cached --quiet; then
+            echo "Formula already up to date, nothing to commit."
+          else
+            git commit -m "Bump vg-lang formula to ${{ steps.version.outputs.version }}"
+            git push origin HEAD:main
+          fi
