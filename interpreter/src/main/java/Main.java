@@ -165,6 +165,30 @@ public class Main {
 
         Interpreter interpreter = new Interpreter(packageFolder.toString());
 
+        // --- Register Network.Socket built-in library ---
+        {
+            components.Library netLib = new components.Library("Network");
+            components.Namespace socketNs = new components.Namespace("Socket");
+            socketNs.addSymbol("connect", (components.BuiltInFunction) a -> {
+                if (a.size() < 2) throw new RuntimeException("Socket.connect requires (host, port)");
+                return components.SocketLib.connect(a.get(0), a.get(1));
+            });
+            socketNs.addSymbol("send", (components.BuiltInFunction) a -> {
+                if (a.size() < 2) throw new RuntimeException("Socket.send requires (socketId, message)");
+                return components.SocketLib.send(a.get(0), a.get(1));
+            });
+            socketNs.addSymbol("receive", (components.BuiltInFunction) a -> {
+                if (a.size() < 1) throw new RuntimeException("Socket.receive requires (socketId)");
+                return components.SocketLib.receive(a.get(0));
+            });
+            socketNs.addSymbol("close", (components.BuiltInFunction) a -> {
+                if (a.size() < 1) throw new RuntimeException("Socket.close requires (socketId)");
+                return components.SocketLib.close(a.get(0));
+            });
+            netLib.addNamespace(socketNs);
+            interpreter.getModuleRegistry().addLibrary(netLib);
+        }
+        // --- end Network.Socket ---
 
         List<String> loadedLibraries = loadAvailableLibraries(interpreter, packageFolder.toString(), true);
 
@@ -508,7 +532,32 @@ public class Main {
 
             String sourceCode = new String(Files.readAllBytes(Paths.get(filePath)));
             Interpreter interpreter = new Interpreter(packageFolder.toString());
-            
+
+        // --- Register Network.Socket built-in library ---
+        {
+            components.Library netLib = new components.Library("Network");
+            components.Namespace socketNs = new components.Namespace("Socket");
+            socketNs.addSymbol("connect", (components.BuiltInFunction) a -> {
+                if (a.size() < 2) throw new RuntimeException("Socket.connect requires (host, port)");
+                return components.SocketLib.connect(a.get(0), a.get(1));
+            });
+            socketNs.addSymbol("send", (components.BuiltInFunction) a -> {
+                if (a.size() < 2) throw new RuntimeException("Socket.send requires (socketId, message)");
+                return components.SocketLib.send(a.get(0), a.get(1));
+            });
+            socketNs.addSymbol("receive", (components.BuiltInFunction) a -> {
+                if (a.size() < 1) throw new RuntimeException("Socket.receive requires (socketId)");
+                return components.SocketLib.receive(a.get(0));
+            });
+            socketNs.addSymbol("close", (components.BuiltInFunction) a -> {
+                if (a.size() < 1) throw new RuntimeException("Socket.close requires (socketId)");
+                return components.SocketLib.close(a.get(0));
+            });
+            netLib.addNamespace(socketNs);
+            interpreter.getModuleRegistry().addLibrary(netLib);
+        }
+        // --- end Network.Socket ---
+
             // Enable debug mode
             interpreter.enableDebugMode();
             
@@ -605,6 +654,31 @@ public class Main {
 
             String sourceCode = new String(Files.readAllBytes(Paths.get(filePath)));
             Interpreter interpreter = new Interpreter(packageFolder.toString());
+
+        // --- Register Network.Socket built-in library ---
+        {
+            components.Library netLib = new components.Library("Network");
+            components.Namespace socketNs = new components.Namespace("Socket");
+            socketNs.addSymbol("connect", (components.BuiltInFunction) a -> {
+                if (a.size() < 2) throw new RuntimeException("Socket.connect requires (host, port)");
+                return components.SocketLib.connect(a.get(0), a.get(1));
+            });
+            socketNs.addSymbol("send", (components.BuiltInFunction) a -> {
+                if (a.size() < 2) throw new RuntimeException("Socket.send requires (socketId, message)");
+                return components.SocketLib.send(a.get(0), a.get(1));
+            });
+            socketNs.addSymbol("receive", (components.BuiltInFunction) a -> {
+                if (a.size() < 1) throw new RuntimeException("Socket.receive requires (socketId)");
+                return components.SocketLib.receive(a.get(0));
+            });
+            socketNs.addSymbol("close", (components.BuiltInFunction) a -> {
+                if (a.size() < 1) throw new RuntimeException("Socket.close requires (socketId)");
+                return components.SocketLib.close(a.get(0));
+            });
+            netLib.addNamespace(socketNs);
+            interpreter.getModuleRegistry().addLibrary(netLib);
+        }
+        // --- end Network.Socket ---
 
             loadAvailableLibraries(interpreter, packageFolder.toString(), false);
 

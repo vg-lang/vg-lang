@@ -1,0 +1,85 @@
+library Network {
+    /## The Socket namespace provides TCP client socket communication.
+    # Allows VG programs to connect to a TCP server and exchange messages.
+    ##/
+    namespace Socket {
+        /## Opens a TCP connection to host:port.
+        # @param host  Hostname or IP address
+        # @param port  Port number
+        # @return Socket ID to pass to send/receive/close, or -1 on failure
+        ##/
+        function connect(host, port) {
+            return VgSystemCall("components.SocketLib", "connect", host, port);
+        }
+
+        /## Sends a line of text over an open socket.
+        # @param socketId  ID returned by connect()
+        # @param message   Text to send
+        # @return true on success, false on failure
+        ##/
+        function send(socketId, message) {
+            return VgSystemCall("components.SocketLib", "send", socketId, message);
+        }
+
+        /## Receives a line of text (blocks up to ~500 ms, returns "" on timeout).
+        # @param socketId  ID returned by connect()
+        # @return Received string, or "" on timeout / error
+        ##/
+        function receive(socketId) {
+            return VgSystemCall("components.SocketLib", "receive", socketId);
+        }
+
+        /## Closes a socket and frees its resources.
+        # @param socketId  ID returned by connect()
+        # @return true on success, false on failure
+        ##/
+        function close(socketId) {
+            return VgSystemCall("components.SocketLib", "close", socketId);
+        }
+    }
+
+    /## The Server namespace provides TCP server socket functions.
+    # Lets VG programs act as a TCP server: bind a port, accept incoming
+    # client connections, then communicate with each client using the
+    # standard Socket.send / Socket.receive / Socket.close methods.
+    #
+    # Typical pattern:
+    #   var srv = Server.create(54322);
+    #   var clientId = -1;
+    #   while (clientId == -1) { clientId = Server.accept(srv); }
+    #   Socket.send(clientId, "hello");
+    #   var msg = Socket.receive(clientId);
+    #   Socket.close(clientId);
+    #   Server.close(srv);
+    ##/
+    namespace Server {
+        /## Creates a TCP server socket listening on the given port.
+        # The socket uses a 50 ms internal accept timeout so Server.accept()
+        # never blocks the VG thread for long — poll in a loop.
+        # @param port  Port number to bind
+        # @return Server ID to pass to accept()/close(), or -1 on failure
+        ##/
+        function create(port) {
+            return VgSystemCall("components.SocketLib", "serverCreate", port);
+        }
+
+        /## Accepts one pending client connection (non-blocking).
+        # Returns -1 immediately if no client is waiting yet.
+        # The returned ID works directly with Socket.send/receive/close.
+        # @param serverId  ID returned by create()
+        # @return Client socket ID, or -1 if no client is ready
+        ##/
+        function accept(serverId) {
+            return VgSystemCall("components.SocketLib", "serverAccept", serverId);
+        }
+
+        /## Closes the server socket (stops accepting new connections).
+        # Already-accepted client sockets are NOT affected.
+        # @param serverId  ID returned by create()
+        # @return true on success, false on failure
+        ##/
+        function close(serverId) {
+            return VgSystemCall("components.SocketLib", "serverClose", serverId);
+        }
+    }
+}

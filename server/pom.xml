@@ -26,7 +26,7 @@
         </dependency>
         <dependency>
             <groupId>vg-lang</groupId>
-            <artifactId>components</artifactId>
+            <artifactId>interpreter</artifactId>
             <version>1.4.0</version>
         </dependency>
     </dependencies>

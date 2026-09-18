@@ -1,0 +1,295 @@
+import Util.String;
+import Util.Integer;
+import Network.Socket;
+import Network.Server;
+
+/##
+# Tetris Multiplayer Server — implemented in VG
+#
+# Replaces tetris_multiplayer_server.py with a pure VG-language server.
+# Requires the extended Network.vglib (Server namespace) and the updated
+# SocketLib.java (serverCreate / serverAccept / serverClose).
+#
+# Protocol (one JSON line per message):
+#   Client -> Server:  {"type":"state","score":N,"level":N,"game_over":false,"board":[[...]]}
+#   Server -> Client:  {"type":"waiting","message":"..."}
+#   Server -> Client:  {"type":"start","player":1,"message":"..."}
+#   Server -> Client:  {"type":"opponent","name":"Player X","score":N,"level":N,"game_over":false,"board":[[...]]}
+#   Server -> Client:  {"type":"result","winner":W,"your_score":N,"opponent_score":N}
+#
+# @author Hussein Abdul-Ameer
+##/
+
+## ── configuration ────────────────────────────────────────────────────────────
+var SERVER_PORT        = 54322;
+var KEEP_ALIVE_TICKS   = 20;   ## send waiting-ping to P1 every N accept-poll cycles (~1 s)
+var START_REPEAT_COUNT = 10;   ## repeat start message this many times so polling clients catch it
+var START_REPEAT_MS    = 500;  ## ms between start-message repeats
+
+## ── server handle (set in main) ───────────────────────────────────────────────
+var serverId = -1;
+
+## ── helper: sleep via components.Util ────────────────────────────────────────
+function sleep(ms) {
+    VgSystemCall("components.Util", "sleep", ms);
+}
+
+## ── JSON builder helpers ──────────────────────────────────────────────────────
+
+/##
+# Returns the double-quote character as a string (for embedding quotes in JSON).
+##/
+function qt() {
+    return "\"";
+}
+
+/##
+# Wraps a string value in double quotes.
+# @param s  The string to quote
+# @return   The quoted string, e.g.  "hello"  becomes  \"hello\"
+##/
+function quoted(s) {
+    return qt() + s + qt();
+}
+
+/##
+# Build a {"type":"waiting","message":"..."} line.
+# @param msg  Human-readable status message
+##/
+function buildWaiting(msg) {
+    return "{" + quoted("type") + ":" + quoted("waiting") + ","
+               + quoted("message") + ":" + quoted(msg) + "}";
+}
+
+/##
+# Build a {"type":"start","player":N,"message":"..."} line.
+# @param playerNum  1 or 2
+# @param msg        Human-readable message
+##/
+function buildStart(playerNum, msg) {
+    return "{" + quoted("type") + ":" + quoted("start") + ","
+               + quoted("player") + ":" + playerNum + ","
+               + quoted("message") + ":" + quoted(msg) + "}";
+}
+
+/##
+# Build a {"type":"result","winner":W,"your_score":MY,"opponent_score":OPP} line.
+# @param winner        0 = draw, 1 = player 1, 2 = player 2
+# @param yourScore     Score of the recipient
+# @param opponentScore Score of the opponent
+##/
+function buildResult(winner, yourScore, opponentScore) {
+    return "{" + quoted("type") + ":" + quoted("result") + ","
+               + quoted("winner") + ":" + winner + ","
+               + quoted("your_score") + ":" + yourScore + ","
+               + quoted("opponent_score") + ":" + opponentScore + "}";
+}
+
+/##
+# Relay a state message to the opponent.
+# Input format:  {"type":"state","score":...}
+# Output format: {"type":"opponent","name":"Player N","score":...}
+#
+# The first 16 characters of a state message are always: {"type":"state",
+# We strip that prefix and replace it with the opponent header.
+#
+# @param msg        Raw state JSON received from a client
+# @param playerName "Player 1" or "Player 2"
+##/
+function buildRelay(msg, playerName) {
+    ## {"type":"state",  is exactly 16 chars (indices 0–15)
+    ## Everything from index 16 onward is "score":N,...}
+    var rest = String.substring(msg, 16, String.stringLength(msg));
+    return "{" + quoted("type") + ":" + quoted("opponent") + ","
+               + quoted("name") + ":" + quoted(playerName) + ","
+               + rest;
+}
+
+/##
+# Extract an integer field value from a JSON string.
+# Finds the key, then scans forward for the first digit sequence after ':'.
+# @param json  Raw JSON string
+# @param key   Field name WITHOUT quotes, e.g. "score"
+# @return      Integer value, or 0 if not found
+##/
+function parseIntField(json, key) {
+    var idx = String.indexOf(json, key);
+    if (idx == -1) { return 0; }
+    var numStr     = "";
+    var foundColon = false;
+    for (var i = idx; i < idx + 40; i = i + 1) {
+        var ch = String.substring(json, i, i + 1);
+        if (ch == ":") { foundColon = true; }
+        if (foundColon) {
+            if (ch == "0" || ch == "1" || ch == "2" || ch == "3" || ch == "4" ||
+                ch == "5" || ch == "6" || ch == "7" || ch == "8" || ch == "9") {
+                numStr = numStr + ch;
+            } else {
+                if (numStr != "") { return Integer.toInt(numStr); }
+            }
+        }
+    }
+    if (numStr != "") { return Integer.toInt(numStr); }
+    return 0;
+}
+
+/##
+# Returns true if the JSON message contains "game_over":true.
+# @param msg  Raw JSON string
+##/
+function isGameOver(msg) {
+    return (String.indexOf(msg, "game_over" + qt() + ":true") != -1);
+}
+
+## ── server lifecycle ──────────────────────────────────────────────────────────
+
+/##
+# Start the server, bind to SERVER_PORT, and keep it running forever.
+# Each call to runSession() handles one complete 2-player game.
+##/
+function startServer() {
+    print("[server] Tetris Multiplayer Server (VG edition)");
+    print("[server] Starting on port " + SERVER_PORT);
+
+    serverId = Server.create(SERVER_PORT);
+    if (serverId < 0) {
+        print("[server] ERROR: Could not bind to port " + SERVER_PORT + ". Is it already in use?");
+        return;
+    }
+
+    print("[server] Ready. Expose with:  ngrok tcp " + SERVER_PORT);
+    print("");
+
+    var session = 0;
+    while (true) {
+        session = session + 1;
+        print("[server] === Session " + session + " — waiting for 2 players ===");
+        runSession();
+        print("[server] Session " + session + " ended.");
+        print("");
+    }
+}
+
+/##
+# Run one full game session:
+#   1. Accept Player 1 (poll until connected)
+#   2. Accept Player 2 (poll until connected, keep Player 1 alive with pings)
+#   3. Send start messages to both
+#   4. Relay loop until both players finish or disconnect
+##/
+function runSession() {
+    var player1Id = -1;
+    var player2Id = -1;
+    var p1Score   = 0;
+    var p2Score   = 0;
+    var p1Over    = false;
+    var p2Over    = false;
+    var gameOver  = false;
+
+    ## ── 1. Wait for Player 1 ────────────────────────────────────────────────
+    print("[server] Waiting for Player 1...");
+    while (player1Id < 0) {
+        player1Id = Server.accept(serverId);
+        ## serverAccept blocks ~50 ms internally, so this loop self-paces
+    }
+    print("[server] Player 1 connected!");
+    Socket.send(player1Id, buildWaiting("Waiting for opponent to connect..."));
+
+    ## ── 2. Wait for Player 2  (keep-alive pings to Player 1) ────────────────
+    print("[server] Waiting for Player 2...");
+    var pingTick = 0;
+    while (player2Id < 0) {
+        player2Id = Server.accept(serverId);
+        pingTick  = pingTick + 1;
+        if (pingTick >= KEEP_ALIVE_TICKS) {
+            pingTick = 0;
+            Socket.send(player1Id, buildWaiting("Still waiting for opponent..."));
+        }
+    }
+    print("[server] Player 2 connected!");
+
+    ## ── 3. Send start messages to both (repeat so polling clients catch them) ─
+    print("[server] Sending start signal...");
+    var si = 0;
+    while (si < START_REPEAT_COUNT) {
+        Socket.send(player1Id, buildStart(1, "Opponent connected! You are Player 1. Get ready!"));
+        Socket.send(player2Id, buildStart(2, "Opponent connected! You are Player 2. Get ready!"));
+        sleep(START_REPEAT_MS);
+        si = si + 1;
+    }
+    print("[server] Game started!");
+
+    ## ── 4. Relay loop ────────────────────────────────────────────────────────
+    ## We alternate: read P1 → relay to P2, read P2 → relay to P1.
+    ## Socket.receive() returns "" on its 100 ms timeout, so each full cycle
+    ## is at most ~200 ms — fast enough for Tetris game state updates.
+    while (!gameOver) {
+
+        ## ── read from Player 1 ───────────────────────────────────────────────
+        var msg1 = Socket.receive(player1Id);
+        if (msg1 != "") {
+            if (String.indexOf(msg1, "\"type\":\"state\"") != -1) {
+                ## Relay board state to Player 2
+                Socket.send(player2Id, buildRelay(msg1, "Player 1"));
+
+                ## Track score
+                p1Score = parseIntField(msg1, "score");
+
+                ## Detect game-over from Player 1
+                if (isGameOver(msg1) && !p1Over) {
+                    p1Over = true;
+                    print("[server] Player 1 game over  (score=" + p1Score + ")");
+                    if (p2Over || true) {
+                        ## Send result to both; if P2 not over yet they get it on next relay
+                        gameOver = true;
+                        var winner = 0;
+                        if (p1Score > p2Score)      { winner = 1; }
+                        else if (p2Score > p1Score) { winner = 2; }
+                        Socket.send(player1Id, buildResult(winner, p1Score, p2Score));
+                        Socket.send(player2Id, buildResult(winner, p2Score, p1Score));
+                        print("[server] Result sent. Winner: Player " + winner
+                              + "  (P1=" + p1Score + ", P2=" + p2Score + ")");
+                    }
+                }
+            }
+        }
+
+        if (gameOver) { break; }
+
+        ## ── read from Player 2 ───────────────────────────────────────────────
+        var msg2 = Socket.receive(player2Id);
+        if (msg2 != "") {
+            if (String.indexOf(msg2, "\"type\":\"state\"") != -1) {
+                ## Relay board state to Player 1
+                Socket.send(player1Id, buildRelay(msg2, "Player 2"));
+
+                ## Track score
+                p2Score = parseIntField(msg2, "score");
+
+                ## Detect game-over from Player 2
+                if (isGameOver(msg2) && !p2Over) {
+                    p2Over = true;
+                    print("[server] Player 2 game over  (score=" + p2Score + ")");
+                    if (p1Over || true) {
+                        gameOver = true;
+                        var winner = 0;
+                        if (p1Score > p2Score)      { winner = 1; }
+                        else if (p2Score > p1Score) { winner = 2; }
+                        Socket.send(player1Id, buildResult(winner, p1Score, p2Score));
+                        Socket.send(player2Id, buildResult(winner, p2Score, p1Score));
+                        print("[server] Result sent. Winner: Player " + winner
+                              + "  (P1=" + p1Score + ", P2=" + p2Score + ")");
+                    }
+                }
+            }
+        }
+    }
+
+    ## ── cleanup ─────────────────────────────────────────────────────────────
+    Socket.close(player1Id);
+    Socket.close(player2Id);
+    print("[server] Connections closed.");
+}
+
+## ── entry point ──────────────────────────────────────────────────────────────
+startServer();

@@ -1,7 +1,7 @@
 // ai bruk : var litt bruk av ai angående scripting med pascal som var noe veldig nytt for meg
 
 #define MyAppName "VG Programming Language"
-#define MyAppVersion "1.4.0"
+#define MyAppVersion "1.6.0"
 #define MyAppExeName "VG.exe"
 #define MyAppAssocName MyAppName + " File"
 #define MyAppAssocExt ".vg"
@@ -25,7 +25,7 @@ SolidCompression=yes
 WizardStyle=modern
 
 
-WizardImageFile=path\to\assets\sidebar.bmp
+WizardImageFile=C:\Users\hodif\Downloads\vg-lang-master (1)\vg-lang-master\installer\assets\sidebar.bmp
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

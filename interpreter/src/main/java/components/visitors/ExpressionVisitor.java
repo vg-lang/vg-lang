@@ -27,10 +27,18 @@ public class ExpressionVisitor extends BaseVisitor {
             Object right = interpreter.visit(ctx.relationalExpression(i));
             switch (op) {
                 case "==":
-                    left = Objects.equals(left, right);
+                    if (left instanceof Number && right instanceof Number) {
+                        left = ((Number) left).doubleValue() == ((Number) right).doubleValue();
+                    } else {
+                        left = Objects.equals(left, right);
+                    }
                     break;
                 case "!=":
-                    left = !Objects.equals(left, right);
+                    if (left instanceof Number && right instanceof Number) {
+                        left = ((Number) left).doubleValue() != ((Number) right).doubleValue();
+                    } else {
+                        left = !Objects.equals(left, right);
+                    }
                     break;
                 default:
                     throw new RuntimeException("Unknown operator: " + op);

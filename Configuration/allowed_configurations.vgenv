@@ -23,6 +23,7 @@ components.MyGUI$MyProgressIndicator: <init>, setProgress
 components.MyGUI$MyDatePicker: <init>, getSelectedDate
 components.MyGUI$MyButton: <init>,setButtonColor,setOnClick
 components.MyGUI$MySoundManager: playSound,stopAllSounds,setVolume,playSoundLoop
+components.SocketLib: connect, send, receive, close
 components.ArrayUtils: length,push,pop,unshift,shift,split,joinArray
 java.lang.Math: floor,ceil,random,abs,min,max,pow,sqrt
 components.IoUtils: getSystemIn,writeFile,appendToFile,readFile

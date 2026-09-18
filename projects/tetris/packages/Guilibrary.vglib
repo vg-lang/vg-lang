@@ -725,4 +725,5 @@ library Guilibrary {
             return VgSystemCall("components.MyGUI$MyTextField", "setText", textField, text);
         }
     }
+
 } 

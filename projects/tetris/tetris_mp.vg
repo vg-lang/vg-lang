@@ -1,0 +1,2034 @@
+import Arrays.array;
+import DateTime.timestamp;
+import MathLib.arithmetic;
+import Random.number;
+import Guilibrary.window;
+import Guilibrary.Pane;
+import Guilibrary.Label;
+import Guilibrary.IOEvents;
+import Guilibrary.Timer;
+import Guilibrary.popup;
+import Guilibrary.Sound;
+import Guilibrary.Button;
+import Guilibrary.Image;
+import Guilibrary.TextField;
+import IO.File;
+import Util.String;
+import Util.Integer;
+import RegexLib.regex;
+import Network.Socket;
+
+
+/## 
+# Tetris game implementation using VG language
+# 
+# @field BOARD_WIDTH       Width of the game board in blocks
+# @field BOARD_HEIGHT      Height of the game board in blocks
+# @field BLOCK_SIZE        Pixel size of each block
+# @field GAME_SPEED_INITIAL Initial game speed in milliseconds
+# @field MIN_GAME_SPEED    Minimum possible game speed
+# @author Hussein Abdul-Ameer
+##/
+var BOARD_WIDTH = 10;
+var BOARD_HEIGHT = 20;
+var BLOCK_SIZE = 30;
+var GAME_SPEED_INITIAL = 800; ## milliseconds between automatic drops
+var GAME_SPEED_DECREMENT = 50; ## speed up by this amount per level
+var MIN_GAME_SPEED = 100; ## fastest speed
+
+/##
+# Game state variables
+# 
+# @field gameBoard        2D array representing the game board
+# @field currentPiece     Current active tetromino
+# @field nextPiece        Next upcoming tetromino
+# @field score           Current game score
+# @field level           Current game level
+# @field gameOver        Game over state flag
+##/
+var gameBoard = [];
+var currentPiece = [];
+var nextPiece = [];
+var gameWindow = 0;
+var gamePane = 0;
+var scoreLabel = 0;
+var levelLabel = 0;
+var nextPiecePane = 0;
+var gameTimer = 0;
+var score = 0;
+var level = 1;
+var gameSpeed = GAME_SPEED_INITIAL;
+var gameOver = false;
+var tetrominoBag = [];
+var soundEnabled = true;
+var gamePaused = false;
+var mainMenuWindow = 0;
+var musicMuted = false;
+var highScoreWindow = 0;
+var nameTextField = 0;
+var highScoreFilePath = "tetris_high_scores.txt";
+var currentDifficulty = "easy"; ## "easy", "medium", "hard"
+var difficultySelectionWindow = 0;
+
+## ── Multiplayer state ──────────────────────────────────────────────────────
+var mpEnabled        = false;
+var mpSocketId       = -1;
+var mpServerHost     = "127.0.0.1";
+var mpServerPort     = 54322;
+var mpPlayerNum      = 0;
+var mpOpponentWindow = 0;
+var mpOpponentPane   = 0;
+var mpOpponentScore  = 0;
+var mpOpponentLevel  = 1;
+var mpOpponentOver   = false;
+var mpOpponentScoreLabel = 0;
+var mpOpponentLevelLabel = 0;
+var mpSendTimer      = 0;
+var mpConnectWindow  = 0;
+var mpHostField      = 0;
+var mpPortField      = 0;
+var mpStatusLabel    = 0;
+var mpRunning        = false;
+var mpWaitTimer      = 0;
+
+/##
+# Tetromino types enumeration
+# 
+# @value I  I-shaped tetromino
+# @value J  J-shaped tetromino
+# @value L  L-shaped tetromino
+# @value O  O-shaped tetromino
+# @value S  S-shaped tetromino
+# @value T  T-shaped tetromino
+# @value Z  Z-shaped tetromino
+# @author Hussein Abdul-Ameer
+##/
+
+enum TetrominoType{
+    I,
+    J,
+    L,
+    O,
+    S,
+    T,
+    Z
+}
+
+
+## Colors for each tetromino type
+/## 
+# Tetris game implementation using VG language
+# 
+# @field Cyan       Cyan color hex code
+# @field Blue      Blue color hex code
+# @field Orange    Orange color hex code
+# @field Yellow Yellow color hex code
+# @field Green   Green color hex code
+# @field Purple Purple color hex code
+# @field Red Red color hex code
+# @author Hussein Abdul-Ameer
+##/
+var TetrominoColors = [
+    "#00FFFF", ## I - Cyan
+    "#0000FF", ## J - Blue
+    "#FF7F00", ## L - Orange
+    "#FFFF00", ## O - Yellow
+    "#00FF00", ## S - Green
+    "#800080", ## T - Purple
+    "#FF0000"  ## Z - Red
+];
+
+/##
+# Tetromino rotation states and shapes
+# 
+# 3D array structure:
+# [TetrominoType][RotationState][Row][Column]
+# 
+# @field I  I-shaped tetromino rotations
+# @field J  J-shaped tetromino rotations
+# @field L  L-shaped tetromino rotations
+# @field O  O-shaped tetromino rotations (identical rotations)
+# @field S  S-shaped tetromino rotations
+# @field T  T-shaped tetromino rotations
+# @field Z  Z-shaped tetromino rotations
+# @value 1 represents a filled block
+# @value 0 represents empty space
+# @author Hussein Abdul-Ameer
+##/
+var TetrominoShapes = [
+    ## I
+    [
+        [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],
+        [[0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0]],
+        [[0, 0, 0, 0], [0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0]],
+        [[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]]
+    ],
+    ## J
+    [
+        [[1, 0, 0], [1, 1, 1], [0, 0, 0]],
+        [[0, 1, 1], [0, 1, 0], [0, 1, 0]],
+        [[0, 0, 0], [1, 1, 1], [0, 0, 1]],
+        [[0, 1, 0], [0, 1, 0], [1, 1, 0]]
+    ],
+    ## L
+    [
+        [[0, 0, 1], [1, 1, 1], [0, 0, 0]],
+        [[0, 1, 0], [0, 1, 0], [0, 1, 1]],
+        [[0, 0, 0], [1, 1, 1], [1, 0, 0]],
+        [[1, 1, 0], [0, 1, 0], [0, 1, 0]]
+    ],
+    ## O
+    [
+        [[0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]],
+        [[0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]],
+        [[0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]],
+        [[0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0]]
+    ],
+    ## S
+    [
+        [[0, 1, 1], [1, 1, 0], [0, 0, 0]],
+        [[0, 1, 0], [0, 1, 1], [0, 0, 1]],
+        [[0, 0, 0], [0, 1, 1], [1, 1, 0]],
+        [[1, 0, 0], [1, 1, 0], [0, 1, 0]]
+    ],
+    ## T
+    [
+        [[0, 1, 0], [1, 1, 1], [0, 0, 0]],
+        [[0, 1, 0], [0, 1, 1], [0, 1, 0]],
+        [[0, 0, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [1, 1, 0], [0, 1, 0]]
+    ],
+    ## Z
+    [
+        [[1, 1, 0], [0, 1, 1], [0, 0, 0]],
+        [[0, 0, 1], [0, 1, 1], [0, 1, 0]],
+        [[0, 0, 0], [1, 1, 0], [0, 1, 1]],
+        [[0, 1, 0], [1, 1, 0], [1, 0, 0]]
+    ]
+];
+
+/##
+# Pentomino types enumeration (for medium difficulty)
+# 
+# @value F  F-shaped pentomino
+# @value I  I-shaped pentomino
+# @value L  L-shaped pentomino
+# @value N  N-shaped pentomino
+# @value P  P-shaped pentomino
+# @value T  T-shaped pentomino
+# @value U  U-shaped pentomino
+# @value V  V-shaped pentomino
+# @value W  W-shaped pentomino
+# @value X  X-shaped pentomino
+# @value Y  Y-shaped pentomino
+# @value Z  Z-shaped pentomino
+# @author Hussein Abdul-Ameer
+##/
+enum PentominoType{
+    F, I, L, N, P, T, U, V, W, X, Y, Z
+}
+
+## Colors for pentomino pieces
+var PentominoColors = [
+    "#FF6B6B", ## F - Light Red
+    "#4ECDC4", ## I - Teal
+    "#45B7D1", ## L - Sky Blue
+    "#96CEB4", ## N - Mint Green
+    "#FFEAA7", ## P - Light Yellow
+    "#DDA0DD", ## T - Plum
+    "#98D8C8", ## U - Mint
+    "#F7DC6F", ## V - Light Gold
+    "#BB8FCE", ## W - Light Purple
+    "#85C1E9", ## X - Light Blue
+    "#F8C471", ## Y - Peach
+    "#82E0AA"  ## Z - Light Green
+];
+
+/##
+# Pentomino shapes (5 blocks each)
+# 12 unique pentomino pieces with rotation states
+##/
+var PentominoShapes = [
+    ## F
+    [
+        [[0, 1, 1], [1, 1, 0], [0, 1, 0]],
+        [[1, 0, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [0, 1, 1], [1, 1, 0]],
+        [[0, 1, 0], [1, 1, 1], [0, 0, 1]]
+    ],
+    ## I
+    [
+        [[1, 1, 1, 1, 1]],
+        [[1], [1], [1], [1], [1]],
+        [[1, 1, 1, 1, 1]],
+        [[1], [1], [1], [1], [1]]
+    ],
+    ## L
+    [
+        [[1, 0, 0, 0], [1, 1, 1, 1]],
+        [[1, 1], [1, 0], [1, 0], [1, 0]],
+        [[1, 1, 1, 1], [0, 0, 0, 1]],
+        [[0, 1], [0, 1], [0, 1], [1, 1]]
+    ],
+    ## N
+    [
+        [[1, 1, 0, 0], [0, 1, 1, 1]],
+        [[0, 1], [1, 1], [1, 0], [1, 0]],
+        [[1, 1, 1, 0], [0, 0, 1, 1]],
+        [[0, 1], [0, 1], [1, 1], [1, 0]]
+    ],
+    ## P
+    [
+        [[1, 1], [1, 1], [1, 0]],
+        [[1, 1, 1], [0, 1, 1]],
+        [[0, 1], [1, 1], [1, 1]],
+        [[1, 1, 0], [1, 1, 1]]
+    ],
+    ## T
+    [
+        [[1, 1, 1], [0, 1, 0], [0, 1, 0]],
+        [[0, 0, 1], [1, 1, 1], [0, 0, 1]],
+        [[0, 1, 0], [0, 1, 0], [1, 1, 1]],
+        [[1, 0, 0], [1, 1, 1], [1, 0, 0]]
+    ],
+    ## U
+    [
+        [[1, 0, 1], [1, 1, 1]],
+        [[1, 1], [1, 0], [1, 1]],
+        [[1, 1, 1], [1, 0, 1]],
+        [[1, 1], [0, 1], [1, 1]]
+    ],
+    ## V
+    [
+        [[1, 0, 0], [1, 0, 0], [1, 1, 1]],
+        [[1, 1, 1], [1, 0, 0], [1, 0, 0]],
+        [[1, 1, 1], [0, 0, 1], [0, 0, 1]],
+        [[0, 0, 1], [0, 0, 1], [1, 1, 1]]
+    ],
+    ## W
+    [
+        [[1, 0, 0], [1, 1, 0], [0, 1, 1]],
+        [[0, 1, 1], [1, 1, 0], [1, 0, 0]],
+        [[1, 1, 0], [0, 1, 1], [0, 0, 1]],
+        [[0, 0, 1], [0, 1, 1], [1, 1, 0]]
+    ],
+    ## X
+    [
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
+    ],
+    ## Y
+    [
+        [[0, 1, 0, 0], [1, 1, 1, 1]],
+        [[1, 0], [1, 1], [1, 0], [1, 0]],
+        [[1, 1, 1, 1], [0, 0, 1, 0]],
+        [[0, 1], [0, 1], [1, 1], [0, 1]]
+    ],
+    ## Z
+    [
+        [[1, 1, 0], [0, 1, 0], [0, 1, 1]],
+        [[0, 0, 1], [1, 1, 1], [1, 0, 0]],
+        [[1, 1, 0], [0, 1, 0], [0, 1, 1]],
+        [[0, 0, 1], [1, 1, 1], [1, 0, 0]]
+    ]
+];
+
+## Colors for hexomino pieces (for hard difficulty)
+var HexominoColors = [
+    "#FF5733", ## Red-Orange
+    "#33FF57", ## Bright Green
+    "#3357FF", ## Bright Blue
+    "#FF33F5", ## Bright Pink
+    "#F5FF33", ## Bright Yellow
+    "#33FFF5", ## Cyan
+    "#FF8C33", ## Orange
+    "#8C33FF", ## Purple
+    "#33FF8C", ## Light Green
+    "#FF3333"  ## Bright Red
+];
+
+/##
+# Hexomino shapes (6 blocks each)
+# Selection of hexomino pieces for hard difficulty
+##/
+var HexominoShapes = [
+    ## Linear hexomino (6 in a row)
+    [
+        [[1, 1, 1, 1, 1, 1]],
+        [[1], [1], [1], [1], [1], [1]],
+        [[1, 1, 1, 1, 1, 1]],
+        [[1], [1], [1], [1], [1], [1]]
+    ],
+    ## L-shaped hexomino
+    [
+        [[1, 0, 0, 0, 0], [1, 1, 1, 1, 1]],
+        [[1, 1], [1, 0], [1, 0], [1, 0], [1, 0]],
+        [[1, 1, 1, 1, 1], [0, 0, 0, 0, 1]],
+        [[0, 1], [0, 1], [0, 1], [0, 1], [1, 1]]
+    ],
+    ## T-shaped hexomino
+    [
+        [[1, 1, 1], [0, 1, 0], [0, 1, 0], [0, 1, 0]],
+        [[0, 0, 0, 1], [1, 1, 1, 1], [0, 0, 0, 1]],
+        [[0, 1, 0], [0, 1, 0], [0, 1, 0], [1, 1, 1]],
+        [[1, 0, 0, 0], [1, 1, 1, 1], [1, 0, 0, 0]]
+    ],
+    ## Plus-shaped hexomino
+    [
+        [[0, 1, 0], [1, 1, 1], [0, 1, 0], [0, 1, 0]],
+        [[0, 1, 0, 0], [1, 1, 1, 1], [0, 1, 0, 0]],
+        [[0, 1, 0], [0, 1, 0], [1, 1, 1], [0, 1, 0]],
+        [[0, 0, 1, 0], [1, 1, 1, 1], [0, 0, 1, 0]]
+    ],
+    ## Z-shaped hexomino
+    [
+        [[1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 1, 1]],
+        [[0, 0, 1], [0, 1, 1], [1, 1, 0], [1, 0, 0]],
+        [[1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 1, 1]],
+        [[0, 0, 1], [0, 1, 1], [1, 1, 0], [1, 0, 0]]
+    ],
+    ## Square with tail hexomino
+    [
+        [[1, 1, 0], [1, 1, 0], [1, 1, 0]],
+        [[1, 1, 1], [1, 1, 1]],
+        [[0, 1, 1], [0, 1, 1], [0, 1, 1]],
+        [[1, 1, 1], [1, 1, 1]]
+    ],
+    ## Staircase hexomino
+    [
+        [[1, 0, 0], [1, 1, 0], [0, 1, 1], [0, 0, 1]],
+        [[0, 0, 1, 1], [1, 1, 1, 0], [1, 0, 0, 0]],
+        [[1, 0, 0, 0], [1, 1, 0, 0], [0, 1, 1, 0], [0, 0, 1, 1]],
+        [[0, 0, 0, 1], [0, 1, 1, 1], [1, 1, 0, 0]]
+    ],
+    ## Cross hexomino
+    [
+        [[0, 1, 0], [1, 1, 1], [1, 1, 1]],
+        [[1, 0, 1], [1, 1, 1], [0, 1, 0]],
+        [[1, 1, 1], [1, 1, 1], [0, 1, 0]],
+        [[0, 1, 0], [1, 1, 1], [1, 0, 1]]
+    ],
+    ## Hook hexomino
+    [
+        [[1, 1, 1, 1], [0, 0, 1, 0], [0, 0, 1, 0]],
+        [[0, 0, 1], [0, 0, 1], [1, 1, 1], [1, 0, 0]],
+        [[0, 1, 0, 0], [0, 1, 0, 0], [1, 1, 1, 1]],
+        [[0, 0, 1], [1, 1, 1], [1, 0, 0], [1, 0, 0]]
+    ],
+    ## Bent hexomino
+    [
+        [[1, 1, 0], [0, 1, 1], [0, 0, 1], [0, 0, 1]],
+        [[0, 0, 1, 1], [1, 1, 1, 0], [1, 0, 0, 0]],
+        [[1, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 1]],
+        [[0, 0, 0, 1], [0, 1, 1, 1], [1, 1, 0, 0]]
+    ]
+];
+
+/##
+# Shuffles the tetromino bag using Fisher-Yates algorithm
+# 
+# Modifies the tetrominoBag array in-place to create
+# a randomized order of tetromino pieces
+# 
+# @field tetrominoBag The array of available tetromino types
+# @author Hussein Abdul-Ameer
+##/
+function shuffleBag() {
+    var len = array.getLength(tetrominoBag);
+    var i = len - 1;
+    while (i > 0) {
+        var j = number.integer(0, i);
+        var temp = tetrominoBag[i];
+        tetrominoBag[i] = tetrominoBag[j];
+        tetrominoBag[j] = temp;
+        i = i - 1;
+    }
+}
+
+/##
+# Gets random piece type using bag randomization system
+# 
+# Implements the bag system where all pieces are shuffled and dealt
+# consecutively before refilling. Works for all difficulty levels.
+# 
+# @return number Index of piece type
+# @author Hussein Abdul-Ameer
+##/
+function getRandomPieceType() {
+    if (array.getLength(tetrominoBag) == 0) {
+        ## Refill the bag based on current difficulty
+        if (currentDifficulty == "easy") {
+            ## Classic tetris - 7 pieces
+            tetrominoBag = [0, 1, 2, 3, 4, 5, 6];
+        } else if (currentDifficulty == "medium") {
+            ## Pentomino - 12 pieces
+            tetrominoBag = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        } else if (currentDifficulty == "hard") {
+            ## Polynomino - mix of tetrominoes, pentominoes, and hexominoes
+            ## Use indices to represent different piece types
+            ## 0-6: tetrominoes, 7-18: pentominoes, 19-28: hexominoes
+            tetrominoBag = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28];
+        }
+        shuffleBag();
+    }
+    
+    ## Take the last piece from the bag
+    var index = array.getLength(tetrominoBag) - 1;
+    var type = tetrominoBag[index];
+    
+    ## Create a new array without the last element
+    var newBag = [];
+    for (var i = 0; i < index; i = i + 1) {
+        array.push(newBag, tetrominoBag[i]);
+    }
+    tetrominoBag = newBag;
+    
+    return type;
+}
+
+/##
+# Creates a new piece instance based on current difficulty
+# 
+# @param type  The type of piece (depends on difficulty)
+# @param x     Initial x position
+# @param y     Initial y position
+# @return      Array representing the piece with [type, color, shape, x, y, rotation]
+# @author Hussein Abdul-Ameer
+##/
+function createPiece(type, x, y) {
+    var piece = [];
+    array.push(piece, type);        ## index 0: type
+    
+    ## Determine color and shape based on difficulty and piece type
+    if (currentDifficulty == "easy") {
+        ## Classic tetris
+        array.push(piece, TetrominoColors[type]); ## index 1: color
+        array.push(piece, TetrominoShapes[type]); ## index 2: shape
+    } else if (currentDifficulty == "medium") {
+        ## Pentomino
+        array.push(piece, PentominoColors[type]); ## index 1: color
+        array.push(piece, PentominoShapes[type]); ## index 2: shape
+    } else if (currentDifficulty == "hard") {
+        ## Polynomino - mix of different piece types
+        if (type <= 6) {
+            ## Tetromino
+            array.push(piece, TetrominoColors[type]); ## index 1: color
+            array.push(piece, TetrominoShapes[type]); ## index 2: shape
+        } else if (type <= 18) {
+            ## Pentomino (indices 7-18 map to 0-11 in PentominoShapes)
+            var pentIndex = type - 7;
+            array.push(piece, PentominoColors[pentIndex]); ## index 1: color
+            array.push(piece, PentominoShapes[pentIndex]); ## index 2: shape
+        } else {
+            ## Hexomino (indices 19-28 map to 0-9 in HexominoShapes)
+            var hexIndex = type - 19;
+            array.push(piece, HexominoColors[hexIndex]); ## index 1: color
+            array.push(piece, HexominoShapes[hexIndex]); ## index 2: shape
+        }
+    }
+    
+    array.push(piece, x);           ## index 3: x
+    array.push(piece, y);           ## index 4: y
+    array.push(piece, 0);           ## index 5: rotation
+    return piece;
+}
+
+/##
+# Initializes the game board with empty cells
+# 
+# @author Hussein Abdul-Ameer
+##/
+function initializeBoard() {
+    gameBoard = [];
+    for (var y = 0; y < BOARD_HEIGHT; y = y + 1) {
+        var row = [];
+        for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+            array.push(row, 0);
+        }
+        array.push(gameBoard, row);
+    }
+}
+
+## Generate a random piece based on current difficulty
+function generateRandomPiece() {
+    var type = getRandomPieceType();
+    var x = arithmetic.floor(BOARD_WIDTH / 2) - 1;
+    var y = 0;
+    return createPiece(type, x, y);
+}
+
+/##
+# Checks if the current piece position is valid
+# 
+# @param piece      The tetromino to check
+# @param offsetX    X-axis offset to test
+# @param offsetY    Y-axis offset to test
+# @param newRotation Rotation state to test
+# @return           True if position is valid, false otherwise
+# @author Hussein Abdul-Ameer
+##/
+function isValidPosition(piece, offsetX, offsetY, newRotation) {
+    ## First check if piece is valid
+    if (piece == 0 || array.getLength(piece) < 6) {
+        return false;
+    }
+    
+    var rotation = piece[5]; ## Default to the piece's current rotation
+    
+    ## Only override the rotation if newRotation is provided and not zero
+    if (newRotation != 0) {
+        rotation = newRotation;
+    }
+    
+    var shape = piece[2][rotation]; ## shape[rotation]
+    var height = array.getLength(shape);
+    var width = array.getLength(shape[0]);
+    
+    for (var y = 0; y < height; y = y + 1) {
+        for (var x = 0; x < width; x = x + 1) {
+            if (shape[y][x] == 1) {
+                var boardX = piece[3] + x + offsetX; ## x
+                var boardY = piece[4] + y + offsetY; ## y
+                
+                ## Check if out of bounds
+                if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) {
+                    return false;
+                }
+                
+                ## Check if overlapping with locked pieces
+                ## Make sure boardY is within bounds before accessing gameBoard
+                if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                    if (gameBoard[boardY][boardX] != 0) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    
+    return true;
+}
+
+## Move the current piece left
+function moveLeft() {
+    if (currentPiece != 0 && isValidPosition(currentPiece, -1, 0, currentPiece[5])) {
+        currentPiece[3] = currentPiece[3] - 1; ## x
+        playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/move.wav");
+    }
+}
+
+## Move the current piece right
+function moveRight() {
+    if (currentPiece != 0 && isValidPosition(currentPiece, 1, 0, currentPiece[5])) {
+        currentPiece[3] = currentPiece[3] + 1; ## x
+        playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/move.wav");
+    }
+}
+
+## Move the current piece down
+function moveDown() {
+    ## Check if current piece is valid
+    if (currentPiece == 0 || array.getLength(currentPiece) < 6) {
+        ## If current piece is invalid, try to create a new one
+        currentPiece = generateRandomPiece();
+        return;
+    }
+    
+    if (isValidPosition(currentPiece, 0, 1, currentPiece[5])) {
+        currentPiece[4] = currentPiece[4] + 1; ## y
+    } else {
+        ## Lock the piece in place
+        lockPiece();
+
+        ## Check for completed lines
+        clearLines();
+
+        ## Spawn the next piece
+        spawnNextPiece();
+
+        ## Check if game over
+        if (currentPiece != 0 && array.getLength(currentPiece) >= 6 && !isValidPosition(currentPiece, 0, 0, currentPiece[5])) {
+            gameOver = true;
+            Timer.stopTimer(gameTimer);
+            playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/gameover.wav");
+            showHighScoreEntry();
+        }
+    }
+}
+
+## Hard drop the current piece
+function hardDrop() {
+    while (isValidPosition(currentPiece, 0, 1, currentPiece[5])) {
+        currentPiece[4] = currentPiece[4] + 1;
+        score = score + 2; ## 2 points per cell dropped
+    }
+
+    ## Lock the piece in place
+    lockPiece();
+
+    ## Check for completed lines
+    clearLines();
+
+    ## Spawn the next piece
+    spawnNextPiece();
+
+    ## Check if game over
+    if (!isValidPosition(currentPiece, 0, 0, currentPiece[5])) {
+        gameOver = true;
+        Timer.stopTimer(gameTimer);
+        playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/gameover.wav");
+        showHighScoreEntry();
+    }
+
+    ## Update score display
+    Label.setLabelText(scoreLabel, "Score: " + score);
+}
+
+## Rotate the current piece clockwise
+function rotateClockwise() {
+    var newRotation = (currentPiece[5] + 1) % 4; ## rotation
+
+    if (isValidPosition(currentPiece, 0, 0, newRotation)) {
+        currentPiece[5] = newRotation; ## rotation
+        playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/move.wav");
+    } else {
+        ## Try wall kicks
+        if (isValidPosition(currentPiece, 1, 0, newRotation)) {
+            currentPiece[3] = currentPiece[3] + 1; ## x
+            currentPiece[5] = newRotation; ## rotation
+            playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/move.wav");
+        } else if (isValidPosition(currentPiece, -1, 0, newRotation)) {
+            currentPiece[3] = currentPiece[3] - 1; ## x
+            currentPiece[5] = newRotation; ## rotation
+            playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/move.wav");
+        }
+    }
+}
+
+## Rotate the current piece counterclockwise
+function rotateCounterClockwise() {
+    var newRotation = (currentPiece[5] + 3) % 4; ## rotation (adding 3 is the same as subtracting 1 in modulo 4)
+
+    if (isValidPosition(currentPiece, 0, 0, newRotation)) {
+        currentPiece[5] = newRotation; ## rotation
+        playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/move.wav");
+    } else {
+        ## Try wall kicks
+        if (isValidPosition(currentPiece, 1, 0, newRotation)) {
+            currentPiece[3] = currentPiece[3] + 1; ## x
+            currentPiece[5] = newRotation; ## rotation
+            playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/move.wav");
+        } else if (isValidPosition(currentPiece, -1, 0, newRotation)) {
+            currentPiece[3] = currentPiece[3] - 1; ## x
+            currentPiece[5] = newRotation; ## rotation
+            playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/move.wav");
+        }
+    }
+}
+
+/##
+# Locks the current piece in place on the game board
+# 
+# @author Hussein Abdul-Ameer
+##/
+function lockPiece() {
+    ## Check if current piece is valid
+    if (currentPiece == 0 || array.getLength(currentPiece) < 6) {
+        return;
+    }
+    
+    var shape = currentPiece[2][currentPiece[5]];
+    var height = array.getLength(shape);
+    var width = array.getLength(shape[0]);
+
+    for (var y = 0; y < height; y = y + 1) {
+        for (var x = 0; x < width; x = x + 1) {
+            if (shape[y][x] == 1) {
+                var boardY = currentPiece[4] + y;
+                var boardX = currentPiece[3] + x;
+
+                ## Make sure we're within bounds before setting
+                if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                    gameBoard[boardY][boardX] = currentPiece[1];
+                }
+            }
+        }
+    }
+}
+
+/##
+# Checks and clears completed lines from the game board
+# 
+# @return Number of lines cleared
+# @author Hussein Abdul-Ameer
+##/
+function clearLines() {
+    var linesCleared = 0;
+
+    for (var y = BOARD_HEIGHT - 1; y >= 0; y = y - 1) {
+        var lineComplete = true;
+        
+        ## Check each cell in the row
+        for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+            if (gameBoard[y][x] == 0) {
+                lineComplete = false;
+            }
+        }
+
+        if (lineComplete) {
+            linesCleared = linesCleared + 1;
+
+            ## Move all lines above down
+            for (var moveY = y; moveY > 0; moveY = moveY - 1) {
+                for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+                    gameBoard[moveY][x] = gameBoard[moveY - 1][x];
+                }
+            }
+
+            ## Clear the top line
+            for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+                gameBoard[0][x] = 0;
+            }
+
+            ## Check the same line again (since we moved everything down)
+            y = y + 1;
+        }
+    }
+
+    ## Update score based on lines cleared
+    if (linesCleared > 0) {
+        ## Scoring: 100 for 1 line, 300 for 2 lines, 500 for 3 lines, 800 for 4 lines
+        var points = 0;
+        if (linesCleared == 1) { 
+            points = 100;
+        } else if (linesCleared == 2) {  
+            points = 300;
+        } else if (linesCleared == 3) {  
+            points = 500;
+        } else if (linesCleared == 4) {  
+            points = 800;
+        }
+
+        score = score + points;
+        playGameSound("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/clear.wav");
+
+        ## Level up every 10 lines
+        var newLevel = arithmetic.floor(score / 1000) + 1;
+        if (newLevel > level) {
+            level = newLevel;
+            ## Increase game speed
+            gameSpeed = arithmetic.max(MIN_GAME_SPEED, GAME_SPEED_INITIAL - (level - 1) * GAME_SPEED_DECREMENT);
+            Timer.stopTimer(gameTimer);
+            gameTimer = Timer.createTimer(gameSpeed, &gameLoop());
+            Timer.startTimer(gameTimer);
+        }
+
+        ## Update score and level display
+        Label.setLabelText(scoreLabel, "Score: " + score);
+        Label.setLabelText(levelLabel, "Level: " + level);
+    }
+}
+
+## Calculate the ghost piece position (where the piece would land if dropped)
+function calculateGhostPosition() {
+    ## Check if current piece is valid
+    if (currentPiece == 0 || array.getLength(currentPiece) < 6) {
+        return 0;
+    }
+    
+    ## Create a copy of the current piece
+    var ghostPiece = [];
+    for (var i = 0; i < array.getLength(currentPiece); i = i + 1) {
+        array.push(ghostPiece, currentPiece[i]);
+    }
+    
+    ## Drop the ghost piece as far as it can go
+    var dropDistance = 0;
+    while (isValidPosition(ghostPiece, 0, dropDistance + 1, ghostPiece[5])) {
+        dropDistance = dropDistance + 1;
+    }
+    
+    ## Set the ghost piece's y position
+    ghostPiece[4] = ghostPiece[4] + dropDistance;
+    
+    return ghostPiece;
+}
+
+## Draw the game board
+function drawBoard() {
+    ## Clear the game pane
+    clearPane(gamePane);
+    
+    ## Draw the locked blocks
+    for (var y = 0; y < BOARD_HEIGHT; y = y + 1) {
+        for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+            if (gameBoard[y][x] != 0) {
+                var blockPane = Pane.createPane(
+                    x * BLOCK_SIZE + 1,
+                    y * BLOCK_SIZE + 1,
+                    BLOCK_SIZE - 2,
+                    BLOCK_SIZE - 2
+                );
+                Pane.setPaneColor(blockPane, gameBoard[y][x]);
+                Pane.addComponentToPane(gamePane, blockPane);
+            }
+        }
+    }
+
+    ## Draw the ghost piece
+    var ghostPiece = calculateGhostPosition();
+    if (ghostPiece != 0) {
+        var shape = ghostPiece[2][ghostPiece[5]];
+        var height = array.getLength(shape);
+        var width = array.getLength(shape[0]);
+
+        for (var y = 0; y < height; y = y + 1) {
+            for (var x = 0; x < width; x = x + 1) {
+                if (shape[y][x] == 1) {
+                    var boardY = ghostPiece[4] + y;
+                    var boardX = ghostPiece[3] + x;
+
+                    ## Only draw if it's on the board and not where the current piece is
+                    if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH &&
+                        (boardY != currentPiece[4] + y || boardX != currentPiece[3] + x)) {
+                        
+                        ## Create a black block with white border for the ghost piece
+                        var ghostBlock = Pane.createPane(
+                            boardX * BLOCK_SIZE + 1,
+                            boardY * BLOCK_SIZE + 1,
+                            BLOCK_SIZE - 2,
+                            BLOCK_SIZE - 2
+                        );
+                        Pane.setPaneColor(ghostBlock, "#000000");  ## Black fill
+                        Pane.setPaneBorder(ghostBlock, "#FFFFFF", 1);  ## White border
+                        Pane.addComponentToPane(gamePane, ghostBlock);
+                    }
+                }
+            }
+        }
+    }
+
+    ## Draw the current piece
+    if (currentPiece != 0 && array.getLength(currentPiece) >= 6) {
+        var shape = currentPiece[2][currentPiece[5]];
+        var height = array.getLength(shape);
+        var width = array.getLength(shape[0]);
+
+        for (var y = 0; y < height; y = y + 1) {
+            for (var x = 0; x < width; x = x + 1) {
+                if (shape[y][x] == 1) {
+                    var boardY = currentPiece[4] + y;
+                    var boardX = currentPiece[3] + x;
+
+                    ## Only draw if it's on the board
+                    if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                        var blockPane = Pane.createPane(
+                            boardX * BLOCK_SIZE + 1,
+                            boardY * BLOCK_SIZE + 1,
+                            BLOCK_SIZE - 2,
+                            BLOCK_SIZE - 2
+                        );
+                        Pane.setPaneColor(blockPane, currentPiece[1]);
+                        Pane.addComponentToPane(gamePane, blockPane);
+                    }
+                }
+            }
+        }
+    }
+}
+
+## Spawn the next tetromino
+function spawnNextPiece() {
+    ## Make sure we have a valid next piece before assigning it
+    if (nextPiece != 0 && array.getLength(nextPiece) >= 6) {
+        currentPiece = nextPiece;
+        nextPiece = generateRandomPiece();
+        updateNextPieceDisplay();
+        
+        ## Remove debug popup that's causing errors
+        ## popup.info(gameWindow, "Current piece type: " + currentPiece[0], "Debug");
+    } else {
+        ## If nextPiece is invalid, generate a new one
+        currentPiece = generateRandomPiece();
+        nextPiece = generateRandomPiece();
+        updateNextPieceDisplay();
+    }
+}
+
+## Clear all components from a pane
+function clearPane(pane) {
+    if (pane == gamePane) {
+        ## Remove the old game pane from the window
+        window.removeComponentFromWindow(gameWindow, gamePane);
+        
+        ## Create a new game pane with the same properties
+        gamePane = Pane.createPane(0, 0, BOARD_WIDTH * BLOCK_SIZE, BOARD_HEIGHT * BLOCK_SIZE);
+        Pane.setPaneColor(gamePane, "#000000");
+        Pane.setPaneBorder(gamePane, "#FFFFFF", 2);
+        window.addComponentToWindow(gameWindow, gamePane);
+    } else if (pane == nextPiecePane) {
+        ## Remove the old next piece pane from the window
+        window.removeComponentFromWindow(gameWindow, nextPiecePane);
+        
+        ## Create a new next piece pane with the same properties
+        nextPiecePane = Pane.createPane(
+            BOARD_WIDTH * BLOCK_SIZE + 10, 130,
+            4 * BLOCK_SIZE + 20, 4 * BLOCK_SIZE + 20
+        );
+        Pane.setPaneColor(nextPiecePane, "#000000");
+        Pane.setPaneBorder(nextPiecePane, "#FFFFFF", 1);
+        window.addComponentToWindow(gameWindow, nextPiecePane);
+    }
+}
+
+## Update the display of the next piece
+function updateNextPieceDisplay() {
+    ## Clear the next piece pane
+    clearPane(nextPiecePane);
+    Pane.setPaneColor(nextPiecePane, "#000000");
+
+    ## Draw the next piece
+    var shape = nextPiece[2][0]; ## Use the first rotation
+    var height = array.getLength(shape);
+    var width = array.getLength(shape[0]);
+
+    for (var y = 0; y < height; y = y + 1) {
+        for (var x = 0; x < width; x = x + 1) {
+            if (shape[y][x] == 1) {
+                var blockPane = Pane.createPane(
+                    x * BLOCK_SIZE + 10,
+                    y * BLOCK_SIZE + 10,
+                    BLOCK_SIZE - 2,
+                    BLOCK_SIZE - 2
+                );
+                Pane.setPaneColor(blockPane, nextPiece[1]);
+                Pane.addComponentToPane(nextPiecePane, blockPane);
+            }
+        }
+    }
+}
+
+/##
+# Handles keyboard input for game controls
+# 
+# @param code The keycode of the pressed key
+# @author Hussein Abdul-Ameer
+##/
+function handleKeyPress(code) {
+    if (code == 81) { ## 'Q' key - Quit game
+        Timer.stopTimer(gameTimer);
+        if (mpEnabled && mpSendTimer != 0) { Timer.stopTimer(mpSendTimer); }
+        if (mpEnabled) { VgSystemCall("components.SocketLib", "close", mpSocketId); mpEnabled = false; }
+        if (mpOpponentWindow != 0) { window.dispose(mpOpponentWindow); mpOpponentWindow = 0; }
+        
+        ## Stop any playing sounds
+        Sound.stopAllSounds();
+        
+        ## Dispose the window
+        window.dispose(gameWindow);
+        
+        ## Since there's no exit() function, we'll set a flag and stop all game activity
+        gameOver = true;
+        gamePaused = true;
+        
+        return;
+    }
+    
+    if (code == 27) { ## ESC key - Return to main menu
+        Timer.stopTimer(gameTimer);
+        if (mpEnabled && mpSendTimer != 0) { Timer.stopTimer(mpSendTimer); }
+        if (mpEnabled) { VgSystemCall("components.SocketLib", "close", mpSocketId); mpEnabled = false; }
+        if (mpOpponentWindow != 0) { window.dispose(mpOpponentWindow); mpOpponentWindow = 0; }
+        
+        ## Stop any playing sounds
+        Sound.stopAllSounds();
+        
+        ## Dispose the window
+        window.dispose(gameWindow);
+        
+        ## Show the main menu
+        showMainMenu();
+        return;
+    }
+    
+    if (code == 77) { ## 'M' key - Mute/unmute
+        soundEnabled = !soundEnabled;
+        
+        if (soundEnabled) {
+            ## Resume background music
+            playGameSoundLoop("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/Tetris.wav", -1);
+        } else {
+            ## Stop all sounds
+            Sound.stopAllSounds();
+        }
+        return;
+    }
+    
+    if (code == 80) { ## 'P' key - Pause/unpause
+        gamePaused = !gamePaused;
+        
+        if (gamePaused) {
+            ## Pause the game
+            Timer.stopTimer(gameTimer);
+            
+            ## Show pause message
+            var pauseLabel = Label.createLabel("PAUSED", 
+                BOARD_WIDTH * BLOCK_SIZE / 2 - 50, 
+                BOARD_HEIGHT * BLOCK_SIZE / 2 - 15, 
+                100, 30);
+            Label.setLabelTextColor(pauseLabel, "#FFFFFF");
+            Pane.addComponentToPane(gamePane, pauseLabel);
+        } else {
+            ## Resume the game
+            gameTimer = Timer.createTimer(gameSpeed, &gameLoop());
+            Timer.startTimer(gameTimer);
+            
+            ## Redraw the board to remove pause message
+            drawBoard();
+        }
+        return;
+    }
+    
+    if (code == 82) { ## 'R' key - Reset game
+        ## Stop the game timer
+        Timer.stopTimer(gameTimer);
+        
+        ## Stop any playing sounds
+        Sound.stopAllSounds();
+        
+        ## Reset game state variables
+        score = 0;
+        level = 1;
+        gameSpeed = GAME_SPEED_INITIAL;
+        gameOver = false;
+        gamePaused = false;
+        
+        ## Initialize the game board
+        initializeBoard();
+        
+        ## Generate new pieces
+        nextPiece = generateRandomPiece();
+        currentPiece = generateRandomPiece();
+        updateNextPieceDisplay();
+        
+        ## Update score and level display
+        Label.setLabelText(scoreLabel, "Score: " + score);
+        Label.setLabelText(levelLabel, "Level: " + level);
+        
+        ## Draw the initial state
+        drawBoard();
+        
+        ## Start a new game timer
+        gameTimer = Timer.createTimer(gameSpeed, &gameLoop());
+        Timer.startTimer(gameTimer);
+        
+        ## Restart music
+        playGameSoundLoop("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/Tetris.wav", -1);
+        
+        return;
+    }
+    
+    ## Only process game controls if not paused and not game over
+    if (gameOver || gamePaused) {
+        return;
+    }
+    
+    if (code == 37) { ## Left arrow
+        moveLeft();
+    } else if (code == 39) { ## Right arrow
+        moveRight();
+    } else if (code == 40) { ## Down arrow
+        moveDown();
+    } else if (code == 90) { ## Z key
+        rotateCounterClockwise();
+    } else if (code == 67) { ## C key
+        rotateClockwise();
+    } else if (code == 32) { ## Space bar
+        hardDrop();
+    }
+
+    ## Redraw the board
+    drawBoard();
+}
+
+/##
+# Main game loop handler
+# 
+# @author Hussein Abdul-Ameer
+##/
+function gameLoop() {
+    if (gameOver || gamePaused) {
+        return;
+    }
+
+    moveDown();
+    drawBoard();
+}
+
+## Play sound function that respects mute setting
+function playGameSound(soundFile) {
+    if (soundEnabled) {
+        Sound.playSound(soundFile);
+    }
+}
+
+## Play sound loop function that respects mute setting
+function playGameSoundLoop(soundFile, loops) {
+    if (soundEnabled) {
+        Sound.playSoundLoop(soundFile, loops);
+    }
+}
+
+/##
+# Displays the main menu window
+# 
+# @author Hussein Abdul-Ameer
+##/
+
+## ══════════════════════════════════════════════════════════════════════════════
+## MULTIPLAYER FUNCTIONS
+## ══════════════════════════════════════════════════════════════════════════════
+
+function showMultiplayerConnect() {
+    Sound.stopAllSounds();
+    window.dispose(mainMenuWindow);
+    mpConnectWindow = window.create("Tetris - Multiplayer", 420, 310);
+    window.setBackgroundColor(mpConnectWindow, "#000000");
+    var titleLabel = Label.createLabel("Multiplayer - Enter Server Address", 20, 20, 380, 30);
+    Label.setLabelTextColor(titleLabel, "#FFFFFF");
+    window.addComponentToWindow(mpConnectWindow, titleLabel);
+    var hostLabel = Label.createLabel("Host (e.g. 2.tcp.eu.ngrok.io):", 20, 70, 380, 25);
+    Label.setLabelTextColor(hostLabel, "#AAAAAA");
+    window.addComponentToWindow(mpConnectWindow, hostLabel);
+    mpHostField = TextField.createTextField("127.0.0.1", 20, 95, 380, 35);
+    window.addComponentToWindow(mpConnectWindow, mpHostField);
+    var portLabel = Label.createLabel("Port:", 20, 140, 100, 25);
+    Label.setLabelTextColor(portLabel, "#AAAAAA");
+    window.addComponentToWindow(mpConnectWindow, portLabel);
+    mpPortField = TextField.createTextField("54322", 20, 165, 150, 35);
+    window.addComponentToWindow(mpConnectWindow, mpPortField);
+    mpStatusLabel = Label.createLabel("Enter address and click Connect.", 20, 210, 380, 30);
+    Label.setLabelTextColor(mpStatusLabel, "#FFFF00");
+    window.addComponentToWindow(mpConnectWindow, mpStatusLabel);
+    var connectBtn = Button.createButton("Connect", 130, 260, 160, 40);
+    Button.setButtonColor(connectBtn, "#00FF00");
+    IOEvents.setOnClick(connectBtn, &doMultiplayerConnect());
+    window.addComponentToWindow(mpConnectWindow, connectBtn);
+    window.launch(mpConnectWindow);
+}
+
+function doMultiplayerConnect() {
+    var host = TextField.getText(mpHostField);
+    var portStr = TextField.getText(mpPortField);
+    var port = Integer.toInt(portStr);
+    if (host == "") { host = "127.0.0.1"; }
+    if (port == 0)  { port = 54322; }
+    mpServerHost = host;
+    mpServerPort = port;
+    Label.setLabelText(mpStatusLabel, "Connecting to " + host + ":" + portStr + " ...");
+    var connectResult = VgSystemCall("components.SocketLib", "connect", mpServerHost, mpServerPort);
+    if (connectResult == -1) {
+        mpSocketId = -1;
+        Label.setLabelText(mpStatusLabel, "ERROR: Could not connect! Start the server first.");
+        return;
+    }
+    mpSocketId = connectResult;
+    Label.setLabelText(mpStatusLabel, "Connected! Waiting for opponent...");
+    if (mpWaitTimer != 0) { Timer.stopTimer(mpWaitTimer); }
+    mpWaitTimer = Timer.createTimer(1000, &mpWaitForStart());
+    Timer.startTimer(mpWaitTimer);
+}
+
+function mpWaitForStart() {
+    if (mpSocketId == -1) {
+        Timer.stopTimer(mpWaitTimer);
+        mpWaitTimer = 0;
+        return;
+    }
+    var response = VgSystemCall("components.SocketLib", "receive", mpSocketId);
+    ## Empty response means connection dropped
+    if (response == "") {
+        return;
+    }
+    mpPlayerNum = parseMpPlayerNum(response);
+    if (mpPlayerNum == 0) {
+        ## Still a waiting/keepalive ping - show it
+        Label.setLabelText(mpStatusLabel, "Waiting for opponent...");
+        return;
+    }
+    Timer.stopTimer(mpWaitTimer);
+    Label.setLabelText(mpStatusLabel, "Opponent found! You are Player " + mpPlayerNum + ". Starting...");
+    mpEnabled = true;
+    window.dispose(mpConnectWindow);
+    currentDifficulty = "easy";
+    score = 0;
+    level = 1;
+    gameSpeed = GAME_SPEED_INITIAL;
+    gameOver = false;
+    gamePaused = false;
+    tetrominoBag = [];
+    soundEnabled = !musicMuted;
+    initMultiplayerGame();
+}
+
+function parseMpPlayerNum(json) {
+    ## Server sends "player": 1 with a space - match both formats
+    if ((String.indexOf(json, "player") != -1)) {
+        var pnum = mpParseIntField(json, "player");
+        if (pnum == 1) { return 1; }
+        if (pnum == 2) { return 2; }
+    }
+    return 0;
+}
+
+function buildMpStateJson(isGameOver) {
+    var QT = "\"";
+    var gameOverStr = "false";
+    if (isGameOver) { gameOverStr = "true"; }
+    var json = "{" + QT + "type" + QT + ":" + QT + "state" + QT + ",";
+    json = json + QT + "score" + QT + ":" + score + ",";
+    json = json + QT + "level" + QT + ":" + level + ",";
+    json = json + QT + "game_over" + QT + ":" + gameOverStr + ",";
+    json = json + QT + "board" + QT + ":[";
+    for (var y = 0; y < BOARD_HEIGHT; y = y + 1) {
+        json = json + "[";
+        for (var x = 0; x < BOARD_WIDTH; x = x + 1) {
+            if (gameBoard[y][x] == 0) {
+                json = json + "0";
+            } else {
+                json = json + "1";
+            }
+            if (x < BOARD_WIDTH - 1) { json = json + ","; }
+        }
+        json = json + "]";
+        if (y < BOARD_HEIGHT - 1) { json = json + ","; }
+    }
+    json = json + "]}";
+    return json;
+}
+
+function mpNetworkTick() {
+    if (!mpEnabled || mpRunning) { return; }
+    mpRunning = true;
+    var stateJson = buildMpStateJson(gameOver);
+    VgSystemCall("components.SocketLib", "send", mpSocketId, stateJson);
+    var response = VgSystemCall("components.SocketLib", "receive", mpSocketId);
+    if (response != "") {
+        if ((String.indexOf(response, "result") != -1)) {
+            mpHandleResult(response);
+        } else if ((String.indexOf(response, "opponent") != -1)) {
+            mpHandleOpponentState(response);
+        }
+    }
+    mpRunning = false;
+}
+
+function mpHandleOpponentState(json) {
+    mpOpponentScore = mpParseIntField(json, "score");
+    mpOpponentLevel = mpParseIntField(json, "level");
+    mpOpponentOver  = (String.indexOf(json, "game_over\":true") != -1);
+    Label.setLabelText(mpOpponentScoreLabel, "Score: " + mpOpponentScore);
+    Label.setLabelText(mpOpponentLevelLabel, "Level: " + mpOpponentLevel);
+    drawOpponentBoard(json);
+}
+
+function mpParseIntField(json, key) {
+    var idx = String.indexOf(json, key);
+    if (idx == -1) { return 0; }
+    var numStr = "";
+    var foundColon = false;
+    for (var i = idx; i < idx + 30; i = i + 1) {
+        var ch = String.substring(json, i, i + 1);
+        if (ch == ":") { foundColon = true; }
+        if (foundColon) {
+            if (ch == "0" || ch == "1" || ch == "2" || ch == "3" || ch == "4" ||
+                ch == "5" || ch == "6" || ch == "7" || ch == "8" || ch == "9") {
+                numStr = numStr + ch;
+            } else {
+                if (numStr != "") { return Integer.toInt(numStr); }
+            }
+        }
+    }
+    if (numStr != "") { return Integer.toInt(numStr); }
+    return 0;
+}
+
+function drawOpponentBoard(json) {
+    window.removeComponentFromWindow(mpOpponentWindow, mpOpponentPane);
+    mpOpponentPane = Pane.createPane(0, 0, BOARD_WIDTH * BLOCK_SIZE, BOARD_HEIGHT * BLOCK_SIZE);
+    Pane.setPaneColor(mpOpponentPane, "#000000");
+    Pane.setPaneBorder(mpOpponentPane, "#FF4444", 2);
+    window.addComponentToWindow(mpOpponentWindow, mpOpponentPane);
+    var boardStart = String.indexOf(json, "board");
+    if (boardStart == -1) { return; }
+    var foundBracket = false;
+    var scanIdx = boardStart;
+    while (scanIdx < boardStart + 20 && !foundBracket) {
+        var scanCh = String.substring(json, scanIdx, scanIdx + 1);
+        if (scanCh == "[") { foundBracket = true; boardStart = scanIdx + 1; }
+        scanIdx = scanIdx + 1;
+    }
+    if (!foundBracket) { return; }
+    var y = 0;
+    var x = 0;
+    var i = boardStart;
+    var jsonLen = String.stringLength(json);
+    while (i < jsonLen && y < BOARD_HEIGHT) {
+        var ch = String.substring(json, i, i + 1);
+        if (ch == "1") {
+            var blockPane = Pane.createPane(x * BLOCK_SIZE + 1, y * BLOCK_SIZE + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+            Pane.setPaneColor(blockPane, "#FF6666");
+            Pane.addComponentToPane(mpOpponentPane, blockPane);
+            x = x + 1;
+        } else if (ch == "0") {
+            x = x + 1;
+        } else if (ch == "]") {
+            if (x > 0) { y = y + 1; x = 0; }
+        }
+        i = i + 1;
+    }
+    if (mpOpponentOver) {
+        var overLabel = Label.createLabel("GAME OVER", BOARD_WIDTH * BLOCK_SIZE / 2 - 45, BOARD_HEIGHT * BLOCK_SIZE / 2 - 15, 120, 30);
+        Label.setLabelTextColor(overLabel, "#FF0000");
+        Pane.addComponentToPane(mpOpponentPane, overLabel);
+    }
+}
+
+function mpHandleResult(json) {
+    var winner   = mpParseIntField(json, "winner");
+    var myScore  = mpParseIntField(json, "your_score");
+    var oppScore = mpParseIntField(json, "opponent_score");
+    Timer.stopTimer(mpSendTimer);
+    var msg = "";
+    if (winner == 0) {
+        msg = "DRAW!\nYour score: " + myScore + "\nOpponent score: " + oppScore;
+    } else if (winner == mpPlayerNum) {
+        msg = "YOU WIN!\nYour score: " + myScore + "\nOpponent score: " + oppScore;
+    } else {
+        msg = "YOU LOSE!\nYour score: " + myScore + "\nOpponent score: " + oppScore;
+    }
+    popup.info(gameWindow, msg, "Game Over");
+    VgSystemCall("components.SocketLib", "close", mpSocketId);
+    mpEnabled = false;
+}
+
+function initMultiplayerGame() {
+    var opponentNum = 3 - mpPlayerNum;
+    mpOpponentWindow = window.create("Opponent - Player " + opponentNum, BOARD_WIDTH * BLOCK_SIZE + 120, BOARD_HEIGHT * BLOCK_SIZE + 40);
+    window.setBackgroundColor(mpOpponentWindow, "#1a1a2e");
+    mpOpponentPane = Pane.createPane(0, 0, BOARD_WIDTH * BLOCK_SIZE, BOARD_HEIGHT * BLOCK_SIZE);
+    Pane.setPaneColor(mpOpponentPane, "#000000");
+    Pane.setPaneBorder(mpOpponentPane, "#FF4444", 2);
+    window.addComponentToWindow(mpOpponentWindow, mpOpponentPane);
+    mpOpponentScoreLabel = Label.createLabel("Score: 0", BOARD_WIDTH * BLOCK_SIZE + 10, 10, 100, 30);
+    Label.setLabelTextColor(mpOpponentScoreLabel, "#FF4444");
+    window.addComponentToWindow(mpOpponentWindow, mpOpponentScoreLabel);
+    mpOpponentLevelLabel = Label.createLabel("Level: 1", BOARD_WIDTH * BLOCK_SIZE + 10, 50, 100, 30);
+    Label.setLabelTextColor(mpOpponentLevelLabel, "#FF4444");
+    window.addComponentToWindow(mpOpponentWindow, mpOpponentLevelLabel);
+    var waitLabel = Label.createLabel("Waiting...", BOARD_WIDTH * BLOCK_SIZE / 2 - 40, BOARD_HEIGHT * BLOCK_SIZE / 2, 100, 30);
+    Label.setLabelTextColor(waitLabel, "#AAAAAA");
+    Pane.addComponentToPane(mpOpponentPane, waitLabel);
+    window.launch(mpOpponentWindow);
+    mpSendTimer = Timer.createTimer(500, &mpNetworkTick());
+    Timer.startTimer(mpSendTimer);
+    initGame();
+}
+
+function showMainMenu() {
+    ## Create the main menu window
+    mainMenuWindow = window.create("Tetris - Main Menu", 400, 570);
+    window.setBackgroundColor(mainMenuWindow, "#000000");
+    
+    ## Create a title image instead of text
+    var titleImage = Image.createImage(
+        "C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/castle.png", 
+        100, 20, 200, 100
+    );
+    window.addComponentToWindow(mainMenuWindow, titleImage);
+    
+    ## Create a start game button
+    var startButton = Button.createButton("Start Game", 100, 150, 200, 50);
+    Button.setButtonColor(startButton, "#FFFFFF");
+    IOEvents.setOnClick(startButton, &startGameFromMenu());
+    window.addComponentToWindow(mainMenuWindow, startButton);
+    
+    ## Create a high scores button
+    var highScoresButton = Button.createButton("High Scores", 100, 220, 200, 50);
+    Button.setButtonColor(highScoresButton, "#FFFFFF");
+    IOEvents.setOnClick(highScoresButton, &showHighScores());
+    window.addComponentToWindow(mainMenuWindow, highScoresButton);
+    
+    ## Create an instructions button
+    var instructionsButton = Button.createButton("Instructions", 100, 290, 200, 50);
+    Button.setButtonColor(instructionsButton, "#FFFFFF");
+    IOEvents.setOnClick(instructionsButton, &showInstructions());
+    window.addComponentToWindow(mainMenuWindow, instructionsButton);
+    
+    var mpButton = Button.createButton("Multiplayer", 100, 360, 200, 50);
+    Button.setButtonColor(mpButton, "#00FFFF");
+    IOEvents.setOnClick(mpButton, &showMultiplayerConnect());
+    window.addComponentToWindow(mainMenuWindow, mpButton);
+
+    var muteButton = Button.createButton("Toggle Music", 100, 430, 200, 50);
+    Button.setButtonColor(muteButton, "#FFFFFF");
+    IOEvents.setOnClick(muteButton, &toggleMusicFromMenu());
+    window.addComponentToWindow(mainMenuWindow, muteButton);
+    
+    ## Create a quit button
+    var quitButton = Button.createButton("Quit", 100, 500, 200, 50);
+    Button.setButtonColor(quitButton, "#FFFFFF");
+    IOEvents.setOnClick(quitButton, &quitGame());
+    window.addComponentToWindow(mainMenuWindow, quitButton);
+    
+    ## Play background music
+    if (!musicMuted) {
+        Sound.playSoundLoop("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/Tetris.wav", -1);
+    }
+    
+    ## Launch the window
+    window.launch(mainMenuWindow);
+}
+
+/##
+# Starts a new game from the main menu
+# 
+# @author Hussein Abdul-Ameer
+##/
+function startGameFromMenu() {
+    ## Stop any currently playing sounds to prevent duplicates
+    Sound.stopAllSounds();
+    
+    ## Dispose of the menu window
+    window.dispose(mainMenuWindow);
+    
+    ## Show difficulty selection window
+    showDifficultySelection();
+}
+
+/##
+# Shows the difficulty selection window
+# 
+# @author Hussein Abdul-Ameer
+##/
+function showDifficultySelection() {
+    ## Create the difficulty selection window
+    difficultySelectionWindow = window.create("Select Difficulty", 500, 450);
+    window.setBackgroundColor(difficultySelectionWindow, "#000000");
+    
+    ## Create a title label
+    var titleLabel = Label.createLabel("Choose Your Challenge", 125, 30, 250, 40);
+    Label.setLabelTextColor(titleLabel, "#FFFFFF");
+    window.addComponentToWindow(difficultySelectionWindow, titleLabel);
+    
+    ## Easy difficulty button
+    var easyButton = Button.createButton("Easy - Classic Tetris", 100, 100, 300, 60);
+    Button.setButtonColor(easyButton, "#00FF00");
+    IOEvents.setOnClick(easyButton, &startEasyGame());
+    window.addComponentToWindow(difficultySelectionWindow, easyButton);
+    
+    ## Easy description
+    var easyDescription = Label.createLabel("7 classic tetrominoes (4 blocks each)", 50, 170, 400, 30);
+    Label.setLabelTextColor(easyDescription, "#CCCCCC");
+    window.addComponentToWindow(difficultySelectionWindow, easyDescription);
+    
+    ## Medium difficulty button
+    var mediumButton = Button.createButton("Medium - Pentomino Tetris", 100, 210, 300, 60);
+    Button.setButtonColor(mediumButton, "#FFFF00");
+    IOEvents.setOnClick(mediumButton, &startMediumGame());
+    window.addComponentToWindow(difficultySelectionWindow, mediumButton);
+    
+    ## Medium description
+    var mediumDescription = Label.createLabel("12 pentomino pieces (5 blocks each)", 50, 280, 400, 30);
+    Label.setLabelTextColor(mediumDescription, "#CCCCCC");
+    window.addComponentToWindow(difficultySelectionWindow, mediumDescription);
+    
+    ## Hard difficulty button
+    var hardButton = Button.createButton("Hard - Polynomino Tetris", 100, 320, 300, 60);
+    Button.setButtonColor(hardButton, "#FF0000");
+    IOEvents.setOnClick(hardButton, &startHardGame());
+    window.addComponentToWindow(difficultySelectionWindow, hardButton);
+    
+    ## Hard description
+    var hardDescription = Label.createLabel("Mix of tetrominoes, pentominoes & hexominoes", 50, 390, 400, 30);
+    Label.setLabelTextColor(hardDescription, "#CCCCCC");
+    window.addComponentToWindow(difficultySelectionWindow, hardDescription);
+    
+    ## Launch the window
+    window.launch(difficultySelectionWindow);
+}
+
+/##
+# Starts easy game (classic tetris)
+# 
+# @author Hussein Abdul-Ameer
+##/
+function startEasyGame() {
+    currentDifficulty = "easy";
+    window.dispose(difficultySelectionWindow);
+    initGameWithDifficulty();
+}
+
+/##
+# Starts medium game (pentomino tetris)
+# 
+# @author Hussein Abdul-Ameer
+##/
+function startMediumGame() {
+    currentDifficulty = "medium";
+    window.dispose(difficultySelectionWindow);
+    initGameWithDifficulty();
+}
+
+/##
+# Starts hard game (polynomino tetris)
+# 
+# @author Hussein Abdul-Ameer
+##/
+function startHardGame() {
+    currentDifficulty = "hard";
+    window.dispose(difficultySelectionWindow);
+    initGameWithDifficulty();
+}
+
+/##
+# Initializes the game with selected difficulty
+# 
+# @author Hussein Abdul-Ameer
+##/
+function initGameWithDifficulty() {
+    ## Reset all game state variables
+    score = 0;
+    level = 1;
+    gameSpeed = GAME_SPEED_INITIAL;
+    gameOver = false;
+    gamePaused = false;
+    
+    ## Clear the tetromino bag to force refill with new difficulty pieces
+    tetrominoBag = [];
+    
+    ## Set sound enabled based on menu choice
+    soundEnabled = !musicMuted;
+    
+    ## Start the game
+    initGame();
+}
+
+## Toggle music from the menu
+function toggleMusicFromMenu() {
+    musicMuted = !musicMuted;
+    
+    if (musicMuted) {
+        Sound.stopAllSounds();
+    } else {
+        Sound.playSoundLoop("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/Tetris.wav", -1);
+    }
+}
+
+## Quit the game
+function quitGame() {
+    ## Stop any sounds
+    Sound.stopAllSounds();
+    
+    ## Dispose of the window
+    window.dispose(mainMenuWindow);
+}
+
+## Show game instructions
+function showInstructions() {
+    var instructionsText = 
+        "TETRIS CONTROLS\n\n" +
+        "← : Move Left\n" +
+        "→ : Move Right\n" +
+        "Z : Rotate Counter-Clockwise\n" +
+        "C : Rotate Clockwise\n" +
+        "↓ : Soft Drop\n" +
+        "Space : Hard Drop\n" +
+        "P : Pause\n" +
+        "M : Mute\n" +
+        "Q : Quit\n" +
+        "R : Reset\n" +
+        "ESC : Return to Menu";
+    
+    popup.info(mainMenuWindow, instructionsText, "Game Instructions");
+}
+
+/##
+# Initializes and starts a new game
+# 
+# @author Hussein Abdul-Ameer
+##/
+function initGame() {
+    ## Create the game window
+    gameWindow = window.create("Tetris",
+        BOARD_WIDTH * BLOCK_SIZE + 200, ## Width
+        BOARD_HEIGHT * BLOCK_SIZE + 40  ## Height
+    );
+    window.setBackgroundColor(gameWindow, "#333333");
+    
+    ## Create all UI components before launching the window
+    
+    ## Create the game board pane
+    gamePane = Pane.createPane(0, 0, BOARD_WIDTH * BLOCK_SIZE, BOARD_HEIGHT * BLOCK_SIZE);
+    Pane.setPaneColor(gamePane, "#000000");
+    Pane.setPaneBorder(gamePane, "#FFFFFF", 2);
+    window.addComponentToWindow(gameWindow, gamePane);
+
+    ## Create the score and level labels
+    scoreLabel = Label.createLabel("Score: 0",
+        BOARD_WIDTH * BLOCK_SIZE + 10, 10, 180, 30);
+    Label.setLabelTextColor(scoreLabel, "#FFFFFF");
+    window.addComponentToWindow(gameWindow, scoreLabel);
+
+    levelLabel = Label.createLabel("Level: 1",
+        BOARD_WIDTH * BLOCK_SIZE + 10, 50, 180, 30);
+    Label.setLabelTextColor(levelLabel, "#FFFFFF");
+    window.addComponentToWindow(gameWindow, levelLabel);
+
+    ## Create the next piece display
+    var nextPieceLabel = Label.createLabel("Next Piece:",
+        BOARD_WIDTH * BLOCK_SIZE + 10, 90, 180, 30);
+    Label.setLabelTextColor(nextPieceLabel, "#FFFFFF");
+    window.addComponentToWindow(gameWindow, nextPieceLabel);
+
+    nextPiecePane = Pane.createPane(
+        BOARD_WIDTH * BLOCK_SIZE + 10, 130,
+        4 * BLOCK_SIZE + 20, 4 * BLOCK_SIZE + 20
+    );
+    Pane.setPaneColor(nextPiecePane, "#000000");
+    Pane.setPaneBorder(nextPiecePane, "#FFFFFF", 1);
+    window.addComponentToWindow(gameWindow, nextPiecePane);
+
+    ## Set up key press handler
+    IOEvents.setOnKeyPress(gameWindow, &handleKeyPress());
+    
+    ## Initialize the game board
+    initializeBoard();
+    
+    ## Generate the first pieces - make sure they're valid
+    nextPiece = generateRandomPiece();
+    currentPiece = generateRandomPiece(); ## Set current piece directly first time
+    updateNextPieceDisplay();
+    
+    ## Draw the initial state
+    drawBoard();
+    
+    ## Start the game timer
+    gameTimer = Timer.createTimer(gameSpeed, &gameLoop());
+    Timer.startTimer(gameTimer);
+    
+    ## Launch the window last, after all components are added
+    window.launch(gameWindow);
+    
+    ## Play sound after window is launched (only if not muted)
+    if (!musicMuted) {
+        ## Make sure no sounds are playing before starting new ones
+        Sound.stopAllSounds();
+        playGameSoundLoop("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/Tetris.wav", -1);
+    }
+}
+
+## Show high score entry window
+function showHighScoreEntry() {
+    ## Create the high score window
+    highScoreWindow = window.create("Enter Your Name", 300, 200);
+    window.setBackgroundColor(highScoreWindow, "#333333");
+    
+    ## Create a label for instructions
+    var instructionLabel = Label.createLabel("Game Over! Your Score: " + score, 20, 20, 260, 30);
+    Label.setLabelTextColor(instructionLabel, "#FFFFFF");
+    window.addComponentToWindow(highScoreWindow, instructionLabel);
+    
+    ## Create a name entry label
+    var nameLabel = Label.createLabel("Enter Your Name:", 20, 60, 260, 30);
+    Label.setLabelTextColor(nameLabel, "#FFFFFF");
+    window.addComponentToWindow(highScoreWindow, nameLabel);
+    
+    ## Create a text field for name entry
+    nameTextField = TextField.createTextField("", 20, 90, 260, 30);
+    window.addComponentToWindow(highScoreWindow, nameTextField);
+    
+    ## Create a submit button
+    var submitButton = Button.createButton("Submit", 100, 140, 100, 40);
+    Button.setButtonColor(submitButton, "#00FF00");
+    IOEvents.setOnClick(submitButton, &saveHighScoreAndRestart());
+    window.addComponentToWindow(highScoreWindow, submitButton);
+    
+    ## Launch the window
+    window.launch(highScoreWindow);
+}
+
+## Save high score and restart game
+function saveHighScoreAndRestart() {
+    ## Get the player name from text field
+    var playerName = TextField.getText(nameTextField);
+    
+    ## If name is empty, use "Anonymous"
+    if (playerName == "") {
+        playerName = "Anonymous";
+    }
+    
+    ## Replace any commas in the name with spaces to avoid CSV parsing issues
+    var sanitizedName = regex.replaceAll(playerName, ",", " ");
+    
+    ## Format the high score entry
+    var currentTime = timestamp.currentTimeMillis();
+    var highScoreEntry = sanitizedName + "," + score + "," + level + "," + currentTime + "\n";
+    
+    ## Append the score to the high score file
+    try {
+        ## Check if file exists first
+        var existingData = File.readFile(highScoreFilePath);
+        ## File exists, append to it
+        File.appendToFile(highScoreFilePath, highScoreEntry);
+    } catch (e) {
+        ## File doesn't exist yet, create it with header
+        File.writeFile(highScoreFilePath, "Player,Score,Level,Timestamp\n" + highScoreEntry);
+    }
+    
+    ## Close the high score window
+    window.dispose(highScoreWindow);
+    
+    ## Reset the game
+    resetGame();
+}
+
+## Reset the game
+function resetGame() {
+    ## Stop the game timer
+    Timer.stopTimer(gameTimer);
+    
+    ## Stop any playing sounds
+    Sound.stopAllSounds();
+    
+    ## Reset game state variables
+    score = 0;
+    level = 1;
+    gameSpeed = GAME_SPEED_INITIAL;
+    gameOver = false;
+    gamePaused = false;
+    
+    ## Initialize the game board
+    initializeBoard();
+    
+    ## Generate new pieces
+    nextPiece = generateRandomPiece();
+    currentPiece = generateRandomPiece();
+    updateNextPieceDisplay();
+    
+    ## Update score and level display
+    Label.setLabelText(scoreLabel, "Score: " + score);
+    Label.setLabelText(levelLabel, "Level: " + level);
+    
+    ## Draw the initial state
+    drawBoard();
+    
+    ## Start a new game timer
+    gameTimer = Timer.createTimer(gameSpeed, &gameLoop());
+    Timer.startTimer(gameTimer);
+    
+    ## Restart music
+    playGameSoundLoop("C:/Users/hodif/Downloads/vg-lang-master (1)/vg-lang-master/projects/tetris/Tetris.wav", -1);
+}
+
+## Display high scores from the file
+function showHighScores() {
+    var highScoresWindow = window.create("Tetris - High Scores", 400, 500);
+    window.setBackgroundColor(highScoresWindow, "#000000");
+    
+    ## Create a title label
+    var titleLabel = Label.createLabel("Top Scores", 100, 20, 200, 30);
+    Label.setLabelTextColor(titleLabel, "#FFFFFF");
+    window.addComponentToWindow(highScoresWindow, titleLabel);
+    
+    var scoreData = "";
+    try {
+        ## Read high score data from file
+        scoreData = File.readFile(highScoreFilePath);
+    } catch (e) {
+        ## If file doesn't exist, show message
+        var noScoresLabel = Label.createLabel("No high scores yet!", 100, 60, 200, 30);
+        Label.setLabelTextColor(noScoresLabel, "#FFFFFF");
+        window.addComponentToWindow(highScoresWindow, noScoresLabel);
+        
+        ## Add back button
+        var backButton = Button.createButton("Back", 150, 400, 100, 40);
+        Button.setButtonColor(backButton, "#FFFFFF");
+        IOEvents.setOnClick(backButton, &closeHighScoresWindow(highScoresWindow));
+        window.addComponentToWindow(highScoresWindow, backButton);
+        
+        window.launch(highScoresWindow);
+        return;
+    }
+    
+    ## Split the file content into lines
+    var lines = splitByNewline(scoreData);
+    var entries = [];
+    
+    ## Skip the header line (first line)
+    for (var i = 1; i < array.getLength(lines); i = i + 1) {
+        if (lines[i] != "") {
+            var entry = parseScoreLine(lines[i]);
+            if (array.getLength(entry) >= 3) {
+                array.push(entries, entry);
+            }
+        }
+    }
+    
+    ## Sort entries by score (descending)
+    for (var i = 0; i < array.getLength(entries); i = i + 1) {
+        for (var j = i + 1; j < array.getLength(entries); j = j + 1) {
+            if (Integer.toInt(entries[j][1]) > Integer.toInt(entries[i][1])) {
+                var temp = entries[i];
+                entries[i] = entries[j];
+                entries[j] = temp;
+            }
+        }
+    }
+    
+    ## Display the top scores (up to 10)
+    var maxToShow = arithmetic.min(10, array.getLength(entries));
+    var yPos = 60;
+    
+    ## Define column positions
+    var rankX = 50;    ## Position for rank column
+    var nameX = 100;   ## Position for player name column
+    var scoreX = 220;  ## Position for score column
+    var levelX = 300;  ## Position for level column
+    
+    ## Add header row
+    var rankHeader = Label.createLabel("Rank", rankX, yPos, 50, 30);
+    Label.setLabelTextColor(rankHeader, "#FFFF00");
+    window.addComponentToWindow(highScoresWindow, rankHeader);
+    
+    var nameHeader = Label.createLabel("Player", nameX, yPos, 120, 30);
+    Label.setLabelTextColor(nameHeader, "#FFFF00");
+    window.addComponentToWindow(highScoresWindow, nameHeader);
+    
+    var scoreHeader = Label.createLabel("Score", scoreX, yPos, 80, 30);
+    Label.setLabelTextColor(scoreHeader, "#FFFF00");
+    window.addComponentToWindow(highScoresWindow, scoreHeader);
+    
+    var levelHeader = Label.createLabel("Level", levelX, yPos, 50, 30);
+    Label.setLabelTextColor(levelHeader, "#FFFF00");
+    window.addComponentToWindow(highScoresWindow, levelHeader);
+    
+    yPos = yPos + 30;
+    
+    ## Draw a separator line
+    var separatorPane = Pane.createPane(50, yPos, 300, 1);
+    Pane.setPaneColor(separatorPane, "#444444");
+    window.addComponentToWindow(highScoresWindow, separatorPane);
+    
+    yPos = yPos + 10;
+    
+    for (var i = 0; i < maxToShow; i = i + 1) {
+        var rank = i + 1;
+        var name = entries[i][0];
+        var score = entries[i][1];
+        var level = entries[i][2];
+        
+        ## Add each column as a separate label with fixed position
+        var rankLabel = Label.createLabel(rank + ".", rankX, yPos, 50, 30);
+        Label.setLabelTextColor(rankLabel, "#FFFFFF");
+        window.addComponentToWindow(highScoresWindow, rankLabel);
+        
+        var nameLabel = Label.createLabel(name, nameX, yPos, 120, 30);
+        Label.setLabelTextColor(nameLabel, "#FFFFFF");
+        window.addComponentToWindow(highScoresWindow, nameLabel);
+        
+        var scoreLabel = Label.createLabel(score, scoreX, yPos, 80, 30);
+        Label.setLabelTextColor(scoreLabel, "#FFFFFF");
+        window.addComponentToWindow(highScoresWindow, scoreLabel);
+        
+        var levelLabel = Label.createLabel(level, levelX, yPos, 50, 30);
+        Label.setLabelTextColor(levelLabel, "#FFFFFF");
+        window.addComponentToWindow(highScoresWindow, levelLabel);
+        
+        yPos = yPos + 30;
+    }
+    
+    ## Add back button
+    var backButton = Button.createButton("Back", 150, 400, 100, 40);
+    Button.setButtonColor(backButton, "#FFFFFF");
+    IOEvents.setOnClick(backButton, &closeHighScoresWindow(highScoresWindow));
+    window.addComponentToWindow(highScoresWindow, backButton);
+    
+    window.launch(highScoresWindow);
+}
+
+## Helper function to split string by newline character
+function splitByNewline(text) {
+    var lines = [];
+    var currentLine = "";
+    
+    for (var i = 0; i < String.stringLength(text); i = i + 1) {
+        var char = String.substring(text, i, i + 1);
+        
+        if (char == "\n") {
+            ## End of line reached, add current line to lines array
+            array.push(lines, currentLine);
+            currentLine = "";
+        } else {
+            ## Add character to current line
+            currentLine = currentLine + char;
+        }
+    }
+    
+    ## Add the last line if there's any text left
+    if (currentLine != "") {
+        array.push(lines, currentLine);
+    }
+    
+    return lines;
+}
+
+## Helper function to parse a score line into fields
+function parseScoreLine(line) {
+    var fields = [];
+    var parts = splitByComma(line);
+    
+    ## Only return valid entries (need at least name, score, level)
+    if (array.getLength(parts) >= 3) {
+        return parts;
+    }
+    
+    ## Return empty array for invalid entries
+    return [];
+}
+
+## Helper function to split string by comma
+function splitByComma(text) {
+    var fields = [];
+    var currentField = "";
+    
+    for (var i = 0; i < String.stringLength(text); i = i + 1) {
+        var char = String.substring(text, i, i + 1);
+        
+        if (char == ",") {
+            ## End of field, add current field to fields array
+            array.push(fields, currentField);
+            currentField = "";
+        } else {
+            ## Add character to current field
+            currentField = currentField + char;
+        }
+    }
+    
+    ## Add the last field if there's any text left
+    if (currentField != "") {
+        array.push(fields, currentField);
+    }
+    
+    return fields;
+}
+
+## Close high scores window
+function closeHighScoresWindow(highScoresWindow) {
+    window.dispose(highScoresWindow);
+}
+
+## Start with the main menu instead of directly starting the game
+showMainMenu();
